@@ -1,0 +1,12 @@
+ignoreWorkspaceRootCheck: true
+gitChecks: false
+saveExact: true
+minimumReleaseAge: 0
+shellEmulator: true
+
+overrides:
+  typescript: npm:typescript-native-bridge@6.0.3-bridge.16.tsgo.7.0.2
+
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true

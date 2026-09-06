@@ -1,0 +1,43 @@
+{
+  "name": "bitnp-keycloak-account-service",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@12.3.4",
+  "type": "module",
+  "description": "BITNP account portal",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "format": "prettier . --write",
+    "lint": "eslint . && prettier . --check",
+    "lint:fix": "eslint . --fix && prettier . --write",
+    "postinstall": "nuxt prepare",
+    "preview": "nuxt preview",
+    "start": "node .output/server/index.mjs",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "jose": "6.2.12",
+    "nuxt": "4.5.2",
+    "openid-client": "6.8.8",
+    "pg": "8.23.0",
+    "pg-boss": "12.30.0",
+    "vue": "3.5.42",
+    "vue-router": "5.3.1",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@antfu/ni": "30.5.0",
+    "@nuxt/eslint": "1.17.0",
+    "@so1ve/eslint-config": "4.7.0",
+    "@so1ve/prettier-config": "4.7.0",
+    "@types/node": "26.4.1",
+    "@types/pg": "8.23.1",
+    "eslint": "10.10.0",
+    "prettier": "3.9.6",
+    "tsdown": "0.23.0",
+    "tsx": "4.23.13",
+    "typescript": "npm:typescript-native-bridge@6.0.3-bridge.16.tsgo.7.0.2",
+    "vue-tsc": "3.3.11"
+  }
+}
