@@ -11,7 +11,10 @@
   languages.javascript = {
     enable = true;
     package = lib.mkDefault pkgs.node-bin.latest;
-    corepack.enable = true;
+    pnpm = {
+      enable = true;
+      package = pkgs.pnpm-bin.fromPackageJSON ./package.json;
+    };
     lsp.enable = false;
   };
 

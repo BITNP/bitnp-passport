@@ -24,11 +24,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1788620279,
-        "narHash": "sha256-6Yb25lgOyR9DElXX4sZOWhgKKzieI/ysJUj2AVC/Moo=",
+        "lastModified": 1788706136,
+        "narHash": "sha256-SzNj40u79t7cA5LOFwb1dFPzAtnSw/9hcgwgnGOmi/U=",
         "owner": "so1ve",
         "repo": "js-toolchain-overlay",
-        "rev": "9cb02dd81bed775deff6d20fdde4545c8213a6e5",
+        "rev": "b6d15d2e2be836116dfe6f2c395f5d803173f331",
         "type": "github"
       },
       "original": {
