@@ -1,0 +1,154 @@
+{
+  "id": "master",
+  "realm": "master",
+  "displayName": "网协通行证（本地开发）",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "verifyEmail": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "bitnp-active"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "id": "20000000-0000-4000-8000-000000000001",
+      "name": "techdept",
+      "realmRoles": ["bitnp-active"]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "bitnp-pass",
+      "name": "本地通行证",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "local-portal-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": false,
+      "fullScopeAllowed": true,
+      "redirectUris": [
+        "http://localhost:3000/auth/callback",
+        "http://localhost:3000"
+      ],
+      "webOrigins": ["http://localhost:3000"],
+      "defaultClientScopes": ["profile", "email", "roles", "web-origins"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:3000",
+        "backchannel.logout.url": "http://host.docker.internal:3000/auth/backchannel-logout",
+        "backchannel.logout.session.required": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "account-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "account",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "bitnp-pass-service",
+      "name": "本地通行证服务账户",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "local-service-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": true,
+      "defaultClientScopes": ["roles"]
+    }
+  ],
+  "users": [
+    {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@example.test",
+      "emailVerified": true,
+      "firstName": "管理员",
+      "lastName": "测试",
+      "groups": ["/techdept"],
+      "realmRoles": ["admin"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000002",
+      "username": "manager",
+      "enabled": true,
+      "email": "manager@example.test",
+      "emailVerified": true,
+      "firstName": "群组管理员",
+      "lastName": "测试",
+      "groups": ["/techdept"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000003",
+      "username": "member",
+      "enabled": true,
+      "email": "member@example.test",
+      "emailVerified": true,
+      "firstName": "普通用户",
+      "lastName": "测试",
+      "groups": [],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "service-account-bitnp-pass-service",
+      "enabled": true,
+      "serviceAccountClientId": "bitnp-pass-service",
+      "clientRoles": {
+        "master-realm": ["manage-users", "view-realm"]
+      }
+    }
+  ]
+}
