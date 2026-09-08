@@ -1,6 +1,13 @@
 <script setup lang="ts">
-const site = useAppConfig();
+const {
+  data: site,
+  error,
+  refresh,
+} = await useFetch("/api/site", {
+  key: "site-settings",
+});
 
+useFetchError(error, refresh);
 useHead({ title: "帮助" });
 </script>
 
@@ -19,7 +26,9 @@ useHead({ title: "帮助" });
           <p>
             如果无法自助重置密码或有其它需求，请提交以下表单，技术保障中心可能需要先通过其它方式验证你的身份。
           </p>
-          <NButton :href="site.supportUrl" tag="a">提交工单</NButton>
+          <NButton :disabled="!site" :href="site?.supportUrl" tag="a">
+            提交工单
+          </NButton>
         </NCollapseItem>
       </NCollapse>
     </NCard>

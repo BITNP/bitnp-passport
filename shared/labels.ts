@@ -31,6 +31,7 @@ export const auditOutcomeLabels = {
 };
 
 export const auditOperationLabels: Record<string, string> = {
+  "site.update": "修改站点设置",
   "group.configure": "配置群组",
   "group.create": "创建群组",
   "member.add": "添加成员",

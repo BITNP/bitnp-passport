@@ -1,6 +1,11 @@
 <script setup lang="ts">
-const site = useAppConfig();
-const { data: session } = await usePortalSession();
+const [{ data: site, error, refresh, status }, { data: session }] =
+  await Promise.all([
+    useFetch("/api/site", { key: "site-settings" }),
+    usePortalSession(),
+  ]);
+
+useFetchError(error, refresh);
 useHead({ title: "首页" });
 </script>
 
@@ -54,31 +59,35 @@ useHead({ title: "首页" });
     </NGrid>
     <section>
       <h2>服务入口</h2>
-      <NGrid
-        v-if="site.services.length > 0"
-        cols="1 s:2 m:3"
-        :item-style="{ display: 'flex' }"
-        responsive="screen"
-        :x-gap="16"
-        :y-gap="16"
-      >
-        <NGi v-for="service in site.services" :key="service.url">
-          <NCard
-            class="service-link"
-            hoverable
-            :href="service.url"
-            rel="noopener noreferrer"
-            size="small"
-            tag="a"
-            target="_blank"
-          >
-            <NThing :description="service.description" :title="service.name">
-              <template #header-extra>↗</template>
-            </NThing>
-          </NCard>
-        </NGi>
-      </NGrid>
-      <NCard v-else><NEmpty description="暂无服务" /></NCard>
+      <template v-if="site">
+        <NGrid
+          v-if="site.services.length > 0"
+          cols="1 s:2 m:3"
+          responsive="screen"
+          :x-gap="16"
+          :y-gap="16"
+        >
+          <NGi v-for="(service, index) in site.services" :key="index">
+            <NCard
+              class="service-link"
+              hoverable
+              :href="service.url"
+              rel="noopener noreferrer"
+              size="small"
+              tag="a"
+              target="_blank"
+            >
+              <NThing :description="service.description" :title="service.name">
+                <template #header-extra>↗</template>
+              </NThing>
+            </NCard>
+          </NGi>
+        </NGrid>
+        <NCard v-else><NEmpty description="暂无服务" /></NCard>
+      </template>
+      <NCard v-else-if="status === 'pending'">
+        <NSkeleton :repeat="2" text />
+      </NCard>
     </section>
   </NuxtLayout>
 </template>
@@ -105,7 +114,8 @@ useHead({ title: "首页" });
   margin-left: auto;
 }
 
-.notice-card {
+.notice-card,
+.service-link {
   height: 100%;
 }
 

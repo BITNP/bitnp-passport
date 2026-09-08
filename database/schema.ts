@@ -14,6 +14,8 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import type { SiteService } from "#shared/types";
+
 export const termStatus = pgEnum("term_status", [
   "draft",
   "current",
@@ -48,6 +50,18 @@ export const portalAdmins = pgTable("portal_admins", {
     .notNull()
     .defaultNow(),
 });
+
+export const siteSettings = pgTable(
+  "site_settings",
+  {
+    id: boolean("id").primaryKey().default(true),
+    supportUrl: text("support_url").notNull(),
+    services: jsonb("services").$type<SiteService[]>().notNull(),
+  },
+  (table) => [
+    check("site_settings_singleton", eq(table.id, true).inlineParams()),
+  ],
+);
 
 export const sessions = pgTable(
   "sessions",

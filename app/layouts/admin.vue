@@ -9,6 +9,7 @@ const links = [
   ["/admin/users", "用户目录"],
   ["/admin/administrators", "管理员"],
   ["/admin/terms", "任期配置"],
+  ["/admin/settings", "站点设置"],
 ] as const;
 const active = computed(() =>
   route.path.startsWith("/admin/users") ? "/admin/users" : route.path,

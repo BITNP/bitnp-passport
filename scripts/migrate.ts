@@ -6,6 +6,7 @@ import { PgBoss } from "pg-boss";
 import { closeDatabase, databaseUrl, db } from "#backend/database";
 import { logger } from "#backend/logger";
 import { cleanupQueue, failedQueue, operationQueue } from "#backend/queue";
+import { siteSettings } from "#database/schema";
 
 const log = logger.child({ component: "migrate" });
 
@@ -15,6 +16,14 @@ try {
       new URL("../database/migrations", import.meta.url),
     ),
   });
+
+  await db
+    .insert(siteSettings)
+    .values({
+      supportUrl: "mailto:webmaster@bitnp.net",
+      services: [],
+    })
+    .onConflictDoNothing();
 
   const boss = new PgBoss({
     connectionString: databaseUrl,

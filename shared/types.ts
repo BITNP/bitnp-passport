@@ -2,6 +2,12 @@ export interface Actor {
   subject: string;
 }
 
+export interface SiteService {
+  name: string;
+  url: string;
+  description?: string;
+}
+
 export interface UserListItem {
   id: string;
   username: string | null;
