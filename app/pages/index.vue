@@ -37,14 +37,9 @@ useHead({ title: "首页" });
       <NGi>
         <NCard class="notice-card" size="small" title="北理工公众用户">
           <p>
-            网协通行证暂不对北理工公众用户提供服务。电脑诊所的对外预约服务，请通过校微信企业号「网络服务
-            → 电脑义诊」访问。
+            网协通行证暂不对北理工公众用户提供服务。电脑诊所的对外预约服务，请通过钉钉或
+            i北理「IT 服务 → 电脑义诊」访问。
           </p>
-          <template #footer>
-            <NButton href="https://weixin.info.bit.edu.cn/" tag="a">
-              关注企业号
-            </NButton>
-          </template>
         </NCard>
       </NGi>
       <NGi>
