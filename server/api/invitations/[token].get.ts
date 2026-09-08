@@ -1,5 +1,8 @@
 import { invitationInfo } from "#backend/invitations";
 
-export default defineEventHandler((event) =>
-  invitationInfo(getRouterParam(event, "token")!),
+export default defineEventHandler(async (event) =>
+  invitationInfo(
+    getRouterParam(event, "token")!,
+    await getPortalSession(event),
+  ),
 );

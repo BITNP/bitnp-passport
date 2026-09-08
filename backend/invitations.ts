@@ -136,9 +136,13 @@ export async function revokeInvitation(
   );
 }
 
-export async function invitationInfo(token: string) {
+export async function invitationInfo(token: string, actor: Actor | null) {
   const [invitation] = await db
-    .select({ label: managedGroups.label, expiresAt: invitations.expiresAt })
+    .select({
+      groupId: invitations.groupId,
+      label: managedGroups.label,
+      expiresAt: invitations.expiresAt,
+    })
     .from(invitations)
     .innerJoin(managedGroups, eq(invitations.groupId, managedGroups.groupId))
     .where(
@@ -154,7 +158,18 @@ export async function invitationInfo(token: string) {
     throw new ApplicationError(404, "邀请链接无效");
   }
 
-  return invitation;
+  let joined = false;
+
+  if (actor) {
+    const groups = await keycloak.groupsForUser(actor.subject);
+    joined = groups.some((group) => group.id === invitation.groupId);
+  }
+
+  return {
+    label: invitation.label,
+    expiresAt: invitation.expiresAt,
+    joined,
+  };
 }
 
 export async function joinInvitation(actor: Actor, token: string) {

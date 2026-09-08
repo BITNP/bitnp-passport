@@ -2,14 +2,13 @@
 const route = useRoute();
 const token = String(route.params.token);
 
-const [{ data: invitation, error: loadError }, { data: session }] =
+const [{ data: invitation, error: loadError, refresh }, { data: session }] =
   await Promise.all([
     useFetch(`/api/invitations/${encodeURIComponent(token)}`),
     usePortalSession(),
   ]);
 
 const { submit, pending } = useMutation();
-const joined = ref(false);
 const returnTo = encodeURIComponent(`/i/${token}`);
 
 useHead({
@@ -22,48 +21,62 @@ const join = () =>
     await $fetch(`/api/invitations/${encodeURIComponent(token)}/join`, {
       method: "POST",
     });
-    joined.value = true;
+    await refresh();
+  });
+
+const switchAccount = () =>
+  submit(async () => {
+    const result = await $fetch("/api/logout", {
+      method: "POST",
+      query: { returnTo: `/i/${token}` },
+    });
+    await navigateTo(result.url, { external: true });
   });
 </script>
 
 <template>
   <NCard class="invitation">
-    <template v-if="invitation">
+    <NFlex v-if="invitation" :size="24" vertical>
       <NResult
-        v-if="joined"
+        v-if="invitation.joined"
         :description="invitation.label"
         status="success"
         title="已加入群组"
-      >
-        <template #footer>
-          <LinkButton to="/account" type="primary">查看我的账户</LinkButton>
-        </template>
-      </NResult>
-      <NFlex v-else :size="24" vertical>
-        <header>
-          <NText depth="3">群组邀请</NText>
-          <h1>{{ invitation.label }}</h1>
-        </header>
-        <NDescriptions :column="1" label-placement="left">
-          <NDescriptionsItem v-if="session" label="加入账户">
-            <NFlex :size="8">
-              <NText>{{ session.user.displayName }}</NText>
-              <NText depth="3">{{ session.user.username }}</NText>
-            </NFlex>
-          </NDescriptionsItem>
-          <NDescriptionsItem label="有效期至">
-            {{
-              new Date(invitation.expiresAt).toLocaleString("zh-CN", {
-                timeZone: "Asia/Shanghai",
-                dateStyle: "medium",
-                timeStyle: "short",
-              })
-            }}
-          </NDescriptionsItem>
-        </NDescriptions>
-        <NFlex :size="12" vertical>
+      />
+      <header v-else>
+        <NText depth="3">群组邀请</NText>
+        <h1>{{ invitation.label }}</h1>
+      </header>
+      <NDescriptions :column="1" label-placement="left">
+        <NDescriptionsItem v-if="session" label="当前账户">
+          <NFlex :size="8">
+            <NText>{{ session.user.displayName }}</NText>
+            <NText depth="3">{{ session.user.username }}</NText>
+          </NFlex>
+        </NDescriptionsItem>
+        <NDescriptionsItem label="有效期至">
+          {{
+            new Date(invitation.expiresAt).toLocaleString("zh-CN", {
+              timeZone: "Asia/Shanghai",
+              dateStyle: "medium",
+              timeStyle: "short",
+            })
+          }}
+        </NDescriptionsItem>
+      </NDescriptions>
+      <NFlex :size="12" vertical>
+        <template v-if="session">
+          <LinkButton
+            v-if="invitation.joined"
+            block
+            size="large"
+            to="/account"
+            type="primary"
+          >
+            查看我的账户
+          </LinkButton>
           <NButton
-            v-if="session"
+            v-else
             block
             :loading="pending"
             size="large"
@@ -72,23 +85,26 @@ const join = () =>
           >
             加入群组
           </NButton>
-          <template v-else>
-            <NButton
-              block
-              :href="`/auth/login?returnTo=${returnTo}`"
-              size="large"
-              tag="a"
-              type="primary"
-            >
-              登录后加入
-            </NButton>
-            <NButton :href="`/auth/register?returnTo=${returnTo}`" tag="a" text>
-              注册账户
-            </NButton>
-          </template>
-        </NFlex>
+          <NButton :loading="pending" text @click="switchAccount">
+            切换账户
+          </NButton>
+        </template>
+        <template v-else>
+          <NButton
+            block
+            :href="`/auth/login?returnTo=${returnTo}`"
+            size="large"
+            tag="a"
+            type="primary"
+          >
+            登录后加入
+          </NButton>
+          <NButton :href="`/auth/register?returnTo=${returnTo}`" tag="a" text>
+            注册账户
+          </NButton>
+        </template>
       </NFlex>
-    </template>
+    </NFlex>
     <NResult
       v-else-if="loadError"
       :description="(loadError.data as any)?.message ?? loadError.message"

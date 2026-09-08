@@ -41,13 +41,14 @@
       "fullScopeAllowed": true,
       "redirectUris": [
         "http://localhost:3000/auth/callback",
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://localhost:3000/i/*"
       ],
       "webOrigins": ["http://localhost:3000"],
       "defaultClientScopes": ["profile", "email", "roles", "web-origins"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:3000",
+        "post.logout.redirect.uris": "http://localhost:3000##http://localhost:3000/i/*",
         "backchannel.logout.url": "http://host.docker.internal:3000/auth/backchannel-logout",
         "backchannel.logout.session.required": "true"
       },

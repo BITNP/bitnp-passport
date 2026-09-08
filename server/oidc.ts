@@ -42,7 +42,7 @@ export const identityClient = createSharedAsync(() =>
   ),
 );
 
-function returnUrl(input: unknown) {
+export function returnUrl(input: unknown) {
   const url = URL.parse(
     typeof input === "string" ? input : "/account",
     config.appUrl,

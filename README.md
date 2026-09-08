@@ -64,8 +64,8 @@ openssl rand -base64 32
 | ------------------------------- | ---------------------------------------- | -------------------------------------------------- |
 | 客户端认证                      | Access Type 设为 `confidential`          | 开启 Client authentication                         |
 | 登录流程                        | 开启 Standard flow                       | 开启 Standard flow，并保持 Use refresh tokens 开启 |
-| Valid redirect URIs             | `<APP_URL>/auth/callback` 和 `<APP_URL>` | `<APP_URL>/auth/callback`                          |
-| Valid post logout redirect URIs | 使用上面的根地址                         | `<APP_URL>`                                        |
+| Valid redirect URIs             | `<APP_URL>/auth/callback`、`<APP_URL>` 和 `<APP_URL>/i/*` | `<APP_URL>/auth/callback`                          |
+| Valid post logout redirect URIs | 使用上面的根地址和邀请页地址             | `<APP_URL>` 和 `<APP_URL>/i/*`                     |
 | PKCE                            | `S256`                                   | `S256`                                             |
 
 关闭 Implicit flow、Direct access grants 和 Service accounts。保留 `profile`、`email`、`roles` client scopes 及其默认映射。
