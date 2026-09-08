@@ -2,11 +2,16 @@
 import type { DataTableColumns } from "naive-ui";
 import { NFlex, NTag } from "naive-ui";
 import type { VNode } from "vue";
+import type { LocationQueryRaw } from "vue-router";
 
 import { NuxtLink } from "#components";
 import type { UserListItem } from "#shared/types";
 
-defineProps<{ users: T[]; loading?: boolean }>();
+const { userQuery } = defineProps<{
+  users: T[];
+  loading?: boolean;
+  userQuery?: LocationQueryRaw;
+}>();
 
 const slots = defineSlots<{
   actions: (props: { user: T }) => VNode[];
@@ -25,7 +30,12 @@ const columns: DataTableColumns<T> = [
           ? "未找到账户"
           : h(
               NuxtLink,
-              { to: `/admin/users/${encodeURIComponent(user.id)}` },
+              {
+                to: {
+                  path: `/admin/users/${encodeURIComponent(user.id)}`,
+                  query: userQuery,
+                },
+              },
               () => user.username,
             ),
         session.value?.user.subject === user.id

@@ -24,14 +24,16 @@ const userSummary = (user: UserRepresentation) =>
 
 const adapter = config.keycloakVersion === "9" ? keycloak9 : keycloak26;
 
+export const consoleUrl = new URL(
+  `../../admin/${encodeURIComponent(client.realmName)}/console/`,
+  `${config.issuer}/`,
+).href;
+
 export function userConsoleUrl(
   id: string,
   page: "settings" | "groups" | "sessions" = "settings",
 ) {
-  const url = new URL(
-    `../../admin/${encodeURIComponent(client.realmName)}/console/`,
-    `${config.issuer}/`,
-  );
+  const url = new URL(consoleUrl);
   url.hash = adapter.userConsolePath(id, page);
 
   return url.href;

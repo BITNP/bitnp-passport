@@ -1,5 +1,7 @@
 <script setup lang="ts">
-const props = defineProps<{ title: string; back?: string }>();
+import type { RouteLocationRaw } from "vue-router";
+
+const props = defineProps<{ title: string; back?: RouteLocationRaw }>();
 
 const route = useRoute();
 const links = [
@@ -12,6 +14,14 @@ const active = computed(() =>
   route.path.startsWith("/admin/users") ? "/admin/users" : route.path,
 );
 
+function navigate(to: string) {
+  if (to === "/admin/users" && active.value === to) {
+    return navigateTo({ path: to, query: route.query });
+  }
+
+  return navigateTo(to);
+}
+
 useHead({ title: () => props.title });
 </script>
 
@@ -23,9 +33,19 @@ useHead({ title: () => props.title });
       <template #title>
         <h1>{{ props.title }}</h1>
       </template>
+      <template #extra>
+        <NButton href="/admin/keycloak" tag="a" target="_blank">
+          Keycloak 管理
+        </NButton>
+      </template>
     </NPageHeader>
-    <NTabs type="line" :value="active" @update:value="navigateTo($event)">
-      <NTab v-for="[to, label] in links" :key="to" :name="to">
+    <NTabs type="line" :value="active">
+      <NTab
+        v-for="[to, label] in links"
+        :key="to"
+        :name="to"
+        @click="navigate(to)"
+      >
         {{ label }}
       </NTab>
     </NTabs>

@@ -16,10 +16,13 @@ useFetchError(error, refresh);
 
 <template>
   <NuxtLayout
-    back="/admin/users"
+    :back="{ path: '/admin/users', query: route.query }"
     name="admin"
     :title="data?.user.username || '用户详情'"
   >
+    <NCard>
+      <UserSearch />
+    </NCard>
     <template v-if="data">
       <NGrid
         class="user-details"
