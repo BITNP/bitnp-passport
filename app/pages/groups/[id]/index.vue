@@ -16,7 +16,7 @@ const [
   usePortalSession(),
 ]);
 
-const { submit, pending } = useMutation();
+const { submit, pending } = useMutation(refresh);
 const message = useMessage();
 const identifier = ref("");
 const delegateType = ref<"user" | "group">("user");
@@ -52,7 +52,6 @@ const addMember = () =>
     });
     identifier.value = "";
     message.success("成员已添加");
-    await refresh();
   });
 
 const removeMember = (subject: string) =>
@@ -62,7 +61,6 @@ const removeMember = (subject: string) =>
       body: { subject },
     });
     message.success("成员已移除");
-    await refresh();
   });
 
 const grantDelegate = () =>
@@ -77,7 +75,6 @@ const grantDelegate = () =>
     });
     delegate.value = null;
     message.success("委托权限已授予");
-    await refresh();
   });
 
 type Delegate = NonNullable<typeof group.value>["delegates"][number];
@@ -93,7 +90,6 @@ const revokeDelegate = (delegate: Delegate) =>
       },
     });
     message.success("委托权限已撤销");
-    await refresh();
   });
 
 type Member = NonNullable<typeof group.value>["members"][number];

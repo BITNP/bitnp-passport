@@ -1,4 +1,4 @@
-export function useMutation() {
+export function useMutation(refresh?: () => Promise<void>) {
   const message = useMessage();
   const pending = ref(false);
 
@@ -11,6 +11,7 @@ export function useMutation() {
 
     try {
       await request();
+      await refresh?.();
     } catch (cause: any) {
       message.error(cause.data?.message ?? cause.message);
 

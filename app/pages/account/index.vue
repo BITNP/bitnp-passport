@@ -3,9 +3,11 @@ import type { ProfileInput } from "#shared/types";
 
 definePageMeta({ middleware: "auth" });
 
-const [{ data: account, error: loadError, refresh }, { data: session }] =
-  await Promise.all([useFetch("/api/account"), usePortalSession()]);
-const { submit, pending } = useMutation();
+const [
+  { data: account, error: loadError, refresh },
+  { data: session, refresh: refreshSession },
+] = await Promise.all([useFetch("/api/account"), usePortalSession()]);
+const { submit, pending } = useMutation(refreshSession);
 const message = useMessage();
 const profile = computed(() => account.value?.profile);
 const form = reactive<ProfileInput>({ name: "" });
@@ -42,7 +44,6 @@ const save = () =>
     });
     account.value = { ...account.value!, profile };
     message.success("个人资料已保存");
-    await refreshNuxtData("portal-session");
   });
 
 useFetchError(loadError, refresh);

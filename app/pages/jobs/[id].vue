@@ -28,7 +28,7 @@ const group = computed(() =>
   groups.value?.find((group) => group.groupId === data.value?.job.groupId),
 );
 
-const { submit, pending } = useMutation();
+const { submit, pending } = useMutation(refresh);
 const active = computed(
   () =>
     data.value?.job.status === "queued" || data.value?.job.status === "running",
@@ -45,7 +45,6 @@ onUnmounted(() => clearInterval(poll));
 const action = (name: "retry" | "cancel") =>
   submit(async () => {
     await $fetch(`/api/jobs/${id.value}/${name}`, { method: "POST" });
-    await refresh();
   });
 
 type Item = NonNullable<typeof data.value>["items"][number];

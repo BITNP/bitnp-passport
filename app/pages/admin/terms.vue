@@ -4,7 +4,7 @@ import { termStatusLabels } from "#shared/labels";
 definePageMeta({ middleware: ["auth", "admin"] });
 
 const { data, error: loadError, refresh } = await useFetch("/api/admin/terms");
-const { submit, pending } = useMutation();
+const { submit, pending } = useMutation(refresh);
 const message = useMessage();
 
 const editing = ref<string>();
@@ -51,7 +51,6 @@ const save = () =>
       await $fetch("/api/admin/terms", { method: "POST", body: input });
     }
 
-    await refresh();
     resetForm();
     message.success("任期已保存");
   });
