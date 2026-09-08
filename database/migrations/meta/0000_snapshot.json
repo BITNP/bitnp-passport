@@ -1,5 +1,5 @@
 {
-  "id": "0192d1d2-86c1-4037-a121-7d107b68c062",
+  "id": "212d6dee-1975-4a13-a58d-ea10aeb4cca5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -154,6 +154,14 @@
           "primaryKey": false,
           "notNull": true
         },
+        "type": {
+          "name": "type",
+          "type": "delegate_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'user'"
+        },
         "subject": {
           "name": "subject",
           "type": "text",
@@ -179,6 +187,12 @@
           "name": "delegation_subject",
           "columns": [
             {
+              "expression": "type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
               "expression": "subject",
               "isExpression": false,
               "asc": true,
@@ -203,9 +217,9 @@
         }
       },
       "compositePrimaryKeys": {
-        "group_delegations_group_id_subject_pk": {
-          "name": "group_delegations_group_id_subject_pk",
-          "columns": ["group_id", "subject"]
+        "group_delegations_group_id_type_subject_pk": {
+          "name": "group_delegations_group_id_type_subject_pk",
+          "columns": ["group_id", "type", "subject"]
         }
       },
       "uniqueConstraints": {},
@@ -223,8 +237,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "token_hash": {
-          "name": "token_hash",
+        "token": {
+          "name": "token",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -297,10 +311,10 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "invitations_token_hash_unique": {
-          "name": "invitations_token_hash_unique",
+        "invitations_token_unique": {
+          "name": "invitations_token_unique",
           "nullsNotDistinct": false,
-          "columns": ["token_hash"]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -383,10 +397,9 @@
           "primaryKey": true,
           "notNull": true
         },
-        "kind": {
-          "name": "kind",
-          "type": "job_kind",
-          "typeSchema": "public",
+        "queue_id": {
+          "name": "queue_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -400,7 +413,7 @@
           "name": "group_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "status": {
           "name": "status",
@@ -410,24 +423,17 @@
           "notNull": true,
           "default": "'queued'"
         },
-        "payload": {
-          "name": "payload",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
         "error": {
           "name": "error",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "cancel_requested": {
-          "name": "cancel_requested",
-          "type": "boolean",
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true,
-          "default": false
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -465,22 +471,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "one_rollover_job": {
-          "name": "one_rollover_job",
-          "columns": [
-            {
-              "expression": "kind",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "(\"jobs\".\"kind\" = 'rollover' and \"jobs\".\"status\" in ('queued', 'running'))",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -497,45 +487,34 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {
-        "membership_job_group": {
-          "name": "membership_job_group",
-          "value": "((\"jobs\".\"kind\" = 'membership' and \"jobs\".\"group_id\" is not null) or \"jobs\".\"kind\" = 'rollover')"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.login_attempts": {
-      "name": "login_attempts",
+    "public.logout_tokens": {
+      "name": "logout_tokens",
       "schema": "",
       "columns": {
-        "token_hash": {
-          "name": "token_hash",
+        "jti": {
+          "name": "jti",
           "type": "text",
           "primaryKey": true,
           "notNull": true
         },
-        "state": {
-          "name": "state",
+        "subject": {
+          "name": "subject",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "nonce": {
-          "name": "nonce",
+        "oidc_sid": {
+          "name": "oidc_sid",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "verifier": {
-          "name": "verifier",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "return_to": {
-          "name": "return_to",
-          "type": "text",
+        "issued_at": {
+          "name": "issued_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
@@ -547,8 +526,38 @@
         }
       },
       "indexes": {
-        "login_attempt_expiry": {
-          "name": "login_attempt_expiry",
+        "logout_subject": {
+          "name": "logout_subject",
+          "columns": [
+            {
+              "expression": "subject",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "logout_sid": {
+          "name": "logout_sid",
+          "columns": [
+            {
+              "expression": "oidc_sid",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "logout_expiry": {
+          "name": "logout_expiry",
           "columns": [
             {
               "expression": "expires_at",
@@ -563,31 +572,6 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.logout_tokens": {
-      "name": "logout_tokens",
-      "schema": "",
-      "columns": {
-        "jti": {
-          "name": "jti",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -719,12 +703,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "csrf_token": {
-          "name": "csrf_token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "encrypted_tokens": {
           "name": "encrypted_tokens",
           "type": "text",
@@ -737,17 +715,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "expires_at": {
-          "name": "expires_at",
+        "refresh_expires_at": {
+          "name": "refresh_expires_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true
-        },
-        "absolute_expires_at": {
-          "name": "absolute_expires_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -792,7 +764,7 @@
           "name": "session_expiry",
           "columns": [
             {
-              "expression": "expires_at",
+              "expression": "refresh_expires_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -942,20 +914,20 @@
       "schema": "public",
       "values": ["pending", "succeeded", "failed", "unknown"]
     },
+    "public.delegate_type": {
+      "name": "delegate_type",
+      "schema": "public",
+      "values": ["user", "group"]
+    },
     "public.item_status": {
       "name": "item_status",
       "schema": "public",
       "values": ["pending", "succeeded", "failed"]
     },
-    "public.job_kind": {
-      "name": "job_kind",
-      "schema": "public",
-      "values": ["membership", "rollover"]
-    },
     "public.job_operation": {
       "name": "job_operation",
       "schema": "public",
-      "values": ["add", "remove", "activate", "deactivate"]
+      "values": ["add", "remove"]
     },
     "public.job_status": {
       "name": "job_status",

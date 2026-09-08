@@ -1,7 +1,7 @@
 CREATE TYPE "public"."audit_outcome" AS ENUM('pending', 'succeeded', 'failed', 'unknown');--> statement-breakpoint
+CREATE TYPE "public"."delegate_type" AS ENUM('user', 'group');--> statement-breakpoint
 CREATE TYPE "public"."item_status" AS ENUM('pending', 'succeeded', 'failed');--> statement-breakpoint
-CREATE TYPE "public"."job_kind" AS ENUM('membership', 'rollover');--> statement-breakpoint
-CREATE TYPE "public"."job_operation" AS ENUM('add', 'remove', 'activate', 'deactivate');--> statement-breakpoint
+CREATE TYPE "public"."job_operation" AS ENUM('add', 'remove');--> statement-breakpoint
 CREATE TYPE "public"."job_status" AS ENUM('queued', 'running', 'succeeded', 'failed', 'cancelled');--> statement-breakpoint
 CREATE TYPE "public"."term_status" AS ENUM('draft', 'current', 'archived');--> statement-breakpoint
 CREATE TABLE "audit_events" (
@@ -20,21 +20,22 @@ CREATE TABLE "audit_events" (
 --> statement-breakpoint
 CREATE TABLE "group_delegations" (
 	"group_id" text NOT NULL,
+	"type" "delegate_type" DEFAULT 'user' NOT NULL,
 	"subject" text NOT NULL,
 	"granted_by" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "group_delegations_group_id_subject_pk" PRIMARY KEY("group_id","subject")
+	CONSTRAINT "group_delegations_group_id_type_subject_pk" PRIMARY KEY("group_id","type","subject")
 );
 --> statement-breakpoint
 CREATE TABLE "invitations" (
 	"id" uuid PRIMARY KEY NOT NULL,
-	"token_hash" text NOT NULL,
+	"token" text NOT NULL,
 	"group_id" text NOT NULL,
 	"created_by" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
 	"revoked_at" timestamp with time zone,
-	CONSTRAINT "invitations_token_hash_unique" UNIQUE("token_hash"),
+	CONSTRAINT "invitations_token_unique" UNIQUE("token"),
 	CONSTRAINT "invitation_expiry" CHECK ("invitations"."expires_at" > "invitations"."created_at")
 );
 --> statement-breakpoint
@@ -49,29 +50,21 @@ CREATE TABLE "job_items" (
 --> statement-breakpoint
 CREATE TABLE "jobs" (
 	"id" uuid PRIMARY KEY NOT NULL,
-	"kind" "job_kind" NOT NULL,
+	"queue_id" uuid NOT NULL,
 	"actor_subject" text NOT NULL,
-	"group_id" text,
+	"group_id" text NOT NULL,
 	"status" "job_status" DEFAULT 'queued' NOT NULL,
-	"payload" jsonb NOT NULL,
 	"error" text,
-	"cancel_requested" boolean DEFAULT false NOT NULL,
+	"started_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "membership_job_group" CHECK ((("jobs"."kind" = 'membership' and "jobs"."group_id" is not null) or "jobs"."kind" = 'rollover'))
-);
---> statement-breakpoint
-CREATE TABLE "login_attempts" (
-	"token_hash" text PRIMARY KEY NOT NULL,
-	"state" text NOT NULL,
-	"nonce" text NOT NULL,
-	"verifier" text NOT NULL,
-	"return_to" text NOT NULL,
-	"expires_at" timestamp with time zone NOT NULL
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "logout_tokens" (
 	"jti" text PRIMARY KEY NOT NULL,
+	"subject" text,
+	"oidc_sid" text,
+	"issued_at" timestamp with time zone NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
@@ -97,11 +90,9 @@ CREATE TABLE "sessions" (
 	"username" text NOT NULL,
 	"display_name" text NOT NULL,
 	"email" text,
-	"csrf_token" text NOT NULL,
 	"encrypted_tokens" text NOT NULL,
 	"refresh_at" timestamp with time zone NOT NULL,
-	"expires_at" timestamp with time zone NOT NULL,
-	"absolute_expires_at" timestamp with time zone NOT NULL,
+	"refresh_expires_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -130,12 +121,13 @@ ALTER TABLE "term_groups" ADD CONSTRAINT "term_groups_term_id_terms_id_fk" FOREI
 ALTER TABLE "term_groups" ADD CONSTRAINT "term_groups_group_id_managed_groups_group_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."managed_groups"("group_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "audit_created" ON "audit_events" USING btree ("created_at" DESC NULLS LAST);--> statement-breakpoint
 CREATE INDEX "audit_group" ON "audit_events" USING btree ("group_id","created_at" DESC NULLS LAST);--> statement-breakpoint
-CREATE INDEX "delegation_subject" ON "group_delegations" USING btree ("subject");--> statement-breakpoint
+CREATE INDEX "delegation_subject" ON "group_delegations" USING btree ("type","subject");--> statement-breakpoint
 CREATE INDEX "invitation_group" ON "invitations" USING btree ("group_id","created_at" DESC NULLS LAST);--> statement-breakpoint
 CREATE INDEX "job_actor" ON "jobs" USING btree ("actor_subject","created_at" DESC NULLS LAST);--> statement-breakpoint
-CREATE UNIQUE INDEX "one_rollover_job" ON "jobs" USING btree ("kind") WHERE ("jobs"."kind" = 'rollover' and "jobs"."status" in ('queued', 'running'));--> statement-breakpoint
-CREATE INDEX "login_attempt_expiry" ON "login_attempts" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX "logout_subject" ON "logout_tokens" USING btree ("subject");--> statement-breakpoint
+CREATE INDEX "logout_sid" ON "logout_tokens" USING btree ("oidc_sid");--> statement-breakpoint
+CREATE INDEX "logout_expiry" ON "logout_tokens" USING btree ("expires_at");--> statement-breakpoint
 CREATE INDEX "session_subject" ON "sessions" USING btree ("subject");--> statement-breakpoint
 CREATE INDEX "session_oidc_sid" ON "sessions" USING btree ("oidc_sid");--> statement-breakpoint
-CREATE INDEX "session_expiry" ON "sessions" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX "session_expiry" ON "sessions" USING btree ("refresh_expires_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "one_current_term" ON "terms" USING btree ("status") WHERE "terms"."status" = 'current';

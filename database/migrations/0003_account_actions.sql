@@ -1,1 +1,0 @@
-ALTER TABLE "login_attempts" ADD COLUMN "subject" text;
