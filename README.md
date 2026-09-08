@@ -42,7 +42,7 @@ cp .env.example .env
 | 9             | `https://sso.example.com/auth/realms/master` |
 | 26            | `https://sso.example.com/realms/master`      |
 
-> [!INFO]
+> [!NOTE]
 >
 > 未来如果 Forgejo Docker Registry 弄好了，可以考虑上传镜像到 Registry，现在感觉没啥必要
 
