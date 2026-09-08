@@ -16,7 +16,7 @@ export const db = drizzle({
     connectionTimeoutMillis: 5000,
     idleTimeoutMillis: 30_000,
     statement_timeout: 30_000,
-    application_name: "bitnp-pass",
+    application_name: "bitnp-passport",
   },
   schema,
 });

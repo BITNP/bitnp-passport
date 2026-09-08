@@ -26,7 +26,7 @@
   ],
   "clients": [
     {
-      "clientId": "bitnp-pass",
+      "clientId": "bitnp-passport",
       "name": "本地通行证",
       "enabled": true,
       "protocol": "openid-connect",
@@ -66,7 +66,7 @@
       ]
     },
     {
-      "clientId": "bitnp-pass-service",
+      "clientId": "bitnp-passport-service",
       "name": "本地通行证服务账户",
       "enabled": true,
       "protocol": "openid-connect",
@@ -144,9 +144,9 @@
       ]
     },
     {
-      "username": "service-account-bitnp-pass-service",
+      "username": "service-account-bitnp-passport-service",
       "enabled": true,
-      "serviceAccountClientId": "bitnp-pass-service",
+      "serviceAccountClientId": "bitnp-passport-service",
       "clientRoles": {
         "master-realm": ["manage-users", "view-realm"]
       }

@@ -1,10 +1,10 @@
 {
-  "name": "bitnp-keycloak-account-service",
+  "name": "bitnp-passport",
   "private": true,
   "version": "0.0.0",
   "packageManager": "pnpm@12.3.4",
   "type": "module",
-  "description": "BITNP account portal",
+  "description": "BITNP Passport account portal",
   "engines": {
     "node": ">=24.12.0"
   },

@@ -1,4 +1,4 @@
-name: bitnp-pass-dev
+name: bitnp-passport-dev
 
 services:
   postgres:

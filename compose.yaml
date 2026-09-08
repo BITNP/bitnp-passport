@@ -1,7 +1,7 @@
 services:
   web:
     build: .
-    image: ${BITNP_PASS_IMAGE}
+    image: ${BITNP_PASSPORT_IMAGE}
     env_file: .env
     ports:
       - "127.0.0.1:3000:3000"
@@ -9,7 +9,7 @@ services:
     stop_grace_period: 45s
 
   worker:
-    image: ${BITNP_PASS_IMAGE}
+    image: ${BITNP_PASSPORT_IMAGE}
     env_file: .env
     command: ["node", "workers/index.ts"]
     restart: unless-stopped

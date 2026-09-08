@@ -1,4 +1,4 @@
-# BITNP Pass （新版网协通行证）
+# BITNP Passport （新版网协通行证）
 
 基于 Keycloak 的账户门户。适配 Keycloak 9 与 26 (目前用的是 9，未来可能可以升级到新版)
 
@@ -24,14 +24,14 @@ cp .env.example .env
 
 | 变量                             | 说明                                                          |
 | -------------------------------- | ------------------------------------------------------------- |
-| `BITNP_PASS_IMAGE`               | 应用镜像名，本机构建可用 `bitnp-pass:local`                   |
+| `BITNP_PASSPORT_IMAGE`           | 应用镜像名，本机构建可用 `bitnp-passport:local`               |
 | `APP_URL`                        | 门户公开地址，如 `https://accounts.bitnp.net`，使用域名根路径 |
 | `DATABASE_URL`                   | 门户 PostgreSQL 连接串                                        |
 | `KEYCLOAK_VERSION`               | 填 `9` 或 `26`                                                |
 | `OIDC_ISSUER_URL`                | Keycloak realm 地址，示例见下表，不带末尾斜杠                 |
-| `OIDC_CLIENT_ID`                 | 门户客户端 ID，默认示例为 `bitnp-pass`                        |
+| `OIDC_CLIENT_ID`                 | 门户客户端 ID，默认示例为 `bitnp-passport`                    |
 | `OIDC_CLIENT_SECRET`             | 门户客户端密钥                                                |
-| `KEYCLOAK_SERVICE_CLIENT_ID`     | 服务客户端 ID，默认示例为 `bitnp-pass-service`                |
+| `KEYCLOAK_SERVICE_CLIENT_ID`     | 服务客户端 ID，默认示例为 `bitnp-passport-service`            |
 | `KEYCLOAK_SERVICE_CLIENT_SECRET` | 服务客户端密钥                                                |
 | `SESSION_ENCRYPTION_KEY`         | 32 字节随机密钥的 Base64 编码，用于保存登录会话               |
 | `ACTIVE_MEMBER_ROLE`             | 标记网协现任的 realm role，默认 `bitnp-active`                |
@@ -58,7 +58,7 @@ openssl rand -base64 32
 
 ### 门户客户端
 
-创建 OpenID Connect 客户端 `bitnp-pass`：
+创建 OpenID Connect 客户端 `bitnp-passport`：
 
 | 设置                            | Keycloak 9                               | Keycloak 26                                        |
 | ------------------------------- | ---------------------------------------- | -------------------------------------------------- |
@@ -76,7 +76,7 @@ openssl rand -base64 32
 
 ### 服务客户端
 
-创建 OpenID Connect 客户端 `bitnp-pass-service`：
+创建 OpenID Connect 客户端 `bitnp-passport-service`：
 
 1. Keycloak 9 使用 `confidential`；Keycloak 26 开启 Client authentication
 2. 开启 Service accounts，关闭 Standard flow、Implicit flow 和 Direct access grants
