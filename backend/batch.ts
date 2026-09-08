@@ -22,35 +22,36 @@ export async function previewMembers(
   const rows: MembershipPreview["rows"] = [];
 
   for (let offset = 0; offset < identifiers.length; offset += 8) {
-    const batch = identifiers.slice(offset, offset + 8);
-    const results = await Promise.allSettled(
-      batch.map((identifier) => keycloak.resolveUser(identifier)),
+    rows.push(
+      ...(await Promise.all(
+        identifiers.slice(offset, offset + 8).map(async (identifier) => {
+          try {
+            const user = await keycloak.resolveUser(identifier);
+
+            return {
+              identifier,
+              user,
+              member: memberIds.has(user.id),
+              error: null,
+            };
+          } catch (error) {
+            if (
+              !(error instanceof ApplicationError) ||
+              error.statusCode >= 500
+            ) {
+              throw error;
+            }
+
+            return {
+              identifier,
+              user: null,
+              member: false,
+              error: error.message,
+            };
+          }
+        }),
+      )),
     );
-
-    for (const [index, result] of results.entries()) {
-      if (result.status === "fulfilled") {
-        rows.push({
-          identifier: batch[index]!,
-          user: result.value,
-          member: memberIds.has(result.value.id),
-          error: null,
-        });
-      } else {
-        if (
-          !(result.reason instanceof ApplicationError) ||
-          result.reason.statusCode >= 500
-        ) {
-          throw result.reason;
-        }
-
-        rows.push({
-          identifier: batch[index]!,
-          user: null,
-          member: false,
-          error: result.reason.message,
-        });
-      }
-    }
   }
 
   const resolved = new Set(

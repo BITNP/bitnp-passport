@@ -14,14 +14,13 @@ interface LegacyCredentialType extends CredentialType {
 export const readProfile = (accessToken: string) =>
   request<Profile>(accessToken, "");
 
-export async function updateProfile(accessToken: string, input: ProfileInput) {
-  // Omitting attributes preserves the legacy account's custom attributes.
-  await request(accessToken, "", "POST", {
+// Omitting attributes preserves the legacy account's custom attributes.
+export const updateProfile = (accessToken: string, input: ProfileInput) =>
+  request(accessToken, "", "POST", {
     firstName: input.name,
     lastName: null,
     email: input.email,
   });
-}
 
 export async function security(accessToken: string) {
   const types = await request<LegacyCredentialType[]>(
@@ -38,16 +37,14 @@ export async function security(accessToken: string) {
   };
 }
 
-export async function updatePassword(
+export const updatePassword = (
   accessToken: string,
   input: {
     currentPassword: string;
     newPassword: string;
     confirmation: string;
   },
-) {
-  await request(accessToken, "credentials/password", "POST", input);
-}
+) => request(accessToken, "credentials/password", "POST", input);
 
 export async function removeCredential(accessToken: string, id: string) {
   await request(accessToken, `credentials/${encodeURIComponent(id)}`, "DELETE");

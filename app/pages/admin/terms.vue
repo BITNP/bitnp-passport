@@ -38,27 +38,23 @@ function resetForm() {
   selected.value = [];
 }
 
-async function save() {
-  const input = {
-    label: label.value,
-    groupIds: selected.value,
-  };
+const save = () =>
+  submit(async () => {
+    const input = { label: label.value, groupIds: selected.value };
 
-  if (
-    await submit(() =>
-      editing.value
-        ? $fetch(`/api/admin/terms/${editing.value}`, {
-            method: "PUT",
-            body: input,
-          })
-        : $fetch("/api/admin/terms", { method: "POST", body: input }),
-    )
-  ) {
+    if (editing.value) {
+      await $fetch(`/api/admin/terms/${editing.value}`, {
+        method: "PUT",
+        body: input,
+      });
+    } else {
+      await $fetch("/api/admin/terms", { method: "POST", body: input });
+    }
+
     await refresh();
     resetForm();
     message.success("任期已保存");
-  }
-}
+  });
 
 useFetchError(loadError, refresh);
 </script>

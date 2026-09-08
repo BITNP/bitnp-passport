@@ -33,9 +33,6 @@ export default defineNuxtConfig({
   eslint: {
     config: { standalone: false },
   },
-  typescript: {
-    strict: true,
-  },
   app: {
     head: {
       titleTemplate: "%s | 网协通行证",

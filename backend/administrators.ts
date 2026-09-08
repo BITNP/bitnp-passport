@@ -50,7 +50,7 @@ export async function grantAdministrator(actor: Actor, identifier: string) {
         .values({ subject: user.id, grantedBy: actor.subject })
         .onConflictDoNothing();
 
-      return { subject: user.id, username: user.username };
+      return { username: user.username };
     },
   );
 }
@@ -61,18 +61,14 @@ export async function revokeAdministrator(actor: Actor, subject: string) {
   return audited(
     actor,
     { operation: "admin.revoke", target: subject },
-    async () => {
-      // 同时撤销最后两位管理员时，两次请求可能各自看到另一位仍在，导致全部被撤销
-      // 用 serializable 事务将删除与剩余管理员检查作为整体
-      await db.transaction(
+    // 同时撤销最后两位管理员时，两次请求可能各自看到另一位仍在，导致全部被撤销
+    // 用 serializable 事务将删除与剩余管理员检查作为整体
+    () =>
+      db.transaction(
         async (tx) => {
-          const [removed] = await tx
+          await tx
             .delete(portalAdmins)
-            .where(eq(portalAdmins.subject, subject))
-            .returning({ subject: portalAdmins.subject });
-          if (!removed) {
-            return;
-          }
+            .where(eq(portalAdmins.subject, subject));
 
           const remaining = await tx.query.portalAdmins.findFirst({
             columns: { subject: true },
@@ -82,9 +78,6 @@ export async function revokeAdministrator(actor: Actor, subject: string) {
           }
         },
         { isolationLevel: "serializable" },
-      );
-
-      return { revoked: true };
-    },
+      ),
   );
 }

@@ -47,11 +47,11 @@ export async function createInvitation(
   return audited(
     actor,
     { operation: "invitation.create", groupId, target: id, detail: { days } },
-    async () => {
-      await db.transaction(async (tx) => {
+    () =>
+      db.transaction(async (tx) => {
         // 与关闭群组邀请使用同一行锁，确保新链接不会遗漏撤销
         const [group] = await tx
-          .select()
+          .select({ allowInvites: managedGroups.allowInvites })
           .from(managedGroups)
           .where(eq(managedGroups.groupId, groupId))
           .for("update");
@@ -69,10 +69,7 @@ export async function createInvitation(
           createdAt,
           expiresAt: new Date(createdAt.getTime() + days * 86_400_000),
         });
-      });
-
-      return { id };
-    },
+      }),
   );
 }
 
@@ -97,8 +94,6 @@ export async function revokeInvitation(
             isNull(invitations.revokedAt),
           ),
         );
-
-      return { revoked: true };
     },
   );
 }
@@ -140,13 +135,10 @@ export async function joinInvitation(actor: Actor, token: string) {
       groupId: reference.groupId,
       target: actor.subject,
     },
-    async () =>
+    () =>
       db.transaction(async (tx) => {
         const [invitation] = await tx
-          .select({
-            groupId: managedGroups.groupId,
-            label: managedGroups.label,
-          })
+          .select({ groupId: managedGroups.groupId })
           .from(invitations)
           .innerJoin(
             managedGroups,
@@ -166,8 +158,6 @@ export async function joinInvitation(actor: Actor, token: string) {
         }
 
         await keycloak.addMember(actor.subject, invitation.groupId);
-
-        return invitation;
       }),
   );
 }

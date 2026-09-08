@@ -16,7 +16,7 @@ const logoutClaims = z.object({
   events: z.object({ [logoutEvent]: z.strictObject({}) }),
 });
 
-const input = z.object({ logout_token: z.string().min(1).max(16_384) });
+const input = z.object({ logout_token: z.string().min(1) });
 
 export default defineEventHandler(async (event) => {
   const { logout_token: token } = await readValidatedBody(event, input.parse);

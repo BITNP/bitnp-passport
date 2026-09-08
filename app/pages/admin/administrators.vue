@@ -13,39 +13,30 @@ const { submit, pending } = useMutation();
 const message = useMessage();
 const identifier = ref("");
 
-async function grant() {
-  const result = await submit(() =>
-    $fetch("/api/admin/administrators", {
+const grant = () =>
+  submit(async () => {
+    const result = await $fetch("/api/admin/administrators", {
       method: "POST",
       body: { identifier: identifier.value },
-    }),
-  );
-  if (result) {
+    });
     message.success(`已授权 ${result.username}`);
     identifier.value = "";
     await refresh();
-  }
-}
+  });
 
-async function revoke(subject: string) {
-  if (
-    await submit(() =>
-      $fetch("/api/admin/administrators", {
-        method: "DELETE",
-        body: { subject },
-      }),
-    )
-  ) {
-    const own = session.value?.user.subject === subject;
-    await refreshNuxtData("portal-session");
-
-    if (own) {
+const revoke = (subject: string) =>
+  submit(async () => {
+    await $fetch("/api/admin/administrators", {
+      method: "DELETE",
+      body: { subject },
+    });
+    if (session.value?.user.subject === subject) {
+      await refreshNuxtData("portal-session");
       await navigateTo("/account");
     } else {
       await refresh();
     }
-  }
-}
+  });
 
 useFetchError(loadError, refresh);
 </script>

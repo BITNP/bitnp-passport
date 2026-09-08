@@ -14,25 +14,20 @@ const lastAccess = (seconds: number) =>
     timeZone: "Asia/Shanghai",
   });
 
-async function signOut(id?: string) {
-  const result = await submit(() =>
-    $fetch("/api/account/sessions/logout", {
+const signOut = (id?: string) =>
+  submit(async () => {
+    const result = await $fetch("/api/account/sessions/logout", {
       method: "POST",
-      body: id ? { id } : {},
-    }),
-  );
-  if (!result) {
-    return;
-  }
-
-  await refreshNuxtData("portal-session");
-  if (result.signedOut) {
-    await navigateTo("/");
-  } else {
-    message.success("已退出所选登录会话");
-    await refresh();
-  }
-}
+      body: { id },
+    });
+    if (result.signedOut) {
+      await refreshNuxtData("portal-session");
+      await navigateTo("/");
+    } else {
+      message.success("已退出所选登录会话");
+      await refresh();
+    }
+  });
 
 useFetchError(loadError, refresh);
 </script>

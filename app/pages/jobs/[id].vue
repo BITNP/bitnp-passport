@@ -34,26 +34,19 @@ const active = computed(
     data.value?.job.status === "queued" || data.value?.job.status === "running",
 );
 
-let poll: ReturnType<typeof setInterval> | undefined;
-onMounted(() => {
-  poll = setInterval(() => {
-    if (active.value && status.value !== "pending") {
-      void refresh();
-    }
-  }, 3000);
-});
+const poll = setInterval(() => {
+  if (active.value && status.value !== "pending") {
+    void refresh();
+  }
+}, 3000);
 
 onUnmounted(() => clearInterval(poll));
 
-async function action(name: "retry" | "cancel") {
-  if (
-    await submit(() =>
-      $fetch(`/api/jobs/${id.value}/${name}`, { method: "POST" }),
-    )
-  ) {
+const action = (name: "retry" | "cancel") =>
+  submit(async () => {
+    await $fetch(`/api/jobs/${id.value}/${name}`, { method: "POST" });
     await refresh();
-  }
-}
+  });
 
 type Item = NonNullable<typeof data.value>["items"][number];
 const columns: DataTableColumns<Item> = [

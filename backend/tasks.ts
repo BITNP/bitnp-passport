@@ -1,5 +1,3 @@
-import assert from "node:assert/strict";
-
 import { and, eq, inArray, lt, ne } from "drizzle-orm";
 import type { Job } from "pg-boss";
 
@@ -80,8 +78,8 @@ export async function runTask(task: Job<TaskData>) {
 
       try {
         const proceed = await db.transaction(async (tx) => {
-          // Audit inserts use a separate connection and take a foreign-key KEY SHARE lock.
-          // NO KEY UPDATE serializes task steps without blocking those inserts.
+          // Audit inserts use a separate connection and take a foreign-key KEY SHARE lock
+          // NO KEY UPDATE serializes task steps without blocking those inserts
           const [active] = await tx
             .select()
             .from(jobs)
@@ -93,11 +91,11 @@ export async function runTask(task: Job<TaskData>) {
 
           await requireGroupManager(actor, job.groupId);
 
+          // Heartbeat retries can overlap an older callback with the same item snapshot
           const saved = await tx.query.jobItems.findFirst({
             where: itemCondition,
           });
-          assert.ok(saved);
-          if (saved.status === "succeeded") {
+          if (saved!.status === "succeeded") {
             return true;
           }
 

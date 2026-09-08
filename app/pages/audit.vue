@@ -10,7 +10,6 @@ useHead({ title: "审计记录" });
 
 const route = useRoute();
 const page = ref(1);
-const first = computed(() => (page.value - 1) * 50);
 const groupId = computed({
   get: () =>
     typeof route.query.groupId === "string" ? route.query.groupId : "",
@@ -18,7 +17,6 @@ const groupId = computed({
     void navigateTo({ query: { ...route.query, groupId: value || undefined } });
   },
 });
-const filter = computed(() => groupId.value || undefined);
 
 const [
   { data: groups, error: groupsError, refresh: refreshGroups },
@@ -27,7 +25,12 @@ const [
 ] = await Promise.all([
   useFetch("/api/groups"),
   usePortalSession(),
-  useFetch("/api/audit", { query: { first, groupId: filter } }),
+  useFetch("/api/audit", {
+    query: computed(() => ({
+      first: (page.value - 1) * 50,
+      groupId: groupId.value || undefined,
+    })),
+  }),
 ]);
 
 watch(groupId, () => {

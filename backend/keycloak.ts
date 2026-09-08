@@ -18,7 +18,6 @@ const userSummary = (user: UserRepresentation) =>
     "firstName",
     "lastName",
     "email",
-    "emailVerified",
     "enabled",
     "createdTimestamp",
   ]);
@@ -139,13 +138,11 @@ export async function members(id: string) {
   return users.map(userSummary);
 }
 
-export async function addMember(userId: string, groupId: string) {
-  await request(() => client.users.addToGroup({ id: userId, groupId }));
-}
+export const addMember = (userId: string, groupId: string) =>
+  request(() => client.users.addToGroup({ id: userId, groupId }));
 
-export async function removeMember(userId: string, groupId: string) {
-  await request(() => client.users.delFromGroup({ id: userId, groupId }));
-}
+export const removeMember = (userId: string, groupId: string) =>
+  request(() => client.users.delFromGroup({ id: userId, groupId }));
 
 export async function createGroup(name: string, parentId?: string) {
   const { id } = await request(() =>

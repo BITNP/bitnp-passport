@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { ProfileInput } from "#shared/types";
+
 definePageMeta({ middleware: "auth" });
 
 const [{ data: account, error: loadError, refresh }, { data: session }] =
@@ -6,17 +8,18 @@ const [{ data: account, error: loadError, refresh }, { data: session }] =
 const { submit, pending } = useMutation();
 const message = useMessage();
 const profile = computed(() => account.value?.profile);
-const form = reactive({
-  name: [profile.value?.lastName, profile.value?.firstName].join(""),
-  email: profile.value?.email,
-});
+const form = reactive<ProfileInput>({ name: "" });
 
-watch(profile, (value) => {
-  if (value) {
-    form.name = [value.lastName, value.firstName].join("");
-    form.email = value.email;
-  }
-});
+watch(
+  profile,
+  (value) => {
+    if (value) {
+      form.name = [value.lastName, value.firstName].join("");
+      form.email = value.email;
+    }
+  },
+  { immediate: true },
+);
 
 const nameReadOnly = computed(() =>
   profile.value?.userProfileMetadata?.attributes.some(
@@ -31,16 +34,16 @@ const emailMetadata = computed(() =>
   ),
 );
 
-async function save() {
-  const result = await submit(() =>
-    $fetch("/api/account/profile", { method: "PUT", body: form }),
-  );
-  if (result) {
-    account.value = { ...account.value!, profile: result };
+const save = () =>
+  submit(async () => {
+    const profile = await $fetch("/api/account/profile", {
+      method: "PUT",
+      body: form,
+    });
+    account.value = { ...account.value!, profile };
     message.success("个人资料已保存");
     await refreshNuxtData("portal-session");
-  }
-}
+  });
 
 useFetchError(loadError, refresh);
 </script>

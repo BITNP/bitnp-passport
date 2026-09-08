@@ -84,11 +84,8 @@ function edit(group: GroupNode) {
   ];
 }
 
-const select = (keys: (string | number)[]) =>
-  navigateTo(
-    { path: "/admin", query: { groupId: String(keys[0]) } },
-    { replace: true },
-  );
+const select = (groupId: string) =>
+  navigateTo({ path: "/admin", query: { groupId } }, { replace: true });
 
 function create(parent?: GroupNode) {
   editor.value = { parent, name: "", label: "", note: "", allowInvites: false };
@@ -96,29 +93,28 @@ function create(parent?: GroupNode) {
   return navigateTo("/admin", { replace: true });
 }
 
-async function save() {
-  const draft = editor.value!;
-  const result = await submit(() =>
-    $fetch(draft.group ? "/api/admin/groups" : "/api/admin/groups/create", {
-      method: "POST",
-      body: {
-        groupId: draft.group?.id,
-        parentId: draft.parent?.id,
-        name: draft.name,
-        label: draft.label.trim() || draft.name,
-        note: draft.note,
-        allowInvites: draft.allowInvites,
+const save = () =>
+  submit(async () => {
+    const draft = editor.value!;
+    const result = await $fetch(
+      draft.group ? "/api/admin/groups" : "/api/admin/groups/create",
+      {
+        method: "POST",
+        body: {
+          groupId: draft.group?.id,
+          parentId: draft.parent?.id,
+          name: draft.name,
+          label: draft.label.trim() || draft.name,
+          note: draft.note,
+          allowInvites: draft.allowInvites,
+        },
       },
-    }),
-  );
-
-  if (result) {
+    );
     await refresh();
     search.value = "";
-    await select([result.groupId]);
+    await select(result.groupId);
     message.success("群组已保存");
-  }
-}
+  });
 
 watch(
   () => [nodes.value, route.query.groupId] as const,
@@ -161,7 +157,7 @@ useFetchError(loadError, refresh);
               v-model:value="search"
               :disabled="pending"
               :groups="searchGroups"
-              @select="select([$event])"
+              @select="select"
             />
             <NSpin :show="status === 'pending'">
               <NScrollbar class="group-tree">
@@ -184,7 +180,7 @@ useFetchError(loadError, refresh);
                   "
                   :selected-keys="editor?.group ? [editor.group.id] : []"
                   show-line
-                  @update:selected-keys="select"
+                  @update:selected-keys="select(String($event[0]))"
                 />
                 <NEmpty v-else description="暂无群组" />
               </NScrollbar>

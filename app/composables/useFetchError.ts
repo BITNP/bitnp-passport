@@ -19,7 +19,7 @@ export function useFetchError(
         () =>
           h(NFlex, { align: "center", size: 12 }, () => [
             h("span", (cause.data as any)?.message ?? cause.message),
-            h(NButton, { text: true, onClick: () => retry() }, () => "重试"),
+            h(NButton, { text: true, onClick: retry }, () => "重试"),
           ]),
         { duration: 0 },
       );

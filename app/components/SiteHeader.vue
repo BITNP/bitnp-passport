@@ -37,12 +37,11 @@ const links = computed(() => {
 const renderLink = (option: MenuOption) =>
   h(NuxtLink, { to: option.to as string }, () => option.label as string);
 
-async function signOut() {
-  const result = await submit(() => $fetch("/api/logout", { method: "POST" }));
-  if (result) {
+const signOut = () =>
+  submit(async () => {
+    const result = await $fetch("/api/logout", { method: "POST" });
     await navigateTo(result.url, { external: true });
-  }
-}
+  });
 
 useFetchError(sessionError, refreshSession);
 </script>
@@ -63,27 +62,24 @@ useFetchError(sessionError, refreshSession);
       />
       <div class="account-actions">
         <ColorModeSwitch />
-        <NuxtLink v-if="session" class="username" to="/account">
-          <NButton size="small" tag="span" text>
-            <NEllipsis class="username-text">
-              {{ session.user.displayName }}
-            </NEllipsis>
+        <template v-if="session">
+          <NuxtLink class="username" to="/account">
+            <NButton size="small" tag="span" text>
+              <NEllipsis class="username-text">
+                {{ session.user.displayName }}
+              </NEllipsis>
+            </NButton>
+          </NuxtLink>
+          <NButton :loading="pending" size="small" @click="signOut">
+            退出
           </NButton>
-        </NuxtLink>
-        <NButton
-          v-if="session"
-          :loading="pending"
-          size="small"
-          @click="signOut"
-        >
-          退出
-        </NButton>
-        <NButton v-else href="/auth/login" size="small" tag="a" type="primary">
-          登录
-        </NButton>
-        <NButton v-if="!session" href="/auth/register" size="small" tag="a">
-          注册
-        </NButton>
+        </template>
+        <template v-else>
+          <NButton href="/auth/login" size="small" tag="a" type="primary">
+            登录
+          </NButton>
+          <NButton href="/auth/register" size="small" tag="a">注册</NButton>
+        </template>
         <NButton class="mobile-menu" size="small" @click="menuOpen = !menuOpen">
           {{ menuOpen ? "收起" : "菜单" }}
         </NButton>

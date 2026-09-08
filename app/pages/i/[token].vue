@@ -17,17 +17,13 @@ useHead({
   meta: [{ name: "robots", content: "noindex, nofollow" }],
 });
 
-async function join() {
-  if (
-    await submit(() =>
-      $fetch(`/api/invitations/${encodeURIComponent(token)}/join`, {
-        method: "POST",
-      }),
-    )
-  ) {
+const join = () =>
+  submit(async () => {
+    await $fetch(`/api/invitations/${encodeURIComponent(token)}/join`, {
+      method: "POST",
+    });
     joined.value = true;
-  }
-}
+  });
 </script>
 
 <template>

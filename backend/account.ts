@@ -9,7 +9,7 @@ import { config } from "./config.ts";
 import { db } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
 import * as keycloak from "./keycloak.ts";
-import { managedGroups } from "./permissions.ts";
+import { groupAccess } from "./permissions.ts";
 
 interface Device {
   os?: string | null;
@@ -36,15 +36,16 @@ export const updatePassword = adapter.updatePassword;
 export const security = adapter.security;
 
 export async function overview(actor: Actor & { accessToken: string }) {
-  const [userProfile, memberships, groups, roles, settings] = await Promise.all(
+  const [userProfile, memberships, access, roles, settings] = await Promise.all(
     [
       adapter.readProfile(actor.accessToken),
       keycloak.groupsForUser(actor.subject),
-      managedGroups(actor),
+      groupAccess(actor),
       keycloak.userRoles(actor.subject),
       db
-        .select({ groupId: groupSettings.groupId, label: groupSettings.label })
-        .from(groupSettings),
+        .select()
+        .from(groupSettings)
+        .orderBy(groupSettings.label, groupSettings.groupId),
     ],
   );
   const labels = new Map(settings.map((group) => [group.groupId, group.label]));
@@ -55,7 +56,10 @@ export async function overview(actor: Actor & { accessToken: string }) {
       id: group.id,
       label: labels.get(group.id) ?? group.name,
     })),
-    groups,
+    groups: settings.filter(
+      (group) =>
+        access.administrator || access.groupIds.includes(group.groupId),
+    ),
     activeMember: roles.some((role) => role.name === config.activeRole),
   };
 }
@@ -99,10 +103,6 @@ export async function signOut(accessToken: string, id?: string) {
       id ? session.id === id : !session.current,
     ),
   );
-  if (id && removed.length === 0) {
-    throw new ApplicationError(404, "未找到该登录会话");
-  }
-
   await request(
     accessToken,
     id ? `sessions/${encodeURIComponent(id)}` : "sessions?current=false",

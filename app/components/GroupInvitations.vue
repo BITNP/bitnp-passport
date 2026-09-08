@@ -20,33 +20,22 @@ const durations = [1, 7, 14, 30].map((value) => ({
 const date = (value: string) =>
   new Date(value).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
 
-async function createInvitation() {
-  if (
-    await submit(() =>
-      $fetch(endpoint.value, {
-        method: "POST",
-        body: { days: days.value },
-      }),
-    )
-  ) {
+const createInvitation = () =>
+  submit(async () => {
+    await $fetch(endpoint.value, {
+      method: "POST",
+      body: { days: days.value },
+    });
     message.success("邀请已创建");
     await refresh();
-  }
-}
+  });
 
-async function revokeInvitation(id: string) {
-  if (
-    await submit(() =>
-      $fetch(endpoint.value, {
-        method: "DELETE",
-        body: { id },
-      }),
-    )
-  ) {
+const revokeInvitation = (id: string) =>
+  submit(async () => {
+    await $fetch(endpoint.value, { method: "DELETE", body: { id } });
     message.success("邀请已撤销");
     await refresh();
-  }
-}
+  });
 
 const copyInvitation = (url: string) =>
   submit(async () => {

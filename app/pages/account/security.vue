@@ -48,41 +48,40 @@ async function changePassword() {
     return;
   }
 
-  const result = await submit(() =>
-    $fetch("/api/account/password", { method: "POST", body: form }),
-  );
+  await submit(async () => {
+    await $fetch("/api/account/password", { method: "POST", body: form });
+    message.success("密码已修改");
+    await refresh();
+  });
   form.currentPassword = "";
   form.newPassword = "";
   form.confirmation = "";
-
-  if (result) {
-    message.success("密码已修改");
-    await refresh();
-  }
 }
 
-async function startAction(action: string) {
-  const result = await submit(() =>
-    $fetch("/api/account/actions", { method: "POST", body: { action } }),
-  );
-  if (result) {
+const startAction = (action: string) =>
+  submit(async () => {
+    const result = await $fetch("/api/account/actions", {
+      method: "POST",
+      body: { action },
+    });
     await navigateTo(result.url, { external: true });
-  }
-}
+  });
 
-async function removeCredential(id: string) {
-  const result = await submit(() =>
-    $fetch(`/api/account/credentials/${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    }),
-  );
-  if (result?.url) {
-    await navigateTo(result.url, { external: true });
-  } else if (result) {
-    message.success("凭据已移除");
-    await refresh();
-  }
-}
+const removeCredential = (id: string) =>
+  submit(async () => {
+    const result = await $fetch(
+      `/api/account/credentials/${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+      },
+    );
+    if (result.url) {
+      await navigateTo(result.url, { external: true });
+    } else {
+      message.success("凭据已移除");
+      await refresh();
+    }
+  });
 
 useFetchError(loadError, refresh);
 </script>

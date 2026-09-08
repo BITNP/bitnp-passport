@@ -1,4 +1,4 @@
-import { and, desc, eq, getTableColumns, inArray, or } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, or, sql } from "drizzle-orm";
 
 import { auditEvents, managedGroups } from "#database/schema";
 import type { Actor } from "#shared/types";
@@ -37,6 +37,7 @@ export async function listAudit(actor: Actor, first: number, groupId?: string) {
     db
       .select({
         ...getTableColumns(auditEvents),
+        id: sql`${auditEvents.id}`.mapWith(String),
         groupLabel: managedGroups.label,
       })
       .from(auditEvents)
@@ -49,7 +50,7 @@ export async function listAudit(actor: Actor, first: number, groupId?: string) {
   ]);
 
   return {
-    events: rows.map((row) => ({ ...row, id: row.id.toString() })),
+    events: rows,
     total,
   };
 }

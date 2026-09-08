@@ -47,30 +47,24 @@ watch(text, () => {
   selected.value = [];
 });
 
-async function compare() {
-  const result = await submit(() =>
-    $fetch(`/api/groups/${groupId.value}/preview`, {
+const compare = () =>
+  submit(async () => {
+    const result = await $fetch(`/api/groups/${groupId.value}/preview`, {
       method: "POST",
       body: { text: text.value },
-    }),
-  );
-  if (result) {
+    });
     preview.value = result;
     selected.value = [];
-  }
-}
+  });
 
-async function enqueue() {
-  const result = await submit(() =>
-    $fetch(`/api/groups/${groupId.value}/jobs`, {
+const enqueue = () =>
+  submit(async () => {
+    const result = await $fetch(`/api/groups/${groupId.value}/jobs`, {
       method: "POST",
       body: { subjects: selected.value, operation: operation.value },
-    }),
-  );
-  if (result) {
+    });
     await navigateTo(`/jobs/${result.id}`);
-  }
-}
+  });
 
 const previewColumns: DataTableColumns<MembershipPreview["rows"][number]> = [
   { title: "输入", key: "identifier", minWidth: 200 },

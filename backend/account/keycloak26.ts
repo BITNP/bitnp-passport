@@ -46,5 +46,5 @@ export async function updatePassword() {
   throw new ApplicationError(405, "此接口不支持修改密码");
 }
 
-export const removeCredential = async (_accessToken: string, id: string) =>
+export const removeCredential = (_accessToken: string, id: string) =>
   `delete_credential:${id}`;

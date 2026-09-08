@@ -94,15 +94,14 @@ export async function configureGroup(
         await keycloak.renameGroup(groupId, name);
       }
 
-      return db.transaction(async (tx) => {
-        const [group] = await tx
+      await db.transaction(async (tx) => {
+        await tx
           .insert(managedGroups)
           .values({ groupId, ...settings, createdBy: actor.subject })
           .onConflictDoUpdate({
             target: managedGroups.groupId,
             set: settings,
-          })
-          .returning();
+          });
 
         if (!input.allowInvites) {
           await tx
@@ -115,9 +114,9 @@ export async function configureGroup(
               ),
             );
         }
-
-        return group!;
       });
+
+      return { groupId };
     },
   );
 }
@@ -138,12 +137,11 @@ export async function createGroup(
     async () => {
       const groupId = await keycloak.createGroup(name, parentId);
 
-      const [configured] = await db
+      await db
         .insert(managedGroups)
-        .values({ groupId, ...settings, createdBy: actor.subject })
-        .returning();
+        .values({ groupId, ...settings, createdBy: actor.subject });
 
-      return configured!;
+      return { groupId };
     },
   );
 }
@@ -167,11 +165,7 @@ export async function addMember(
       groupId,
       target: user.id,
     },
-    async () => {
-      await keycloak.addMember(user.id, groupId);
-
-      return { id: user.id, username: user.username };
-    },
+    () => keycloak.addMember(user.id, groupId),
   );
 }
 
@@ -185,24 +179,8 @@ export async function removeMember(
   return audited(
     actor,
     { operation: "member.remove", groupId, target: subject },
-    async () => {
-      await keycloak.removeMember(subject, groupId);
-
-      return { id: subject };
-    },
+    () => keycloak.removeMember(subject, groupId),
   );
-}
-
-async function requireDelegationManager(actor: Actor, groupId: string) {
-  await requireAdministrator(actor);
-
-  const group = await db.query.managedGroups.findFirst({
-    where: eq(managedGroups.groupId, groupId),
-    columns: { groupId: true },
-  });
-  if (!group) {
-    throw new ApplicationError(404, "此群组尚未纳入管理");
-  }
 }
 
 export async function grantDelegate(
@@ -213,7 +191,7 @@ export async function grantDelegate(
     identifier: string;
   },
 ) {
-  await requireDelegationManager(actor, groupId);
+  await requireAdministrator(actor);
 
   let subject: string;
 
@@ -246,8 +224,6 @@ export async function grantDelegate(
           grantedBy: actor.subject,
         })
         .onConflictDoNothing();
-
-      return { type: input.type, subject };
     },
   );
 }
@@ -257,7 +233,7 @@ export async function revokeDelegate(
   groupId: string,
   input: Pick<typeof groupDelegations.$inferSelect, "type" | "subject">,
 ) {
-  await requireDelegationManager(actor, groupId);
+  await requireAdministrator(actor);
 
   return audited(
     actor,
@@ -277,8 +253,6 @@ export async function revokeDelegate(
             eq(groupDelegations.subject, input.subject),
           ),
         );
-
-      return input;
     },
   );
 }

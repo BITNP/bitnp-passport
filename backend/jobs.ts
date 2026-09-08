@@ -1,4 +1,3 @@
-import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 
 import { and, desc, eq, exists, or, sql } from "drizzle-orm";
@@ -47,12 +46,11 @@ export async function createMembershipJob(
       })),
     );
 
-    const sent = await boss.send(
+    await boss.send(
       operationQueue,
       { jobId: id, queueId, actorSubject: actor.subject },
       { id: queueId, group: { id: groupId }, db: fromDrizzle(tx, sql) },
     );
-    assert.equal(sent, queueId);
 
     await tx.insert(auditEvents).values({
       actorSubject: actor.subject,
@@ -158,7 +156,7 @@ export async function retryJob(actor: Actor, id: string) {
       .set({ status: "pending", error: null })
       .where(and(eq(jobItems.jobId, id), eq(jobItems.status, "failed")));
 
-    const sent = await boss.send(
+    await boss.send(
       operationQueue,
       { jobId: id, queueId, actorSubject: actor.subject },
       {
@@ -167,7 +165,6 @@ export async function retryJob(actor: Actor, id: string) {
         db: fromDrizzle(tx, sql),
       },
     );
-    assert.equal(sent, queueId);
 
     await tx.insert(auditEvents).values({
       actorSubject: actor.subject,
@@ -177,8 +174,6 @@ export async function retryJob(actor: Actor, id: string) {
       completedAt: new Date(),
     });
   });
-
-  return { id };
 }
 
 export async function cancelJob(actor: Actor, id: string) {
@@ -209,6 +204,4 @@ export async function cancelJob(actor: Actor, id: string) {
       completedAt: new Date(),
     });
   });
-
-  return { id };
 }

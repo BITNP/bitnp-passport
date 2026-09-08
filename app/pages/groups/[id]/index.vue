@@ -44,73 +44,57 @@ useHead({
   title: () => group.value?.settings.label ?? "群组",
 });
 
-async function addMember() {
-  if (
-    await submit(() =>
-      $fetch(`/api/groups/${encodeURIComponent(groupId.value)}/members`, {
-        method: "POST",
-        body: { identifier: identifier.value },
-      }),
-    )
-  ) {
+const addMember = () =>
+  submit(async () => {
+    await $fetch(`/api/groups/${encodeURIComponent(groupId.value)}/members`, {
+      method: "POST",
+      body: { identifier: identifier.value },
+    });
     identifier.value = "";
     message.success("成员已添加");
     await refresh();
-  }
-}
+  });
 
-async function removeMember(subject: string) {
-  if (
-    await submit(() =>
-      $fetch(`/api/groups/${encodeURIComponent(groupId.value)}/members`, {
-        method: "DELETE",
-        body: { subject },
-      }),
-    )
-  ) {
+const removeMember = (subject: string) =>
+  submit(async () => {
+    await $fetch(`/api/groups/${encodeURIComponent(groupId.value)}/members`, {
+      method: "DELETE",
+      body: { subject },
+    });
     message.success("成员已移除");
     await refresh();
-  }
-}
+  });
 
-async function grantDelegate() {
-  if (
-    await submit(() =>
-      $fetch("/api/admin/delegations", {
-        method: "POST",
-        body: {
-          groupId: groupId.value,
-          type: delegateType.value,
-          identifier: delegate.value,
-        },
-      }),
-    )
-  ) {
+const grantDelegate = () =>
+  submit(async () => {
+    await $fetch("/api/admin/delegations", {
+      method: "POST",
+      body: {
+        groupId: groupId.value,
+        type: delegateType.value,
+        identifier: delegate.value,
+      },
+    });
     delegate.value = null;
     message.success("委托权限已授予");
     await refresh();
-  }
-}
+  });
 
 type Delegate = NonNullable<typeof group.value>["delegates"][number];
 
-async function revokeDelegate(delegate: Delegate) {
-  if (
-    await submit(() =>
-      $fetch("/api/admin/delegations", {
-        method: "DELETE",
-        body: {
-          groupId: groupId.value,
-          type: delegate.type,
-          subject: delegate.subject,
-        },
-      }),
-    )
-  ) {
+const revokeDelegate = (delegate: Delegate) =>
+  submit(async () => {
+    await $fetch("/api/admin/delegations", {
+      method: "DELETE",
+      body: {
+        groupId: groupId.value,
+        type: delegate.type,
+        subject: delegate.subject,
+      },
+    });
     message.success("委托权限已撤销");
     await refresh();
-  }
-}
+  });
 
 type Member = NonNullable<typeof group.value>["members"][number];
 const columns: DataTableColumns<Member> = [

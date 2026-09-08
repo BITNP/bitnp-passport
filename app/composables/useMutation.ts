@@ -2,23 +2,21 @@ export function useMutation() {
   const message = useMessage();
   const pending = ref(false);
 
-  async function submit<T>(request: () => T) {
+  async function submit(request: () => Promise<void>) {
     if (pending.value) {
-      return undefined;
+      return;
     }
 
     pending.value = true;
 
     try {
-      return await request();
+      await request();
     } catch (cause: any) {
       message.error(cause.data?.message ?? cause.message);
 
       if (cause.statusCode === 401) {
         await refreshNuxtData("portal-session");
       }
-
-      return undefined;
     } finally {
       pending.value = false;
     }
