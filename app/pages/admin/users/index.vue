@@ -39,7 +39,7 @@ useFetchError(error, refresh);
         >
           <template #actions="{ user }">
             <NButton
-              :href="user.keycloakUrl"
+              :href="`/admin/keycloak?user=${encodeURIComponent(user.id)}`"
               size="small"
               tag="a"
               target="_blank"

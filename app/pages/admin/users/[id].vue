@@ -6,7 +6,7 @@ const { data, error, refresh } = await useFetch(
   () => `/api/admin/users/${encodeURIComponent(String(route.params.id))}`,
 );
 const keycloakPages = {
-  profile: "用户信息",
+  settings: "用户信息",
   groups: "群组管理",
   sessions: "登录会话",
 };
@@ -85,7 +85,7 @@ useFetchError(error, refresh);
                   <a
                     v-for="(label, page) in keycloakPages"
                     :key="page"
-                    :href="data.keycloak[page]"
+                    :href="`/admin/keycloak?user=${encodeURIComponent(data.user.id)}&page=${page}`"
                     rel="noopener noreferrer"
                     target="_blank"
                   >

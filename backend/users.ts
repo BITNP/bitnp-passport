@@ -8,15 +8,7 @@ import { groupAccess, requireAdministrator } from "./permissions.ts";
 export async function listUsers(actor: Actor, search: string, first: number) {
   await requireAdministrator(actor);
 
-  const { users, total } = await keycloak.searchUsers(search, first);
-
-  return {
-    users: users.map((user) => ({
-      ...user,
-      keycloakUrl: keycloak.userConsoleUrl(user.id),
-    })),
-    total,
-  };
+  return keycloak.searchUsers(search, first);
 }
 
 export async function userDetail(actor: Actor, id: string) {
@@ -50,11 +42,6 @@ export async function userDetail(actor: Actor, id: string) {
       groups: configuredGroups.filter((group) =>
         access.groupIds.includes(group.groupId),
       ),
-    },
-    keycloak: {
-      profile: keycloak.userConsoleUrl(id),
-      groups: keycloak.userConsoleUrl(id, "groups"),
-      sessions: keycloak.userConsoleUrl(id, "sessions"),
     },
   };
 }
