@@ -98,6 +98,9 @@ useFetchError(loadError, refresh);
         "
         title="密码"
       >
+        <template #header-extra>
+          <NButton href="/auth/reset-password" tag="a" text>忘记密码？</NButton>
+        </template>
         <NForm
           v-if="security.passwordForm && password.credentials.length > 0"
           class="password-form"

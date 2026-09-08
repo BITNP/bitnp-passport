@@ -8,7 +8,7 @@
   "registrationEmailAsUsername": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
-  "resetPasswordAllowed": false,
+  "resetPasswordAllowed": true,
   "verifyEmail": false,
   "roles": {
     "realm": [

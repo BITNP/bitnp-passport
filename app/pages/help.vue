@@ -13,7 +13,7 @@ useHead({ title: "帮助" });
       <NCollapse :default-expanded-names="['password', 'recovery']">
         <NCollapseItem name="password" title="自助重置密码">
           <p>忘记密码可通过电邮验证邮件，自助重置密码。</p>
-          <NButton href="/auth/login" tag="a">重置密码</NButton>
+          <NButton href="/auth/reset-password" tag="a">重置密码</NButton>
         </NCollapseItem>
         <NCollapseItem name="recovery" title="寻求人工服务">
           <p>
