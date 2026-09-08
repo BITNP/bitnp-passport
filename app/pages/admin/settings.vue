@@ -69,58 +69,63 @@ useFetchError(error, refresh);
           >
             <template #create-button-default>添加服务</template>
             <template #default="{ value, index }">
-              <NGrid
-                class="service-fields"
-                cols="1 m:2"
-                item-responsive
-                responsive="screen"
-                :x-gap="16"
-              >
-                <NGi>
-                  <NFormItem
-                    label="名称"
-                    :label-props="{ for: `service-name-${index}` }"
-                    required
-                  >
-                    <NInput
-                      v-model:value="value.name"
-                      :input-props="{
-                        id: `service-name-${index}`,
-                        required: true,
-                        pattern: '.*\\S.*',
-                      }"
-                    />
-                  </NFormItem>
-                </NGi>
-                <NGi>
-                  <NFormItem
-                    label="地址"
-                    :label-props="{ for: `service-url-${index}` }"
-                    required
-                  >
-                    <NInput
-                      v-model:value="value.url"
-                      :input-props="{
-                        id: `service-url-${index}`,
-                        type: 'url',
-                        required: true,
-                        pattern: 'https?://.+',
-                      }"
-                    />
-                  </NFormItem>
-                </NGi>
-                <NGi span="1 m:2">
-                  <NFormItem
-                    label="描述"
-                    :label-props="{ for: `service-description-${index}` }"
-                  >
-                    <NInput
-                      v-model:value="value.description"
-                      :input-props="{ id: `service-description-${index}` }"
-                    />
-                  </NFormItem>
-                </NGi>
-              </NGrid>
+              <NCard embedded size="small">
+                <NGrid
+                  cols="1 m:2"
+                  item-responsive
+                  responsive="screen"
+                  :x-gap="12"
+                  :y-gap="12"
+                >
+                  <NGi>
+                    <NFormItem
+                      label="名称"
+                      :label-props="{ for: `service-name-${index}` }"
+                      required
+                      :show-feedback="false"
+                    >
+                      <NInput
+                        v-model:value="value.name"
+                        :input-props="{
+                          id: `service-name-${index}`,
+                          required: true,
+                          pattern: '.*\\S.*',
+                        }"
+                      />
+                    </NFormItem>
+                  </NGi>
+                  <NGi>
+                    <NFormItem
+                      label="地址"
+                      :label-props="{ for: `service-url-${index}` }"
+                      required
+                      :show-feedback="false"
+                    >
+                      <NInput
+                        v-model:value="value.url"
+                        :input-props="{
+                          id: `service-url-${index}`,
+                          type: 'url',
+                          required: true,
+                          pattern: 'https?://.+',
+                        }"
+                      />
+                    </NFormItem>
+                  </NGi>
+                  <NGi span="1 m:2">
+                    <NFormItem
+                      label="描述"
+                      :label-props="{ for: `service-description-${index}` }"
+                      :show-feedback="false"
+                    >
+                      <NInput
+                        v-model:value="value.description"
+                        :input-props="{ id: `service-description-${index}` }"
+                      />
+                    </NFormItem>
+                  </NGi>
+                </NGrid>
+              </NCard>
             </template>
           </NDynamicInput>
         </NFormItem>
@@ -131,10 +136,3 @@ useFetchError(error, refresh);
     </NCard>
   </NuxtLayout>
 </template>
-
-<style scoped>
-.service-fields {
-  flex: 1;
-  min-width: 0;
-}
-</style>
