@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createInvitation } from "#backend/groups";
+import { createInvitation } from "#backend/invitations";
 
 const input = z.object({ days: z.number().int().min(1).max(30) });
 

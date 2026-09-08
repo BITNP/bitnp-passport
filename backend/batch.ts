@@ -13,15 +13,8 @@ export async function previewMembers(
 
   const lines = text.split("\n").map((line) => line.trim());
   const identifiers = [...new Set(lines.filter(Boolean))];
-  if (
-    identifiers.length === 0 ||
-    identifiers.length > 200 ||
-    identifiers.some((value) => value.length > 320)
-  ) {
-    throw new ApplicationError(
-      422,
-      "请输入 1 至 200 个用户名或邮箱，每项不超过 320 个字符",
-    );
+  if (identifiers.length === 0 || identifiers.length > 200) {
+    throw new ApplicationError(422, "请输入 1 至 200 个用户名或邮箱");
   }
 
   const members = await keycloak.members(groupId);

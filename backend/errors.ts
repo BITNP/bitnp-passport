@@ -8,6 +8,4 @@ export class ApplicationError extends H3Error {
 }
 
 export const errorMessage = (error: unknown) =>
-  error instanceof ApplicationError
-    ? error.message
-    : "服务暂时不可用，请稍后重试";
+  error instanceof ApplicationError ? error.message : "操作失败";

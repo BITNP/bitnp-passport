@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createMembershipJob } from "#backend/jobs";
 
 const input = z.object({
-  subjects: z.array(z.string().min(1).max(200)).min(1).max(200),
+  subjects: z.array(z.string().min(1)).min(1).max(200),
   operation: z.enum(["add", "remove"]),
 });
 

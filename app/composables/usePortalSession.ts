@@ -1,2 +1,4 @@
 export const usePortalSession = () =>
-  useFetch("/api/session", { key: "portal-session" });
+  useFetch("/api/session", {
+    key: "portal-session",
+  });

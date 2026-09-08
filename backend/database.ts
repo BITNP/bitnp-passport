@@ -1,13 +1,17 @@
 import { drizzle } from "drizzle-orm/node-postgres";
+import { z } from "zod";
 
 import * as schema from "#database/schema";
 
-import { databaseUrl } from "./config.ts";
 import { logger } from "./logger.ts";
+
+export const databaseUrl = z
+  .url({ protocol: /^postgres(?:ql)?$/ })
+  .parse(process.env.DATABASE_URL);
 
 export const db = drizzle({
   connection: {
-    connectionString: databaseUrl(),
+    connectionString: databaseUrl,
     max: 12,
     connectionTimeoutMillis: 5000,
     idleTimeoutMillis: 30_000,

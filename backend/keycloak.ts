@@ -1,15 +1,15 @@
-import KcAdminClient, { NetworkError } from "@keycloak/keycloak-admin-client";
+import type { GroupNode } from "#shared/types";
 
-import { configuration } from "./config.ts";
+import { config } from "./config.ts";
 import { ApplicationError } from "./errors.ts";
-import { createSharedAsync, pick } from "./utils.ts";
-
-type UserRepresentation = Awaited<
-  ReturnType<KcAdminClient["users"]["find"]>
->[number];
-type GroupRepresentation = Awaited<
-  ReturnType<KcAdminClient["groups"]["find"]>
->[number];
+import * as keycloak9 from "./keycloak/keycloak9.ts";
+import * as keycloak26 from "./keycloak/keycloak26.ts";
+import type {
+  GroupRepresentation,
+  UserRepresentation,
+} from "./keycloak/shared.ts";
+import { allPages, client, request } from "./keycloak/shared.ts";
+import { pick } from "./utils.ts";
 
 const userSummary = (user: UserRepresentation) =>
   pick(user as Required<UserRepresentation>, [
@@ -23,96 +23,19 @@ const userSummary = (user: UserRepresentation) =>
     "createdTimestamp",
   ]);
 
-const groupSummary = (group: GroupRepresentation) =>
-  pick(group as Required<GroupRepresentation>, ["id", "name", "path"]);
+const adapter = config.keycloakVersion === "9" ? keycloak9 : keycloak26;
 
-const config = configuration();
-const client = new KcAdminClient({
-  baseUrl: new URL("../..", `${config.issuer}/`).href,
-  realmName: decodeURIComponent(
-    new URL(config.issuer).pathname.split("/").pop()!,
-  ),
-  requestOptions: { redirect: "error" },
-  requestArgOptions: { catchNotFound: false },
-  timeout: 10_000,
-});
+export function userConsoleUrl(
+  id: string,
+  page: "settings" | "groups" | "sessions" = "settings",
+) {
+  const url = new URL(
+    `../../admin/${encodeURIComponent(client.realmName)}/console/`,
+    `${config.issuer}/`,
+  );
+  url.hash = adapter.userConsolePath(id, page);
 
-client.registerTokenProvider({
-  getAccessToken: createSharedAsync(
-    async () => {
-      if (!client.accessToken || client.isTokenExpired()) {
-        try {
-          await client.auth({
-            grantType: "client_credentials",
-            clientId: config.serviceClientId,
-            clientSecret: config.serviceClientSecret,
-          });
-        } catch (error) {
-          if (!(error instanceof NetworkError)) {
-            throw error;
-          }
-
-          throw new ApplicationError(
-            503,
-            "Keycloak 服务账户认证失败，请联系管理员",
-            {
-              cause: error,
-            },
-          );
-        }
-      }
-
-      return client.accessToken;
-    },
-    { cacheResult: false },
-  ),
-});
-
-async function request<T>(operation: () => Promise<T>): Promise<T> {
-  try {
-    return await operation();
-  } catch (error) {
-    if (!(error instanceof NetworkError)) {
-      throw error;
-    }
-
-    const status = error.response.status;
-    switch (status) {
-      case 401: {
-        client.accessToken = undefined;
-
-        break;
-      }
-      case 404: {
-        throw new ApplicationError(404, "Keycloak 中的用户或组已不存在");
-      }
-      case 409: {
-        throw new ApplicationError(409, "Keycloak 中已存在同名记录");
-      }
-      case 400:
-      case 422: {
-        throw new ApplicationError(422, "Keycloak 拒绝了此变更，请检查输入");
-      }
-    }
-
-    throw new ApplicationError(
-      503,
-      `Keycloak 操作失败（HTTP ${status}），请联系管理员`,
-      { cause: error },
-    );
-  }
-}
-
-async function allPages<T>(page: (first: number, max: number) => Promise<T[]>) {
-  const records: T[] = [];
-
-  for (let first = 0; ; first += 100) {
-    const result = await page(first, 100);
-    records.push(...result);
-    if (result.length < 100) {
-      return records;
-    }
-  }
+  return url.href;
 }
 
 export async function userRoles(id: string) {
@@ -128,45 +51,34 @@ export async function userRoles(id: string) {
 export async function user(id: string) {
   const user = await request(() => client.users.findOne({ id }));
 
-  return userSummary(user!);
+  return user as Required<UserRepresentation>;
 }
 
 export async function searchUsers(search: string, first: number) {
-  const users = await request(() =>
-    client.users.find({
-      search,
-      first,
-      max: 50,
-      briefRepresentation: true,
-    }),
+  const [users, total] = await request(() =>
+    Promise.all([
+      client.users.find({
+        search,
+        first,
+        max: 50,
+        briefRepresentation: true,
+      }),
+      client.users.count({ search }),
+    ]),
   );
 
-  return users.map(userSummary);
+  return { users: users as Required<UserRepresentation>[], total };
 }
 
 export async function resolveUser(identifier: string) {
   const field = identifier.includes("@") ? "email" : "username";
-  const users = await request(async () => {
-    if (config.keycloakVersion === "9") {
-      // FIXME: 9.0.0 ignores exact=true and returns substring matches
-      const candidates = await allPages((first, max) =>
-        client.users.find({ [field]: identifier, first, max }),
-      );
-      const normalized = identifier.toLowerCase();
+  const user = await request(() => adapter.findUser(field, identifier));
 
-      return candidates.filter(
-        (user) => user[field]?.toLowerCase() === normalized,
-      );
-    }
-
-    return client.users.find({ [field]: identifier, exact: true, max: 1 });
-  });
-
-  if (users.length === 0) {
+  if (!user) {
     throw new ApplicationError(404, `找不到用户：${identifier}`);
   }
 
-  return userSummary(users[0]!);
+  return userSummary(user);
 }
 
 export async function groupsForUser(id: string) {
@@ -181,42 +93,36 @@ export async function groupsForUser(id: string) {
     ),
   );
 
-  return groups.map(groupSummary);
+  return groups as Required<GroupRepresentation>[];
+}
+
+export async function inheritedGroupIds(id: string) {
+  const memberships = await groupsForUser(id);
+
+  return request(() => adapter.inheritedGroupIds(memberships));
 }
 
 export async function group(id: string) {
   const group = await request(() => client.groups.findOne({ id }));
 
-  return groupSummary(group!);
+  return pick(group as Required<GroupRepresentation>, ["id", "name", "path"]);
 }
 
-export async function searchGroups(search: string, first: number) {
-  const groups = await request(() =>
-    client.groups.find({
-      search,
-      first,
-      max: 50,
-      briefRepresentation: true,
-      populateHierarchy: config.keycloakVersion === "26" ? false : undefined,
-    }),
-  );
+export async function groupTree() {
+  const groups = await request(() => adapter.groupTree());
 
-  // 9.0.0 includes subGroups; expose only the matched groups.
-  return groups.map(groupSummary);
+  const node = (group: GroupRepresentation): GroupNode => ({
+    id: group.id!,
+    name: group.name!,
+    path: group.path!,
+    children: group.subGroups?.map(node) ?? [],
+  });
+
+  return groups.map(node);
 }
 
-export async function memberPage(id: string, first: number) {
-  const users = await request(() =>
-    client.groups.listMembers({
-      id,
-      first,
-      max: 50,
-      briefRepresentation: true,
-    }),
-  );
-
-  return users.map(userSummary);
-}
+export const renameGroup = (id: string, name: string) =>
+  request(() => client.groups.update({ id }, { name }));
 
 export async function members(id: string) {
   const users = await request(() =>
@@ -248,5 +154,5 @@ export async function createGroup(name: string, parentId?: string) {
       : client.groups.create({ name }),
   );
 
-  return group(decodeURIComponent(id));
+  return decodeURIComponent(id);
 }

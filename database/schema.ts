@@ -39,6 +39,8 @@ export const auditOutcome = pgEnum("audit_outcome", [
   "unknown",
 ]);
 
+export const delegateType = pgEnum("delegate_type", ["user", "group"]);
+
 export const portalAdmins = pgTable("portal_admins", {
   subject: text("subject").primaryKey(),
   grantedBy: text("granted_by").notNull(),
@@ -58,10 +60,9 @@ export const sessions = pgTable(
     email: text("email"),
     encryptedTokens: text("encrypted_tokens").notNull(),
     refreshAt: timestamp("refresh_at", { withTimezone: true }).notNull(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    absoluteExpiresAt: timestamp("absolute_expires_at", {
+    refreshExpiresAt: timestamp("refresh_expires_at", {
       withTimezone: true,
-    }).notNull(),
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -69,7 +70,7 @@ export const sessions = pgTable(
   (table) => [
     index("session_subject").on(table.subject),
     index("session_oidc_sid").on(table.oidcSid),
-    index("session_expiry").on(table.expiresAt),
+    index("session_expiry").on(table.refreshExpiresAt),
   ],
 );
 
@@ -106,6 +107,7 @@ export const groupDelegations = pgTable(
     groupId: text("group_id")
       .notNull()
       .references(() => managedGroups.groupId, { onDelete: "cascade" }),
+    type: delegateType("type").notNull().default("user"),
     subject: text("subject").notNull(),
     grantedBy: text("granted_by").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -113,8 +115,8 @@ export const groupDelegations = pgTable(
       .defaultNow(),
   },
   (table) => [
-    primaryKey({ columns: [table.groupId, table.subject] }),
-    index("delegation_subject").on(table.subject),
+    primaryKey({ columns: [table.groupId, table.type, table.subject] }),
+    index("delegation_subject").on(table.type, table.subject),
   ],
 );
 
@@ -122,7 +124,7 @@ export const invitations = pgTable(
   "invitations",
   {
     id: uuid("id").primaryKey(),
-    tokenHash: text("token_hash").notNull().unique(),
+    token: text("token").notNull().unique(),
     groupId: text("group_id")
       .notNull()
       .references(() => managedGroups.groupId),

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { listAudit } from "#backend/audit";
 
 const input = paginationQuery.extend({
-  groupId: z.string().min(1).max(200).optional(),
+  groupId: z.string().min(1).optional(),
 });
 
 export default defineEventHandler(async (event) => {

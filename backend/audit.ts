@@ -1,10 +1,11 @@
-import { and, desc, eq, exists, inArray, or } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, or } from "drizzle-orm";
 
-import { auditEvents, groupDelegations, portalAdmins } from "#database/schema";
+import { auditEvents, managedGroups } from "#database/schema";
 import type { Actor } from "#shared/types";
 
 import { db } from "./database.ts";
 import { ApplicationError, errorMessage } from "./errors.ts";
+import { groupAccess } from "./permissions.ts";
 
 interface Event {
   operation: string;
@@ -15,37 +16,41 @@ interface Event {
 }
 
 export async function listAudit(actor: Actor, first: number, groupId?: string) {
-  const administrator = db
-    .select({ subject: portalAdmins.subject })
-    .from(portalAdmins)
-    .where(eq(portalAdmins.subject, actor.subject));
+  const { administrator, groupIds } = await groupAccess(actor);
+  // 管理员可以查看全部审计事件，因此不需要限制
+  let visible;
 
-  const delegatedGroups = db
-    .select({ groupId: groupDelegations.groupId })
-    .from(groupDelegations)
-    .where(eq(groupDelegations.subject, actor.subject));
+  if (!administrator) {
+    visible = or(
+      // 用户自己触发的事件
+      eq(auditEvents.actorSubject, actor.subject),
+      // 直接授权或通过群组继承的管理范围
+      inArray(auditEvents.groupId, groupIds),
+    );
+  }
 
-  const visible = or(
-    // 用户是管理员，可以查看所有审计事件
-    exists(administrator),
-    // 这条审计事件是用户自己触发的
-    eq(auditEvents.actorSubject, actor.subject),
-    // 用户是组的委托人，可以查看该组的审计事件
-    inArray(auditEvents.groupId, delegatedGroups),
+  const filter = and(
+    visible,
+    groupId ? eq(auditEvents.groupId, groupId) : undefined,
   );
-
-  const rows = await db
-    .select()
-    .from(auditEvents)
-    .where(and(visible, groupId ? eq(auditEvents.groupId, groupId) : undefined))
-    .orderBy(desc(auditEvents.id))
-    .offset(first)
-    .limit(50);
+  const [rows, total] = await Promise.all([
+    db
+      .select({
+        ...getTableColumns(auditEvents),
+        groupLabel: managedGroups.label,
+      })
+      .from(auditEvents)
+      .leftJoin(managedGroups, eq(auditEvents.groupId, managedGroups.groupId))
+      .where(filter)
+      .orderBy(desc(auditEvents.id))
+      .offset(first)
+      .limit(50),
+    db.$count(auditEvents, filter),
+  ]);
 
   return {
     events: rows.map((row) => ({ ...row, id: row.id.toString() })),
-    first,
-    hasMore: rows.length === 50,
+    total,
   };
 }
 
@@ -57,26 +62,17 @@ export async function audited<T>(
   const [inserted] = await db
     .insert(auditEvents)
     .values({
+      ...event,
       actorSubject: actor.subject,
-      operation: event.operation,
-      groupId: event.groupId,
-      target: event.target,
-      jobId: event.jobId,
-      detail: event.detail ?? {},
       outcome: "pending",
     })
     .returning({ id: auditEvents.id });
   const id = inserted!.id;
 
+  let result: T;
+
   try {
-    const result = await run();
-
-    await db
-      .update(auditEvents)
-      .set({ outcome: "succeeded", completedAt: new Date() })
-      .where(eq(auditEvents.id, id));
-
-    return result;
+    result = await run();
   } catch (error) {
     const outcome =
       error instanceof ApplicationError && error.statusCode < 500
@@ -90,4 +86,11 @@ export async function audited<T>(
 
     throw error;
   }
+
+  await db
+    .update(auditEvents)
+    .set({ outcome: "succeeded", completedAt: new Date() })
+    .where(eq(auditEvents.id, id));
+
+  return result;
 }

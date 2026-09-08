@@ -1,22 +1,17 @@
 import * as oidc from "openid-client";
 
-import { configuration } from "#backend/config";
+import { config } from "#backend/config";
 
 export default defineEventHandler(async (event) => {
   const session = await requireSession(event);
-  const config = configuration();
 
-  await deletePortalSession(event, session.tokenHash);
+  const url = oidc.buildEndSessionUrl(await identityClient(), {
+    id_token_hint: session.idToken,
+    client_id: config.clientId,
+    post_logout_redirect_uri: config.appUrl,
+  });
 
-  try {
-    return {
-      url: oidc.buildEndSessionUrl(await identityClient(), {
-        id_token_hint: session.idToken,
-        client_id: config.clientId,
-        post_logout_redirect_uri: config.appUrl,
-      }).href,
-    };
-  } catch {
-    return { url: `${config.appUrl}/?logout=local` };
-  }
+  await deletePortalSession(event);
+
+  return { url: url.href };
 });

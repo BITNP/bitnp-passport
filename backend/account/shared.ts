@@ -1,10 +1,10 @@
 import type { FetchOptions } from "ofetch";
 import { ofetch } from "ofetch";
 
-import { configuration } from "#backend/config";
+import { config } from "#backend/config";
 
 const client = ofetch.create({
-  baseURL: configuration().issuer,
+  baseURL: config.issuer,
   headers: { Accept: "application/json" },
   redirect: "error",
   timeout: 10_000,

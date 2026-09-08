@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import * as account from "#backend/account";
 
-const input = z.object({ id: z.string().min(1).max(200).optional() });
+const input = z.object({ id: z.string().min(1).optional() });
 
 export default defineEventHandler(async (event) => {
   const session = await requireSession(event);

@@ -4,9 +4,9 @@ import * as account from "#backend/account";
 
 const input = z
   .object({
-    currentPassword: z.string().min(1).max(4096),
-    newPassword: z.string().min(1).max(4096),
-    confirmation: z.string().min(1).max(4096),
+    currentPassword: z.string().min(1),
+    newPassword: z.string().min(1),
+    confirmation: z.string().min(1),
   })
   .refine((value) => value.newPassword === value.confirmation);
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { revokeInvitation } from "#backend/groups";
+import { revokeInvitation } from "#backend/invitations";
 
 const input = z.object({ id: z.uuid() });
 

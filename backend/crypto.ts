@@ -5,7 +5,7 @@ import {
   randomBytes,
 } from "node:crypto";
 
-import { configuration } from "./config.ts";
+import { config } from "./config.ts";
 
 export const randomToken = () => randomBytes(32).toString("base64url");
 
@@ -14,11 +14,7 @@ export const tokenHash = (value: string) =>
 
 export function encrypt(value: string) {
   const iv = randomBytes(12);
-  const cipher = createCipheriv(
-    "aes-256-gcm",
-    configuration().encryptionKey,
-    iv,
-  );
+  const cipher = createCipheriv("aes-256-gcm", config.encryptionKey, iv);
 
   const encrypted = Buffer.concat([
     cipher.update(value, "utf8"),
@@ -32,7 +28,7 @@ export function decrypt(value: string) {
   const data = Buffer.from(value, "base64");
   const decipher = createDecipheriv(
     "aes-256-gcm",
-    configuration().encryptionKey,
+    config.encryptionKey,
     data.subarray(0, 12),
   );
   decipher.setAuthTag(data.subarray(12, 28));

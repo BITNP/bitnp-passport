@@ -1,71 +1,79 @@
-import { randomUUID } from "node:crypto";
-
-import { and, desc, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { groupDelegations, invitations, managedGroups } from "#database/schema";
 import type { Actor } from "#shared/types";
 
 import { audited } from "./audit.ts";
-import { configuration } from "./config.ts";
-import { randomToken, tokenHash } from "./crypto.ts";
 import { db } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
 import * as keycloak from "./keycloak.ts";
 import { requireAdministrator, requireGroupManager } from "./permissions.ts";
 
 export const groupConfiguration = z.object({
-  groupId: z.string().min(1).max(200),
-  label: z.string().trim().min(1).max(80),
-  note: z.string().trim().max(2000),
+  groupId: z.string().min(1),
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .regex(/^[^/\p{Cc}]+$/u),
+  label: z.string().trim().min(1),
+  note: z.string().trim(),
   allowInvites: z.boolean(),
 });
 
-export async function listGroups(actor: Actor, search: string, first: number) {
+export async function listGroups(actor: Actor) {
   await requireAdministrator(actor);
 
-  const groups = await keycloak.searchGroups(search, first);
+  const [groups, settings] = await Promise.all([
+    keycloak.groupTree(),
+    db.select().from(managedGroups),
+  ]);
 
-  return { groups, first, hasMore: groups.length === 50 };
+  return { groups, settings };
 }
 
-export async function groupDetail(
-  actor: Actor,
-  groupId: string,
-  first: number,
-) {
+export async function groupDetail(actor: Actor, groupId: string) {
   const settings = await requireGroupManager(actor, groupId);
 
-  const [directory, members, delegates, links] = await Promise.all([
+  const [directory, members, delegations] = await Promise.all([
     keycloak.group(groupId),
-    keycloak.memberPage(groupId, first),
+    keycloak.members(groupId),
     db
       .select()
       .from(groupDelegations)
       .where(eq(groupDelegations.groupId, groupId))
       .orderBy(groupDelegations.createdAt),
-    db
-      .select({
-        id: invitations.id,
-        createdBy: invitations.createdBy,
-        createdAt: invitations.createdAt,
-        expiresAt: invitations.expiresAt,
-        revokedAt: invitations.revokedAt,
-      })
-      .from(invitations)
-      .where(eq(invitations.groupId, groupId))
-      .orderBy(desc(invitations.createdAt))
-      .limit(20),
   ]);
+
+  const delegates = await Promise.all(
+    delegations.map(async (delegation) => {
+      let name: string | null;
+
+      try {
+        if (delegation.type === "user") {
+          name = (await keycloak.user(delegation.subject)).username;
+        } else {
+          name = (await keycloak.group(delegation.subject)).path;
+        }
+      } catch (error) {
+        // Keep delegations visible after a 404 so they can still be revoked
+        if (!(error instanceof ApplicationError) || error.statusCode !== 404) {
+          throw error;
+        }
+
+        name = null;
+      }
+
+      return { ...delegation, name };
+    }),
+  );
 
   return {
     settings,
     directory,
     members,
     delegates,
-    invitations: links,
-    first,
-    hasMore: members.length === 50,
   };
 }
 
@@ -75,23 +83,24 @@ export async function configureGroup(
 ) {
   await requireAdministrator(actor);
 
-  await keycloak.group(input.groupId);
+  const { groupId, name, ...settings } = input;
+  const current = await keycloak.group(groupId);
 
   return audited(
     actor,
     { operation: "group.configure", groupId: input.groupId, detail: input },
-    async () =>
-      db.transaction(async (tx) => {
+    async () => {
+      if (name !== current.name) {
+        await keycloak.renameGroup(groupId, name);
+      }
+
+      return db.transaction(async (tx) => {
         const [group] = await tx
           .insert(managedGroups)
-          .values({ ...input, createdBy: actor.subject })
+          .values({ groupId, ...settings, createdBy: actor.subject })
           .onConflictDoUpdate({
             target: managedGroups.groupId,
-            set: {
-              label: input.label,
-              note: input.note,
-              allowInvites: input.allowInvites,
-            },
+            set: settings,
           })
           .returning();
 
@@ -108,29 +117,33 @@ export async function configureGroup(
         }
 
         return group!;
-      }),
+      });
+    },
   );
 }
 
 export async function createGroup(
   actor: Actor,
-  name: string,
-  parentId?: string,
+  input: Omit<z.infer<typeof groupConfiguration>, "groupId"> & {
+    parentId?: string;
+  },
 ) {
   await requireAdministrator(actor);
 
+  const { name, parentId, ...settings } = input;
+
   return audited(
     actor,
-    { operation: "group.create", detail: { name, parentId } },
+    { operation: "group.create", detail: input },
     async () => {
-      const group = await keycloak.createGroup(name, parentId);
+      const groupId = await keycloak.createGroup(name, parentId);
 
-      await db
+      const [configured] = await db
         .insert(managedGroups)
-        .values({ groupId: group.id, label: name, createdBy: actor.subject })
-        .onConflictDoNothing();
+        .values({ groupId, ...settings, createdBy: actor.subject })
+        .returning();
 
-      return group;
+      return configured!;
     },
   );
 }
@@ -195,13 +208,24 @@ async function requireDelegationManager(actor: Actor, groupId: string) {
 export async function grantDelegate(
   actor: Actor,
   groupId: string,
-  identifier: string,
+  input: {
+    type: typeof groupDelegations.$inferSelect.type;
+    identifier: string;
+  },
 ) {
   await requireDelegationManager(actor, groupId);
 
-  const user = await keycloak.resolveUser(identifier);
-  if (!user.enabled) {
-    throw new ApplicationError(422, "不能授权已停用的用户");
+  let subject: string;
+
+  if (input.type === "user") {
+    const user = await keycloak.resolveUser(input.identifier);
+    if (!user.enabled) {
+      throw new ApplicationError(422, "不能授权已停用的用户");
+    }
+
+    subject = user.id;
+  } else {
+    subject = (await keycloak.group(input.identifier)).id;
   }
 
   return audited(
@@ -209,15 +233,21 @@ export async function grantDelegate(
     {
       operation: "delegate.grant",
       groupId,
-      target: user.id,
+      target: subject,
+      detail: { type: input.type },
     },
     async () => {
       await db
         .insert(groupDelegations)
-        .values({ groupId, subject: user.id, grantedBy: actor.subject })
+        .values({
+          groupId,
+          type: input.type,
+          subject,
+          grantedBy: actor.subject,
+        })
         .onConflictDoNothing();
 
-      return { subject: user.id };
+      return { type: input.type, subject };
     },
   );
 }
@@ -225,176 +255,30 @@ export async function grantDelegate(
 export async function revokeDelegate(
   actor: Actor,
   groupId: string,
-  subject: string,
+  input: Pick<typeof groupDelegations.$inferSelect, "type" | "subject">,
 ) {
   await requireDelegationManager(actor, groupId);
 
   return audited(
     actor,
-    { operation: "delegate.revoke", groupId, target: subject },
+    {
+      operation: "delegate.revoke",
+      groupId,
+      target: input.subject,
+      detail: { type: input.type },
+    },
     async () => {
       await db
         .delete(groupDelegations)
         .where(
           and(
             eq(groupDelegations.groupId, groupId),
-            eq(groupDelegations.subject, subject),
+            eq(groupDelegations.type, input.type),
+            eq(groupDelegations.subject, input.subject),
           ),
         );
 
-      return { subject };
+      return input;
     },
-  );
-}
-
-export async function createInvitation(
-  actor: Actor,
-  groupId: string,
-  days: number,
-) {
-  await requireGroupManager(actor, groupId);
-
-  const token = randomToken();
-
-  return audited(
-    actor,
-    { operation: "invitation.rotate", groupId, detail: { days } },
-    async () => {
-      const expiresAt = await db.transaction(async (tx) => {
-        const [group] = await tx
-          .select()
-          .from(managedGroups)
-          .where(eq(managedGroups.groupId, groupId))
-          .for("update");
-        if (!group?.allowInvites) {
-          throw new ApplicationError(
-            403,
-            "此群组暂未开放邀请，请联系系统管理员",
-          );
-        }
-
-        const createdAt = new Date();
-        const expiry = new Date(createdAt.getTime() + days * 86_400_000);
-
-        await tx
-          .update(invitations)
-          .set({ revokedAt: createdAt })
-          .where(
-            and(
-              eq(invitations.groupId, groupId),
-              isNull(invitations.revokedAt),
-            ),
-          );
-
-        await tx.insert(invitations).values({
-          id: randomUUID(),
-          tokenHash: tokenHash(token),
-          groupId,
-          createdBy: actor.subject,
-          createdAt,
-          expiresAt: expiry,
-        });
-
-        return expiry;
-      });
-
-      return { url: `${configuration().appUrl}/i/${token}`, expiresAt };
-    },
-  );
-}
-
-export async function revokeInvitation(
-  actor: Actor,
-  groupId: string,
-  id: string,
-) {
-  await requireGroupManager(actor, groupId);
-
-  return audited(
-    actor,
-    { operation: "invitation.revoke", groupId, target: id },
-    async () => {
-      await db
-        .update(invitations)
-        .set({ revokedAt: new Date() })
-        .where(
-          and(
-            eq(invitations.id, id),
-            eq(invitations.groupId, groupId),
-            isNull(invitations.revokedAt),
-          ),
-        );
-
-      return { revoked: true };
-    },
-  );
-}
-
-export async function invitationInfo(token: string) {
-  const [invitation] = await db
-    .select({ label: managedGroups.label, expiresAt: invitations.expiresAt })
-    .from(invitations)
-    .innerJoin(managedGroups, eq(invitations.groupId, managedGroups.groupId))
-    .where(
-      and(
-        eq(invitations.tokenHash, tokenHash(token)),
-        isNull(invitations.revokedAt),
-        gt(invitations.expiresAt, new Date()),
-        eq(managedGroups.allowInvites, true),
-      ),
-    )
-    .limit(1);
-  if (!invitation) {
-    throw new ApplicationError(404, "邀请链接已过期、已撤销或不存在");
-  }
-
-  return invitation;
-}
-
-export async function joinInvitation(actor: Actor, token: string) {
-  const reference = await db.query.invitations.findFirst({
-    columns: { id: true, groupId: true },
-    where: eq(invitations.tokenHash, tokenHash(token)),
-  });
-  if (!reference) {
-    throw new ApplicationError(404, "邀请链接已过期、已撤销或不存在");
-  }
-
-  return audited(
-    actor,
-    {
-      operation: "invitation.join",
-      groupId: reference.groupId,
-      target: actor.subject,
-    },
-    async () =>
-      db.transaction(async (tx) => {
-        const [invitation] = await tx
-          .select({
-            groupId: managedGroups.groupId,
-            label: managedGroups.label,
-          })
-          .from(invitations)
-          .innerJoin(
-            managedGroups,
-            eq(invitations.groupId, managedGroups.groupId),
-          )
-          .where(
-            and(
-              eq(invitations.id, reference.id),
-              isNull(invitations.revokedAt),
-              gt(invitations.expiresAt, new Date()),
-              eq(managedGroups.allowInvites, true),
-            ),
-          )
-          .for("update");
-        if (!invitation) {
-          throw new ApplicationError(404, "邀请链接已过期、已撤销或不存在");
-        }
-
-        await keycloak.addMember(actor.subject, invitation.groupId);
-
-        return invitation;
-      }),
   );
 }

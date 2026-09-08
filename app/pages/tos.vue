@@ -1,0 +1,53 @@
+<script setup lang="ts">
+useHead({ title: "使用条款" });
+</script>
+
+<template>
+  <NuxtLayout name="page">
+    <NPageHeader>
+      <template #title><h1>使用条款</h1></template>
+    </NPageHeader>
+    <NCard>
+      <article>
+        <ol>
+          <li>
+            用户名应为小写字母、数字、划线的组合，我们有权随时收回或修改已注册的用户名；
+          </li>
+          <li>
+            本系统使用实名注册制度，通过本渠道注册，每人只允许注册一个账户，并提供真实中文姓名，不允许多人共享账户；对于无法识别真实身份的账户，我们有权进行账户释放；
+          </li>
+          <li>
+            我们有权对超过 90 天未登录的账户，在发送邮件提示 30
+            天后仍无登录的，进行账户释放；
+          </li>
+          <li>
+            您将通过本系统账户，访问部分受访问控制的系统；您不得从事妨害相关系统正常运行、管理的活动；您在我们提供免费服务的此等系统上保存的数据，我们不对其做任何持久性、稳定性保证。
+          </li>
+        </ol>
+        <NDivider />
+        <p>
+          如对使用条款有疑问，请联系
+          <a href="mailto:webmaster@bitnp.net">webmaster@bitnp.net</a>
+          。
+        </p>
+      </article>
+    </NCard>
+  </NuxtLayout>
+</template>
+
+<style scoped>
+ol {
+  margin: 0;
+  padding-left: 22px;
+}
+
+li {
+  padding-left: 4px;
+  margin-bottom: 20px;
+  line-height: 1.9;
+}
+
+li:last-child {
+  margin-bottom: 0;
+}
+</style>

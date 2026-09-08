@@ -16,7 +16,11 @@ export const readProfile = (accessToken: string) =>
 
 export async function updateProfile(accessToken: string, input: ProfileInput) {
   // Omitting attributes preserves the legacy account's custom attributes.
-  await request(accessToken, "", "POST", input);
+  await request(accessToken, "", "POST", {
+    firstName: input.name,
+    lastName: null,
+    email: input.email,
+  });
 }
 
 export async function security(accessToken: string) {

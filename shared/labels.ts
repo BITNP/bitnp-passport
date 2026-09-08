@@ -29,3 +29,26 @@ export const auditOutcomeLabels = {
   failed: "失败",
   unknown: "结果未确认",
 };
+
+export const auditOperationLabels: Record<string, string> = {
+  "group.configure": "配置群组",
+  "group.create": "创建群组",
+  "member.add": "添加成员",
+  "member.remove": "移除成员",
+  "delegate.grant": "授予委托权限",
+  "delegate.revoke": "撤销委托权限",
+  "invitation.create": "创建邀请",
+  "invitation.rotate": "替换邀请",
+  "invitation.revoke": "撤销邀请",
+  "invitation.join": "通过邀请加入",
+  "admin.grant": "授予管理员",
+  "admin.revoke": "撤销管理员",
+  "admin.bootstrap": "初始化管理员",
+  "job.create": "创建批量任务",
+  "job.retry": "重试任务",
+  "job.cancel": "取消任务",
+  "job.add": "批量添加成员",
+  "job.remove": "批量移除成员",
+  "term.create": "创建任期",
+  "term.update": "编辑任期",
+};

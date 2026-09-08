@@ -12,7 +12,25 @@ import { requireAdministrator } from "./permissions.ts";
 export async function administrators(actor: Actor) {
   await requireAdministrator(actor);
 
-  return db.select().from(portalAdmins).orderBy(portalAdmins.createdAt);
+  const rows = await db
+    .select({ id: portalAdmins.subject })
+    .from(portalAdmins)
+    .orderBy(portalAdmins.createdAt);
+
+  return Promise.all(
+    rows.map(async ({ id }) => {
+      try {
+        return await keycloak.user(id);
+      } catch (error) {
+        // Keep grants visible after a 404 so they can still be revoked
+        if (!(error instanceof ApplicationError) || error.statusCode !== 404) {
+          throw error;
+        }
+
+        return { id, username: null };
+      }
+    }),
+  );
 }
 
 export async function grantAdministrator(actor: Actor, identifier: string) {

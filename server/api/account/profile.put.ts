@@ -3,9 +3,8 @@ import { z } from "zod";
 import * as account from "#backend/account";
 
 const input = z.object({
-  firstName: z.string().trim().max(255).nullish(),
-  lastName: z.string().trim().max(255).nullish(),
-  email: z.union([z.email().max(254), z.literal("")]).nullish(),
+  name: z.string().trim().min(1),
+  email: z.union([z.email(), z.literal("")]).nullish(),
 });
 
 export default defineEventHandler(async (event) => {

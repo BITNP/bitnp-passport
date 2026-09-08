@@ -1,10 +1,12 @@
 // TODO: remove adapters after upgrading to keycloak 26
+import { managedGroups as groupSettings } from "#database/schema";
 import type { Actor, ProfileInput } from "#shared/types";
 
 import * as keycloak9 from "./account/keycloak9.ts";
 import * as keycloak26 from "./account/keycloak26.ts";
 import { request } from "./account/shared.ts";
-import { configuration } from "./config.ts";
+import { config } from "./config.ts";
+import { db } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
 import * as keycloak from "./keycloak.ts";
 import { managedGroups } from "./permissions.ts";
@@ -28,35 +30,40 @@ interface Device {
   }[];
 }
 
-const adapter =
-  configuration().keycloakVersion === "9" ? keycloak9 : keycloak26;
+const adapter = config.keycloakVersion === "9" ? keycloak9 : keycloak26;
 
 export const updatePassword = adapter.updatePassword;
 export const security = adapter.security;
-export const profile = adapter.readProfile;
 
 export async function overview(actor: Actor & { accessToken: string }) {
-  const [userProfile, memberships, groups, roles] = await Promise.all([
-    profile(actor.accessToken),
-    keycloak.groupsForUser(actor.subject),
-    managedGroups(actor),
-    keycloak.userRoles(actor.subject),
-  ]);
+  const [userProfile, memberships, groups, roles, settings] = await Promise.all(
+    [
+      adapter.readProfile(actor.accessToken),
+      keycloak.groupsForUser(actor.subject),
+      managedGroups(actor),
+      keycloak.userRoles(actor.subject),
+      db
+        .select({ groupId: groupSettings.groupId, label: groupSettings.label })
+        .from(groupSettings),
+    ],
+  );
+  const labels = new Map(settings.map((group) => [group.groupId, group.label]));
 
   return {
     profile: userProfile,
-    memberships,
+    memberships: memberships.map((group) => ({
+      id: group.id,
+      label: labels.get(group.id) ?? group.name,
+    })),
     groups,
-    activeMember: roles.some(
-      (role) => role.name === configuration().activeRole,
-    ),
+    activeMember: roles.some((role) => role.name === config.activeRole),
   };
 }
 
 export async function updateProfile(accessToken: string, input: ProfileInput) {
   await adapter.updateProfile(accessToken, input);
 
-  return profile(accessToken);
+  return adapter.readProfile(accessToken);
 }
 
 export async function removeCredential(accessToken: string, id: string) {
@@ -78,7 +85,7 @@ export async function requireAction(accessToken: string, action: string) {
       (type) => type.createAction === action || type.updateAction === action,
     )
   ) {
-    throw new ApplicationError(403, "此账户暂不支持该安全设置");
+    throw new ApplicationError(403, "不允许执行此安全设置");
   }
 }
 
@@ -93,7 +100,7 @@ export async function signOut(accessToken: string, id?: string) {
     ),
   );
   if (id && removed.length === 0) {
-    throw new ApplicationError(404, "该登录会话已不存在，请刷新页面");
+    throw new ApplicationError(404, "未找到该登录会话");
   }
 
   await request(

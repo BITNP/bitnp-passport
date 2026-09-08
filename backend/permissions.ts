@@ -1,4 +1,4 @@
-import { and, eq, exists, or } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 
 import {
   groupDelegations,
@@ -9,6 +9,7 @@ import type { Actor } from "#shared/types";
 
 import { db } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
+import * as keycloak from "./keycloak.ts";
 
 export async function isAdministrator(actor: Actor) {
   const administrator = await db.query.portalAdmins.findFirst({
@@ -25,34 +26,45 @@ export async function requireAdministrator(actor: Actor) {
   }
 }
 
-const manageableBy = (actor: Actor) =>
-  or(
-    // 系统管理员可以管理所有组
-    exists(
-      db
-        .select({ subject: portalAdmins.subject })
-        .from(portalAdmins)
-        .where(eq(portalAdmins.subject, actor.subject)),
-    ),
-    // 组管理员可以管理自己负责的组
-    exists(
-      db
-        .select({ subject: groupDelegations.subject })
-        .from(groupDelegations)
-        .where(
-          and(
-            eq(groupDelegations.groupId, groups.groupId),
-            eq(groupDelegations.subject, actor.subject),
-          ),
+export async function groupAccess(actor: Actor) {
+  if (await isAdministrator(actor)) {
+    return { administrator: true, groupIds: [] };
+  }
+
+  const memberships = await keycloak.inheritedGroupIds(actor.subject);
+  const delegations = await db
+    .select({ groupId: groupDelegations.groupId })
+    .from(groupDelegations)
+    .where(
+      or(
+        and(
+          eq(groupDelegations.type, "user"),
+          eq(groupDelegations.subject, actor.subject),
         ),
-    ),
-  );
+        and(
+          eq(groupDelegations.type, "group"),
+          inArray(groupDelegations.subject, [...memberships]),
+        ),
+      ),
+    );
+
+  return {
+    administrator: false,
+    groupIds: delegations.map((delegation) => delegation.groupId),
+  };
+}
 
 export async function requireGroupManager(actor: Actor, groupId: string) {
+  const { administrator, groupIds } = await groupAccess(actor);
   const [group] = await db
     .select()
     .from(groups)
-    .where(and(eq(groups.groupId, groupId), manageableBy(actor)))
+    .where(
+      and(
+        eq(groups.groupId, groupId),
+        administrator ? undefined : inArray(groups.groupId, groupIds),
+      ),
+    )
     .limit(1);
 
   if (!group) {
@@ -62,9 +74,12 @@ export async function requireGroupManager(actor: Actor, groupId: string) {
   return group;
 }
 
-export const managedGroups = async (actor: Actor) =>
-  db
+export async function managedGroups(actor: Actor) {
+  const { administrator, groupIds } = await groupAccess(actor);
+
+  return db
     .select()
     .from(groups)
-    .where(manageableBy(actor))
+    .where(administrator ? undefined : inArray(groups.groupId, groupIds))
     .orderBy(groups.label, groups.groupId);
+}

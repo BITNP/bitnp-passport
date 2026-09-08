@@ -1,21 +1,13 @@
 import { z } from "zod";
 
-import { createGroup } from "#backend/groups";
+import { createGroup, groupConfiguration } from "#backend/groups";
 
-const input = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1)
-    .max(80)
-    .regex(/^[^/\p{Cc}]+$/u),
-  parentId: z.string().min(1).max(200).optional(),
+const input = groupConfiguration.omit({ groupId: true }).extend({
+  parentId: z.string().min(1).optional(),
 });
 
 export default defineEventHandler(async (event) => {
   const actor = await requireSession(event);
 
-  const { name, parentId } = await readValidatedBody(event, input.parse);
-
-  return createGroup(actor, name, parentId);
+  return createGroup(actor, await readValidatedBody(event, input.parse));
 });

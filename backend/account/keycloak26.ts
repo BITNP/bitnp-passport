@@ -21,7 +21,9 @@ export async function updateProfile(accessToken: string, input: ProfileInput) {
   await request(accessToken, "", "POST", {
     username: profile.username,
     attributes: profile.attributes,
-    ...input,
+    firstName: input.name,
+    lastName: null,
+    email: input.email,
   });
 }
 
@@ -41,7 +43,7 @@ export async function security(accessToken: string) {
 }
 
 export async function updatePassword() {
-  throw new ApplicationError(405, "请通过账户安全页面进入密码修改流程");
+  throw new ApplicationError(405, "此接口不支持修改密码");
 }
 
 export const removeCredential = async (_accessToken: string, id: string) =>
