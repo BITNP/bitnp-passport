@@ -11,6 +11,7 @@ const { data: invitations, error, refresh, status } = await useFetch(endpoint);
 const { submit, pending } = useMutation();
 const message = useMessage();
 const days = ref(7);
+const renewalDays = ref<number | null>(7);
 
 const durations = [1, 7, 14, 30].map((value) => ({
   label: `${value} 天`,
@@ -27,6 +28,16 @@ const createInvitation = () =>
       body: { days: days.value },
     });
     message.success("邀请已创建");
+    await refresh();
+  });
+
+const renewInvitation = (id: string) =>
+  submit(async () => {
+    await $fetch(endpoint.value, {
+      method: "PATCH",
+      body: { id, days: renewalDays.value },
+    });
+    message.success("邀请已续期");
     await refresh();
   });
 
@@ -100,14 +111,40 @@ useFetchError(error, refresh);
                 >
                   已撤销
                 </NTag>
-                <ConfirmAction
-                  v-else
-                  :disabled="pending"
-                  message="确认撤销此邀请？"
-                  @confirm="revokeInvitation(invitation.id)"
-                >
-                  撤销
-                </ConfirmAction>
+                <NFlex v-else :size="8">
+                  <NPopconfirm
+                    v-if="allowInvites"
+                    :disabled="pending"
+                    negative-text="取消"
+                    :positive-button-props="{
+                      disabled: pending || renewalDays === null,
+                    }"
+                    positive-text="续期"
+                    :show-icon="false"
+                    @positive-click="renewInvitation(invitation.id)"
+                  >
+                    <template #trigger>
+                      <NButton :disabled="pending" size="small">续期</NButton>
+                    </template>
+
+                    <NFormItem label="延长天数" :show-feedback="false">
+                      <NInputNumber
+                        v-model:value="renewalDays"
+                        class="duration-select"
+                        :max="30"
+                        :min="1"
+                        :precision="0"
+                      />
+                    </NFormItem>
+                  </NPopconfirm>
+                  <ConfirmAction
+                    :disabled="pending"
+                    message="确认撤销此邀请？"
+                    @confirm="revokeInvitation(invitation.id)"
+                  >
+                    撤销
+                  </ConfirmAction>
+                </NFlex>
               </NFlex>
             </NFlex>
           </NListItem>

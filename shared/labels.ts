@@ -38,6 +38,7 @@ export const auditOperationLabels: Record<string, string> = {
   "delegate.grant": "授予委托权限",
   "delegate.revoke": "撤销委托权限",
   "invitation.create": "创建邀请",
+  "invitation.renew": "续期邀请",
   "invitation.rotate": "替换邀请",
   "invitation.revoke": "撤销邀请",
   "invitation.join": "通过邀请加入",

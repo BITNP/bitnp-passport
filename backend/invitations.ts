@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { and, desc, eq, gt, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 
 import { invitations, managedGroups } from "#database/schema";
 import type { Actor } from "#shared/types";
@@ -70,6 +70,44 @@ export async function createInvitation(
           expiresAt: new Date(createdAt.getTime() + days * 86_400_000),
         });
       }),
+  );
+}
+
+export async function renewInvitation(
+  actor: Actor,
+  groupId: string,
+  id: string,
+  days: number,
+) {
+  const group = await requireGroupManager(actor, groupId);
+
+  return audited(
+    actor,
+    { operation: "invitation.renew", groupId, target: id, detail: { days } },
+    async () => {
+      if (!group.allowInvites) {
+        throw new ApplicationError(403, "此群组未开放邀请");
+      }
+
+      const [invitation] = await db
+        .update(invitations)
+        .set({
+          expiresAt: sql`greatest(${invitations.expiresAt}, now()) + ${days} * interval '24 hours'`,
+        })
+        .where(
+          and(
+            eq(invitations.id, id),
+            eq(invitations.groupId, groupId),
+            // 只更新到期时间，不能恢复已撤销的链接
+            isNull(invitations.revokedAt),
+          ),
+        )
+        .returning({ id: invitations.id });
+
+      if (!invitation) {
+        throw new ApplicationError(404, "邀请不存在或已撤销");
+      }
+    },
   );
 }
 
