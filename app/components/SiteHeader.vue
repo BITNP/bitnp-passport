@@ -23,10 +23,6 @@ const links = computed(() => {
       { to: "/jobs", label: "任务" },
       { to: "/audit", label: "记录" },
     );
-
-    if (session.value.administrator) {
-      items.push({ to: "/admin", label: "管理" });
-    }
   }
 
   items.push({ to: "/help", label: "帮助" });
@@ -61,6 +57,15 @@ useFetchError(sessionError, refreshSession);
         :value="active"
       />
       <div class="account-actions">
+        <LinkButton
+          v-if="session?.administrator"
+          size="small"
+          to="/admin"
+          type="primary"
+          @click="menuOpen = false"
+        >
+          管理后台
+        </LinkButton>
         <ColorModeSwitch />
         <template v-if="session">
           <NuxtLink class="username" to="/account">
@@ -143,7 +148,8 @@ useFetchError(sessionError, refreshSession);
 
 @media (max-width: 960px) {
   .header-content {
-    padding: 0 12px;
+    padding: 8px 12px;
+    flex-wrap: wrap;
     gap: 8px;
     min-height: 48px;
   }
