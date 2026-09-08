@@ -35,7 +35,7 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      titleTemplate: "%s | 网协通行证",
+      titleTemplate: "%s %separator 网协通行证",
       htmlAttrs: { lang: "zh-CN" },
     },
   },
