@@ -3,7 +3,9 @@ import { so1ve } from "@so1ve/eslint-config";
 import { withNuxt } from "./.nuxt/eslint.config.mjs";
 
 export default withNuxt(
-  so1ve().override("so1ve/vue/rules", (config) => {
+  so1ve({
+    ignores: ["database/migrations/**"],
+  }).override("so1ve/vue/rules", (config) => {
     const parser = config.languageOptions.parserOptions.parser;
 
     config.languageOptions.parserOptions.parser = {

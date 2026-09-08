@@ -132,8 +132,12 @@
           "name": "audit_events_job_id_jobs_id_fk",
           "tableFrom": "audit_events",
           "tableTo": "jobs",
-          "columnsFrom": ["job_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "job_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -210,8 +214,12 @@
           "name": "group_delegations_group_id_managed_groups_group_id_fk",
           "tableFrom": "group_delegations",
           "tableTo": "managed_groups",
-          "columnsFrom": ["group_id"],
-          "columnsTo": ["group_id"],
+          "columnsFrom": [
+            "group_id"
+          ],
+          "columnsTo": [
+            "group_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -219,7 +227,11 @@
       "compositePrimaryKeys": {
         "group_delegations_group_id_type_subject_pk": {
           "name": "group_delegations_group_id_type_subject_pk",
-          "columns": ["group_id", "type", "subject"]
+          "columns": [
+            "group_id",
+            "type",
+            "subject"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -303,8 +315,12 @@
           "name": "invitations_group_id_managed_groups_group_id_fk",
           "tableFrom": "invitations",
           "tableTo": "managed_groups",
-          "columnsFrom": ["group_id"],
-          "columnsTo": ["group_id"],
+          "columnsFrom": [
+            "group_id"
+          ],
+          "columnsTo": [
+            "group_id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -314,7 +330,9 @@
         "invitations_token_unique": {
           "name": "invitations_token_unique",
           "nullsNotDistinct": false,
-          "columns": ["token"]
+          "columns": [
+            "token"
+          ]
         }
       },
       "policies": {},
@@ -370,8 +388,12 @@
           "name": "job_items_job_id_jobs_id_fk",
           "tableFrom": "job_items",
           "tableTo": "jobs",
-          "columnsFrom": ["job_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "job_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -379,7 +401,11 @@
       "compositePrimaryKeys": {
         "job_items_job_id_item_key_operation_pk": {
           "name": "job_items_job_id_item_key_operation_pk",
-          "columns": ["job_id", "item_key", "operation"]
+          "columns": [
+            "job_id",
+            "item_key",
+            "operation"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -478,8 +504,12 @@
           "name": "jobs_group_id_managed_groups_group_id_fk",
           "tableFrom": "jobs",
           "tableTo": "managed_groups",
-          "columnsFrom": ["group_id"],
-          "columnsTo": ["group_id"],
+          "columnsFrom": [
+            "group_id"
+          ],
+          "columnsTo": [
+            "group_id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -806,8 +836,12 @@
           "name": "term_groups_term_id_terms_id_fk",
           "tableFrom": "term_groups",
           "tableTo": "terms",
-          "columnsFrom": ["term_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "term_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -815,8 +849,12 @@
           "name": "term_groups_group_id_managed_groups_group_id_fk",
           "tableFrom": "term_groups",
           "tableTo": "managed_groups",
-          "columnsFrom": ["group_id"],
-          "columnsTo": ["group_id"],
+          "columnsFrom": [
+            "group_id"
+          ],
+          "columnsTo": [
+            "group_id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -824,14 +862,19 @@
       "compositePrimaryKeys": {
         "term_groups_term_id_group_id_pk": {
           "name": "term_groups_term_id_group_id_pk",
-          "columns": ["term_id", "group_id"]
+          "columns": [
+            "term_id",
+            "group_id"
+          ]
         }
       },
       "uniqueConstraints": {
         "term_groups_group_id_unique": {
           "name": "term_groups_group_id_unique",
           "nullsNotDistinct": false,
-          "columns": ["group_id"]
+          "columns": [
+            "group_id"
+          ]
         }
       },
       "policies": {},
@@ -900,7 +943,9 @@
         "terms_label_unique": {
           "name": "terms_label_unique",
           "nullsNotDistinct": false,
-          "columns": ["label"]
+          "columns": [
+            "label"
+          ]
         }
       },
       "policies": {},
@@ -912,32 +957,57 @@
     "public.audit_outcome": {
       "name": "audit_outcome",
       "schema": "public",
-      "values": ["pending", "succeeded", "failed", "unknown"]
+      "values": [
+        "pending",
+        "succeeded",
+        "failed",
+        "unknown"
+      ]
     },
     "public.delegate_type": {
       "name": "delegate_type",
       "schema": "public",
-      "values": ["user", "group"]
+      "values": [
+        "user",
+        "group"
+      ]
     },
     "public.item_status": {
       "name": "item_status",
       "schema": "public",
-      "values": ["pending", "succeeded", "failed"]
+      "values": [
+        "pending",
+        "succeeded",
+        "failed"
+      ]
     },
     "public.job_operation": {
       "name": "job_operation",
       "schema": "public",
-      "values": ["add", "remove"]
+      "values": [
+        "add",
+        "remove"
+      ]
     },
     "public.job_status": {
       "name": "job_status",
       "schema": "public",
-      "values": ["queued", "running", "succeeded", "failed", "cancelled"]
+      "values": [
+        "queued",
+        "running",
+        "succeeded",
+        "failed",
+        "cancelled"
+      ]
     },
     "public.term_status": {
       "name": "term_status",
       "schema": "public",
-      "values": ["draft", "current", "archived"]
+      "values": [
+        "draft",
+        "current",
+        "archived"
+      ]
     }
   },
   "schemas": {},
