@@ -37,6 +37,14 @@ export default defineNuxtConfig({
     head: {
       titleTemplate: "%s %separator 网协通行证",
       htmlAttrs: { lang: "zh-CN" },
+      link: [
+        {
+          rel: "icon",
+          type: "image/png",
+          sizes: "512x512",
+          href: "/favicon.png",
+        },
+      ],
     },
   },
 });
