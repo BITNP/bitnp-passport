@@ -10,7 +10,7 @@
 
   languages.javascript = {
     enable = true;
-    package = lib.mkDefault pkgs.node-bin.latest;
+    package =  pkgs.node-bin.latest;
     pnpm = {
       enable = true;
       package = pkgs.pnpm-bin.fromPackageJSON ./package.json;
