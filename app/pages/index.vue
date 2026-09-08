@@ -28,6 +28,30 @@ useHead({ title: "首页" });
         </NFlex>
       </div>
     </NCard>
+    <NGrid cols="1 m:2" responsive="screen" :x-gap="16" :y-gap="16">
+      <NGi>
+        <NCard class="notice-card" size="small" title="北理工公众用户">
+          <p>
+            网协通行证暂不对北理工公众用户提供服务。电脑诊所的对外预约服务，请通过校微信企业号「网络服务
+            → 电脑义诊」访问。
+          </p>
+          <template #footer>
+            <NButton href="https://weixin.info.bit.edu.cn/" tag="a">
+              关注企业号
+            </NButton>
+          </template>
+        </NCard>
+      </NGi>
+      <NGi>
+        <NCard class="notice-card" size="small" title="网协成员">
+          <p>没有账户？请优先使用管理层发送的邀请链接，注册后加入相应群组。</p>
+          <p>登录遇到问题？可自助重置密码，或联系技术保障中心人工处理。</p>
+          <template #footer>
+            <LinkButton to="/help">登录帮助</LinkButton>
+          </template>
+        </NCard>
+      </NGi>
+    </NGrid>
     <section>
       <h2>服务入口</h2>
       <NGrid
@@ -56,7 +80,6 @@ useHead({ title: "首页" });
       </NGrid>
       <NCard v-else><NEmpty description="暂无服务" /></NCard>
     </section>
-    <NuxtLink to="/help">登录遇到问题？查看帮助</NuxtLink>
   </NuxtLayout>
 </template>
 
@@ -80,6 +103,10 @@ useHead({ title: "首页" });
 .account-buttons {
   flex-shrink: 0;
   margin-left: auto;
+}
+
+.notice-card {
+  height: 100%;
 }
 
 .service-link:hover {
