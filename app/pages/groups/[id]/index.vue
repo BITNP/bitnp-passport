@@ -2,6 +2,7 @@
 import type { DataTableColumns } from "naive-ui";
 
 import { ConfirmAction, NuxtLink } from "#components";
+import type { GroupNode } from "#shared/types";
 
 definePageMeta({ middleware: "auth" });
 
@@ -30,6 +31,31 @@ const {
 } = await useFetch("/api/admin/groups", {
   immediate: false,
   watch: false,
+});
+
+const delegateGroups = computed(() => {
+  const labels = new Map(
+    delegateDirectory.value?.settings.map((group) => [
+      group.groupId,
+      group.label,
+    ]),
+  );
+  const groups: { groupId: string; label: string; path: string }[] = [];
+
+  function visit(nodes: GroupNode[]) {
+    for (const group of nodes) {
+      groups.push({
+        groupId: group.id,
+        label: labels.get(group.id) ?? group.name,
+        path: group.path,
+      });
+      visit(group.children);
+    }
+  }
+
+  visit(delegateDirectory.value?.groups ?? []);
+
+  return groups;
 });
 
 async function changeDelegateType(type: string) {
@@ -278,16 +304,11 @@ useFetchError(delegateLoadError, loadDelegateGroups);
                     required: true,
                   }"
                 />
-                <NTreeSelect
+                <GroupSelect
                   v-else
                   v-model:value="delegate"
-                  filterable
-                  key-field="id"
-                  label-field="name"
+                  :groups="delegateGroups"
                   :loading="delegateLoadStatus === 'pending'"
-                  :options="delegateDirectory?.groups"
-                  placeholder="选择群组"
-                  show-path
                 />
                 <NButton
                   attr-type="submit"

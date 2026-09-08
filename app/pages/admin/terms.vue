@@ -115,15 +115,11 @@ useFetchError(loadError, refresh);
           />
         </NFormItem>
         <NFormItem label="所属群组" required>
-          <NSelect
+          <GroupSelect
             v-if="available.length > 0"
             v-model:value="selected"
-            filterable
-            label-field="label"
+            :groups="available"
             multiple
-            :options="available"
-            placeholder="选择群组"
-            value-field="groupId"
           />
           <NEmpty v-else description="暂无可用群组">
             <template #extra>

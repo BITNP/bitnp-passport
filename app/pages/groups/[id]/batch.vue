@@ -9,17 +9,20 @@ useHead({ title: "批量成员操作" });
 
 const route = useRoute();
 const groupId = computed(() => encodeURIComponent(String(route.params.id)));
-const {
-  data: group,
-  error: loadError,
-  refresh,
-} = await useFetch(() => `/api/groups/${groupId.value}`);
+const [
+  { data: group, error: loadError, refresh },
+  { data: groups, error: groupsError, refresh: refreshGroups },
+] = await Promise.all([
+  useFetch(() => `/api/groups/${groupId.value}`),
+  useFetch("/api/groups"),
+]);
 
 const text = ref("");
 const preview = ref<MembershipPreview>();
 const selected = ref<string[]>([]);
 const operation = ref<"add" | "remove">("add");
 const { submit, pending } = useMutation();
+const message = useMessage();
 
 const candidates = computed(() => {
   if (!preview.value) {
@@ -46,6 +49,34 @@ watch(text, () => {
   preview.value = undefined;
   selected.value = [];
 });
+
+const importMembers = (sourceGroupId: string) =>
+  submit(async () => {
+    const members = await $fetch(
+      `/api/groups/${encodeURIComponent(sourceGroupId)}/members`,
+    );
+    if (members.length === 0) {
+      message.info("该群组暂无成员");
+
+      return;
+    }
+
+    const identifiers = new Set(
+      text.value
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean),
+    );
+
+    for (const member of members) {
+      if (!identifiers.has(member.email)) {
+        identifiers.add(member.username);
+      }
+    }
+
+    text.value = [...identifiers].join("\n");
+    message.success("名单已导入");
+  });
 
 const compare = () =>
   submit(async () => {
@@ -91,6 +122,7 @@ const candidateColumns: DataTableColumns<(typeof candidates.value)[number]> = [
 ];
 
 useFetchError(loadError, refresh);
+useFetchError(groupsError, refreshGroups);
 </script>
 
 <template>
@@ -108,6 +140,15 @@ useFetchError(loadError, refresh);
     </NPageHeader>
     <NCard v-if="group" title="对比名单">
       <NForm @submit.prevent="compare">
+        <NFormItem v-if="groups" label="从群组追加名单">
+          <GroupSelect
+            :disabled="pending"
+            :groups
+            placeholder="选择来源群组"
+            :value="null"
+            @update:value="importMembers"
+          />
+        </NFormItem>
         <NFormItem
           label="完整用户名或邮箱（每行一个，最多 200 个）"
           :label-props="{ for: 'batch-users' }"
@@ -116,6 +157,7 @@ useFetchError(loadError, refresh);
           <NInput
             v-model:value="text"
             :autosize="{ minRows: 6, maxRows: 12 }"
+            :disabled="pending"
             :input-props="{ id: 'batch-users', required: true }"
             type="textarea"
           />

@@ -44,8 +44,8 @@ const groupOptions = computed(() => {
   }
 
   return [
-    { label: "全部群组", value: "" },
-    ...Array.from(labels, ([value, label]) => ({ value, label })),
+    { label: "全部群组", groupId: "" },
+    ...Array.from(labels, ([groupId, label]) => ({ groupId, label })),
   ];
 });
 const selectedGroup = computed(() =>
@@ -130,10 +130,10 @@ useFetchError(groupsError, refreshGroups);
     <NCard>
       <NFlex :size="20" vertical>
         <NFlex align="center" justify="space-between">
-          <NSelect
+          <GroupSelect
             v-model:value="groupId"
             class="group-filter"
-            :options="groupOptions"
+            :groups="groupOptions"
           />
           <NButton @click="refresh()">刷新</NButton>
         </NFlex>

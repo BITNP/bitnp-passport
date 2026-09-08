@@ -77,6 +77,12 @@ export async function groupDetail(actor: Actor, groupId: string) {
   };
 }
 
+export async function listMembers(actor: Actor, groupId: string) {
+  await requireGroupManager(actor, groupId);
+
+  return keycloak.members(groupId);
+}
+
 export async function configureGroup(
   actor: Actor,
   input: z.infer<typeof groupConfiguration>,
