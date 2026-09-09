@@ -16,8 +16,8 @@ const search = ref("");
 const expanded = ref<(string | number)[]>([]);
 
 const editor = ref<{
-  group?: GroupNode;
-  parent?: GroupNode;
+  groupId?: string;
+  parentId?: string;
   name: string;
   label: string;
   note: string;
@@ -40,6 +40,14 @@ const nodes = computed(() => {
 
   return result;
 });
+
+const group = computed(() =>
+  editor.value?.groupId ? nodes.value.get(editor.value.groupId) : undefined,
+);
+
+const parent = computed(() =>
+  editor.value?.parentId ? nodes.value.get(editor.value.parentId) : undefined,
+);
 
 const labels = computed(
   () =>
@@ -72,7 +80,7 @@ function edit(group: GroupNode) {
     (item) => item.groupId === group.id,
   );
   editor.value = {
-    group,
+    groupId: group.id,
     name: group.name,
     label: settings?.label ?? "",
     note: settings?.note ?? "",
@@ -88,7 +96,13 @@ const select = (groupId: string) =>
   navigateTo({ path: "/admin", query: { groupId } }, { replace: true });
 
 function create(parent?: GroupNode) {
-  editor.value = { parent, name: "", label: "", note: "", allowInvites: false };
+  editor.value = {
+    parentId: parent?.id,
+    name: "",
+    label: "",
+    note: "",
+    allowInvites: false,
+  };
 
   return navigateTo("/admin", { replace: true });
 }
@@ -97,16 +111,12 @@ const save = () =>
   submit(async () => {
     const draft = editor.value!;
     const result = await $fetch(
-      draft.group ? "/api/admin/groups" : "/api/admin/groups/create",
+      draft.groupId ? "/api/admin/groups" : "/api/admin/groups/create",
       {
         method: "POST",
         body: {
-          groupId: draft.group?.id,
-          parentId: draft.parent?.id,
-          name: draft.name,
+          ...draft,
           label: draft.label.trim() || draft.name,
-          note: draft.note,
-          allowInvites: draft.allowInvites,
         },
       },
     );
@@ -178,7 +188,7 @@ useFetchError(loadError, refresh);
                   :render-label="
                     ({ option }) => groupLabel(nodes.get(String(option.id))!)
                   "
-                  :selected-keys="editor?.group ? [editor.group.id] : []"
+                  :selected-keys="editor?.groupId ? [editor.groupId] : []"
                   show-line
                   @update:selected-keys="select(String($event[0]))"
                 />
@@ -189,25 +199,16 @@ useFetchError(loadError, refresh);
         </NCard>
       </NGi>
       <NGi span="1 m:2">
-        <NCard
-          v-if="editor"
-          :title="editor.group ? groupLabel(editor.group) : '新建群组'"
-        >
-          <template v-if="editor.group" #header-extra>
-            <NButton
-              :disabled="pending"
-              size="small"
-              @click="create(editor.group)"
-            >
+        <NCard v-if="editor" :title="group ? groupLabel(group) : '新建群组'">
+          <template v-if="group" #header-extra>
+            <NButton :disabled="pending" size="small" @click="create(group)">
               新建子群组
             </NButton>
           </template>
           <NFlex :size="20" vertical>
             <NText class="group-path" depth="3">
-              <template v-if="editor.group">{{ editor.group.path }}</template>
-              <template v-else-if="editor.parent">
-                父群组：{{ editor.parent.path }}
-              </template>
+              <template v-if="group">{{ group.path }}</template>
+              <template v-else-if="parent">父群组：{{ parent.path }}</template>
               <template v-else>顶层群组</template>
             </NText>
             <NForm :disabled="pending" @submit.prevent="save">
@@ -237,16 +238,16 @@ useFetchError(loadError, refresh);
                 </NCheckbox>
                 <NFlex align="center">
                   <NButton attr-type="submit" :loading="pending" type="primary">
-                    {{ editor.group ? "保存" : "创建群组" }}
+                    {{ group ? "保存" : "创建群组" }}
                   </NButton>
                   <LinkButton
                     v-if="
-                      editor.group &&
+                      group &&
                       directory.settings.some(
-                        (item) => item.groupId === editor?.group?.id,
+                        (item) => item.groupId === editor?.groupId,
                       )
                     "
-                    :to="`/groups/${encodeURIComponent(editor.group.id)}`"
+                    :to="`/groups/${encodeURIComponent(group.id)}`"
                   >
                     成员与授权
                   </LinkButton>

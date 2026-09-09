@@ -64,3 +64,24 @@ export async function groupTree() {
 
   return roots;
 }
+
+export async function groupHasRole(id: string, name: string) {
+  const roles = await client.groups.listCompositeRealmRoleMappings({ id });
+
+  return roles.some((role) => role.name === name);
+}
+
+export async function findGroup(name: string, parentId?: string) {
+  const siblings = await allPages((first, max) =>
+    parentId
+      ? client.groups.listSubGroups({
+          parentId,
+          first,
+          max,
+          briefRepresentation: false,
+        })
+      : client.groups.find({ first, max, briefRepresentation: false }),
+  );
+
+  return siblings.find((group) => group.name === name);
+}

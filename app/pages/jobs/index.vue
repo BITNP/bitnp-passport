@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DataTableColumns } from "naive-ui";
 import { NTag } from "naive-ui";
+import type { InternalApi } from "nitropack/types";
 
 import { NuxtLink } from "#components";
 import { jobStatusLabels } from "#shared/labels";
@@ -55,7 +56,7 @@ const selectedGroup = computed(() =>
 const date = (value: string) =>
   new Date(value).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
 
-type Job = NonNullable<typeof data.value>["jobs"][number];
+type Job = InternalApi["/api/jobs"]["get"]["jobs"][number];
 const columns: DataTableColumns<Job> = [
   {
     title: "任务",

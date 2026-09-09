@@ -47,14 +47,14 @@ const columns: DataTableColumns<T> = [
     title: "姓名",
     key: "name",
     minWidth: 120,
-    render: (user) => [user.lastName, user.firstName].join("") || "—",
+    render: (user) => [user.lastName, user.firstName].join("") || " - ",
   },
   {
     title: "邮箱",
     key: "email",
     minWidth: 240,
     render: (user) =>
-      user.email ? h("a", { href: `mailto:${user.email}` }, user.email) : "—",
+      user.email ? h("a", { href: `mailto:${user.email}` }, user.email) : " - ",
   },
   {
     title: "状态",
@@ -62,7 +62,7 @@ const columns: DataTableColumns<T> = [
     width: 110,
     render: (user) => {
       if (user.username === null) {
-        return "—";
+        return " - ";
       }
 
       return h(
@@ -85,7 +85,7 @@ const columns: DataTableColumns<T> = [
         ? new Date(user.createdTimestamp).toLocaleString("zh-CN", {
             timeZone: "Asia/Shanghai",
           })
-        : "—",
+        : " - ",
   },
   {
     title: "操作",

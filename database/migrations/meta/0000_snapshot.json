@@ -1,5 +1,5 @@
 {
-  "id": "212d6dee-1975-4a13-a58d-ea10aeb4cca5",
+  "id": "e4bc841e-e0df-4b0b-bdd0-66f313d43079",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -745,11 +745,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "refresh_expires_at": {
-          "name": "refresh_expires_at",
+        "expires_at": {
+          "name": "expires_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -794,7 +794,7 @@
           "name": "session_expiry",
           "columns": [
             {
-              "expression": "refresh_expires_at",
+              "expression": "expires_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -813,6 +813,43 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.site_settings": {
+      "name": "site_settings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "boolean",
+          "primaryKey": true,
+          "notNull": true,
+          "default": true
+        },
+        "support_url": {
+          "name": "support_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "services": {
+          "name": "services",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "site_settings_singleton": {
+          "name": "site_settings_singleton",
+          "value": "\"site_settings\".\"id\" = true"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.term_groups": {
       "name": "term_groups",
       "schema": "",
@@ -828,9 +865,43 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "department_name": {
+          "name": "department_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "term_department_code": {
+          "name": "term_department_code",
+          "columns": [
+            {
+              "expression": "term_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "term_groups_term_id_terms_id_fk": {
           "name": "term_groups_term_id_terms_id_fk",
@@ -897,6 +968,36 @@
           "primaryKey": false,
           "notNull": true
         },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "root_group_id": {
+          "name": "root_group_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "clinic_compatible": {
+          "name": "clinic_compatible",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "creation": {
+          "name": "creation",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activation": {
+          "name": "activation",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "status": {
           "name": "status",
           "type": "term_status",
@@ -946,10 +1047,22 @@
           "columns": [
             "label"
           ]
+        },
+        "terms_root_group_id_unique": {
+          "name": "terms_root_group_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "root_group_id"
+          ]
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "term_root_required": {
+          "name": "term_root_required",
+          "value": "(\"terms\".\"root_group_id\" is not null or \"terms\".\"creation\" is not null)"
+        }
+      },
       "isRLSEnabled": false
     }
   },

@@ -1,58 +1,44 @@
 <script setup lang="ts">
+import type { InternalApi } from "nitropack/types";
+
 import { termStatusLabels } from "#shared/labels";
 
 definePageMeta({ middleware: ["auth", "admin"] });
 
 const { data, error: loadError, refresh } = await useFetch("/api/admin/terms");
-const { submit, pending } = useMutation(refresh);
+const { submit, pending } = useMutation();
 const message = useMessage();
 
-const editing = ref<string>();
-const label = ref("");
-const selected = ref<string[]>([]);
+type Term = InternalApi["/api/admin/terms"]["get"]["terms"][number];
 
-const available = computed(
+const panel = ref<
+  | { type: "edit"; term?: Term; copy: boolean }
+  | { type: "activate"; termId: string }
+>();
+
+const groupLabels = computed(
   () =>
-    data.value?.groups.filter(
-      (group) =>
-        !data.value?.terms.some(
-          (term) =>
-            term.id !== editing.value &&
-            term.groups.some((item) => item.groupId === group.groupId),
-        ),
-    ) ?? [],
+    new Map(data.value?.groups.map((group) => [group.groupId, group.label])),
 );
 
-const groupLabel = (id: string) =>
-  data.value!.groups.find((group) => group.groupId === id)!.label;
+async function refreshTerms() {
+  await refresh();
 
-function edit(term: NonNullable<typeof data.value>["terms"][number]) {
-  editing.value = term.id;
-  label.value = term.label;
-  selected.value = term.groups.map((group) => group.groupId);
+  return data.value!;
 }
 
-function resetForm() {
-  editing.value = undefined;
-  label.value = "";
-  selected.value = [];
+function edit(term?: Term, copy = false) {
+  panel.value = { type: "edit", term, copy };
 }
 
-const save = () =>
+const resumeCreation = (id: string) =>
   submit(async () => {
-    const input = { label: label.value, groupIds: selected.value };
-
-    if (editing.value) {
-      await $fetch(`/api/admin/terms/${editing.value}`, {
-        method: "PUT",
-        body: input,
-      });
-    } else {
-      await $fetch("/api/admin/terms", { method: "POST", body: input });
+    try {
+      await $fetch(`/api/admin/terms/${id}/provision`, { method: "POST" });
+      message.success("任期群组已创建");
+    } finally {
+      await refresh();
     }
-
-    resetForm();
-    message.success("任期已保存");
   });
 
 useFetchError(loadError, refresh);
@@ -60,91 +46,94 @@ useFetchError(loadError, refresh);
 
 <template>
   <NuxtLayout name="admin" title="任期配置">
-    <NCard v-if="data" title="已有任期">
-      <NList v-if="data.terms.length > 0">
-        <NListItem v-for="term in data.terms" :key="term.id">
-          <NThing>
-            <template #header>
-              <NFlex align="center">
-                <span>{{ term.label }}</span>
-                <NTag :bordered="false" size="small">
-                  {{ termStatusLabels[term.status] }}
-                </NTag>
-              </NFlex>
-            </template>
-            <template #description>
-              <NFlex :size="12">
-                <NuxtLink
-                  v-for="group in term.groups"
-                  :key="group.groupId"
-                  :to="`/groups/${encodeURIComponent(group.groupId)}`"
+    <template v-if="data">
+      <NCard title="已有任期">
+        <template #header-extra>
+          <NButton :disabled="pending" @click="edit()">关联已有群组</NButton>
+        </template>
+        <NList v-if="data.terms.length > 0">
+          <NListItem v-for="term in data.terms" :key="term.id">
+            <NThing>
+              <template #header>
+                <NFlex align="center" :size="8">
+                  <span>{{ term.label }}</span>
+                  <NTag :bordered="false" size="small">
+                    {{ termStatusLabels[term.status] }}
+                  </NTag>
+                </NFlex>
+              </template>
+              <template #description>
+                <NFlex :size="12">
+                  <NuxtLink
+                    v-for="group in term.groups"
+                    :key="group.groupId"
+                    :to="`/groups/${encodeURIComponent(group.groupId)}`"
+                  >
+                    {{ groupLabels.get(group.groupId) }}
+                  </NuxtLink>
+                </NFlex>
+              </template>
+            </NThing>
+            <template #suffix>
+              <NFlex :size="8">
+                <NButton
+                  v-if="term.creation"
+                  :loading="pending"
+                  size="small"
+                  @click="resumeCreation(term.id)"
                 >
-                  {{ groupLabel(group.groupId) }}
-                </NuxtLink>
+                  继续创建
+                </NButton>
+                <template v-else>
+                  <NButton
+                    v-if="term.status === 'draft' && !term.activation"
+                    :disabled="pending"
+                    size="small"
+                    @click="edit(term)"
+                  >
+                    编辑
+                  </NButton>
+                  <NButton
+                    v-if="term.status === 'draft'"
+                    :disabled="pending"
+                    size="small"
+                    @click="panel = { type: 'activate', termId: term.id }"
+                  >
+                    {{ term.activation ? "继续换届" : "启用本届" }}
+                  </NButton>
+                  <NButton
+                    :disabled="pending || term.activation"
+                    size="small"
+                    @click="edit(term, true)"
+                  >
+                    创建下一届
+                  </NButton>
+                </template>
               </NFlex>
             </template>
-          </NThing>
-          <template #suffix>
-            <NButton
-              v-if="term.status === 'draft'"
-              :disabled="pending"
-              size="small"
-              @click="edit(term)"
-            >
-              编辑
-            </NButton>
-          </template>
-        </NListItem>
-      </NList>
-      <NEmpty v-else description="尚未建立任期" />
-    </NCard>
-    <NCard v-if="data" :title="editing ? '编辑任期' : '新建任期'">
-      <template #header-extra>
-        <NButton v-if="editing" text @click="resetForm()">取消编辑</NButton>
-      </template>
-      <NForm class="term-form" @submit.prevent="save">
-        <NFormItem
-          label="任期名称"
-          :label-props="{ for: 'term-label' }"
-          required
-        >
-          <NInput
-            v-model:value="label"
-            :input-props="{ id: 'term-label', required: true }"
-            placeholder="例如：2026—2027 学年"
-          />
-        </NFormItem>
-        <NFormItem label="所属群组" required>
-          <GroupSelect
-            v-if="available.length > 0"
-            v-model:value="selected"
-            :groups="available"
-            multiple
-          />
-          <NEmpty v-else description="暂无可用群组">
-            <template #extra>
-              <NuxtLink to="/admin">配置群组</NuxtLink>
-            </template>
-          </NEmpty>
-        </NFormItem>
-        <NFlex align="center">
-          <NButton
-            attr-type="submit"
-            :disabled="selected.length === 0"
-            :loading="pending"
-            type="primary"
-          >
-            保存任期
-          </NButton>
-          <NText depth="3">已选 {{ selected.length }} 组</NText>
-        </NFlex>
-      </NForm>
-    </NCard>
+          </NListItem>
+        </NList>
+        <NEmpty v-else description="尚未建立任期" />
+      </NCard>
+
+      <TermEditor
+        v-if="panel?.type === 'edit'"
+        :data
+        :pending
+        :refresh="refreshTerms"
+        :selection="panel"
+        :submit
+        @close="panel = undefined"
+      />
+      <TermActivation
+        v-else-if="panel?.type === 'activate'"
+        :pending
+        :refresh="refreshTerms"
+        :submit
+        :target="panel"
+        :terms="data.terms"
+        @close="panel = undefined"
+      />
+    </template>
   </NuxtLayout>
 </template>
-
-<style scoped>
-.term-form {
-  max-width: 560px;
-}
-</style>

@@ -53,4 +53,7 @@ export const auditOperationLabels: Record<string, string> = {
   "job.remove": "批量移除成员",
   "term.create": "创建任期",
   "term.update": "编辑任期",
+  "term.create-from": "创建下一届",
+  "term.provision": "继续创建任期群组",
+  "term.activate": "启用任期",
 };

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DataTableColumns } from "naive-ui";
+import type { InternalApi } from "nitropack/types";
 
 import { ConfirmAction, NuxtLink } from "#components";
 import type { GroupNode } from "#shared/types";
@@ -20,8 +21,11 @@ const [
 const { submit, pending } = useMutation(refresh);
 const message = useMessage();
 const identifier = ref("");
-const delegateType = ref<"user" | "group">("user");
-const delegate = ref<string | null>(null);
+const delegate = reactive({
+  groupId,
+  type: ref<"user" | "group">("user"),
+  identifier: ref<string | null>(null),
+});
 
 const {
   data: delegateDirectory,
@@ -59,7 +63,7 @@ const delegateGroups = computed(() => {
 });
 
 async function changeDelegateType(type: string) {
-  delegate.value = null;
+  delegate.identifier = null;
 
   if (type === "group") {
     await loadDelegateGroups();
@@ -93,32 +97,24 @@ const grantDelegate = () =>
   submit(async () => {
     await $fetch("/api/admin/delegations", {
       method: "POST",
-      body: {
-        groupId: groupId.value,
-        type: delegateType.value,
-        identifier: delegate.value,
-      },
+      body: delegate,
     });
-    delegate.value = null;
+    delegate.identifier = null;
     message.success("委托权限已授予");
   });
 
-type Delegate = NonNullable<typeof group.value>["delegates"][number];
+type Delegate = InternalApi["/api/groups/:id"]["get"]["delegates"][number];
 
 const revokeDelegate = (delegate: Delegate) =>
   submit(async () => {
     await $fetch("/api/admin/delegations", {
       method: "DELETE",
-      body: {
-        groupId: groupId.value,
-        type: delegate.type,
-        subject: delegate.subject,
-      },
+      body: delegate,
     });
     message.success("委托权限已撤销");
   });
 
-type Member = NonNullable<typeof group.value>["members"][number];
+type Member = InternalApi["/api/groups/:id"]["get"]["members"][number];
 const columns: DataTableColumns<Member> = [
   {
     title: "用户名",
@@ -144,13 +140,13 @@ const columns: DataTableColumns<Member> = [
     title: "姓名",
     key: "name",
     minWidth: 120,
-    render: (member) => [member.lastName, member.firstName].join("") || "—",
+    render: (member) => [member.lastName, member.firstName].join("") || " - ",
   },
   {
     title: "邮箱",
     key: "email",
     minWidth: 240,
-    render: (member) => member.email || "—",
+    render: (member) => member.email || " - ",
   },
   {
     title: "操作",
@@ -279,7 +275,7 @@ useFetchError(delegateLoadError, loadDelegateGroups);
           <NForm v-if="session?.administrator" @submit.prevent="grantDelegate">
             <NFormItem label="授权对象">
               <NRadioGroup
-                v-model:value="delegateType"
+                v-model:value="delegate.type"
                 @update:value="changeDelegateType"
               >
                 <NRadioButton value="user">用户</NRadioButton>
@@ -288,16 +284,16 @@ useFetchError(delegateLoadError, loadDelegateGroups);
             </NFormItem>
             <NFormItem
               :feedback="
-                delegateType === 'group'
+                delegate.type === 'group'
                   ? '包含该群组及所有子群组的成员。'
                   : undefined
               "
-              :label="delegateType === 'user' ? '用户名或邮箱' : '选择群组'"
+              :label="delegate.type === 'user' ? '用户名或邮箱' : '选择群组'"
             >
               <NInputGroup>
                 <UserAutocomplete
-                  v-if="delegateType === 'user'"
-                  v-model:value="delegate"
+                  v-if="delegate.type === 'user'"
+                  v-model:value="delegate.identifier"
                   :input-props="{
                     id: 'delegate',
                     autocomplete: 'off',
@@ -306,13 +302,13 @@ useFetchError(delegateLoadError, loadDelegateGroups);
                 />
                 <GroupSelect
                   v-else
-                  v-model:value="delegate"
+                  v-model:value="delegate.identifier"
                   :groups="delegateGroups"
                   :loading="delegateLoadStatus === 'pending'"
                 />
                 <NButton
                   attr-type="submit"
-                  :disabled="!delegate"
+                  :disabled="!delegate.identifier"
                   :loading="pending"
                   type="primary"
                 >

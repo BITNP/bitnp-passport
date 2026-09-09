@@ -39,7 +39,9 @@ useFetchError(error, refresh);
                 {{ data.user.username }}
               </NDescriptionsItem>
               <NDescriptionsItem label="姓名">
-                {{ [data.user.lastName, data.user.firstName].join("") || "—" }}
+                {{
+                  [data.user.lastName, data.user.firstName].join("") || " - "
+                }}
               </NDescriptionsItem>
               <NDescriptionsItem label="邮箱">
                 <NFlex align="center" :size="8">
@@ -74,7 +76,7 @@ useFetchError(error, refresh);
                         "zh-CN",
                         { timeZone: "Asia/Shanghai" },
                       )
-                    : "—"
+                    : " - "
                 }}
               </NDescriptionsItem>
               <NDescriptionsItem label="用户 ID">

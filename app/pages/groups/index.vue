@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DataTableColumns } from "naive-ui";
 import { NTag, NText } from "naive-ui";
+import type { InternalApi } from "nitropack/types";
 
 import { LinkButton } from "#components";
 
@@ -21,7 +22,7 @@ const filteredGroups = computed(() => {
   );
 });
 
-type Group = NonNullable<typeof groups.value>[number];
+type Group = InternalApi["/api/groups"]["get"][number];
 const columns: DataTableColumns<Group> = [
   {
     title: "群组名称",

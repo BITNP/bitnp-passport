@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DataTableColumns } from "naive-ui";
 import { NButton, NTag } from "naive-ui";
+import type { InternalApi } from "nitropack/types";
 
 import { NuxtLink } from "#components";
 import { auditOperationLabels, auditOutcomeLabels } from "#shared/labels";
@@ -40,7 +41,7 @@ watch(groupId, () => {
 const date = (value: string) =>
   new Date(value).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
 
-type AuditEvent = NonNullable<typeof data.value>["events"][number];
+type AuditEvent = InternalApi["/api/audit"]["get"]["events"][number];
 const selected = ref<AuditEvent>();
 const selectedGroup = computed(() =>
   groups.value?.find((group) => group.groupId === selected.value?.groupId),
@@ -94,7 +95,7 @@ const columns: DataTableColumns<AuditEvent> = [
         (group) => group.groupId === event.groupId,
       );
       if (!group) {
-        return event.groupLabel ?? "—";
+        return event.groupLabel ?? " - ";
       }
 
       return h(

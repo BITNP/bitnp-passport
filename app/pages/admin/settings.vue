@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { InternalApi } from "nitropack/types";
+
 definePageMeta({ middleware: ["auth", "admin"] });
 
 const {
@@ -9,7 +11,7 @@ const {
 } = await useFetch("/api/site", {
   key: "site-settings",
 });
-const editor = ref<NonNullable<typeof site.value>>();
+const editor = ref<InternalApi["/api/site"]["get"]>();
 const { submit, pending } = useMutation();
 const message = useMessage();
 

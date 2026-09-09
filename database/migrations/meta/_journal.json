@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1788896847104,
+      "when": 1788956392003,
       "tag": "0000_initial",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1788902048246,
-      "tag": "0001_site_settings",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1788925447003,
-      "tag": "0002_portal_session_expiry",
       "breakpoints": true
     }
   ]

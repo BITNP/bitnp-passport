@@ -1,7 +1,8 @@
-import { createTerm, termInput } from "#backend/terms";
+import { saveTerm } from "#backend/terms";
+import { termInput } from "#backend/terms/shared";
 
 export default defineEventHandler(async (event) =>
-  createTerm(
+  saveTerm(
     await requireSession(event),
     await readValidatedBody(event, termInput.parse),
   ),

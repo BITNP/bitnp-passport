@@ -19,8 +19,10 @@ const [
 
 const text = ref("");
 const preview = ref<MembershipPreview>();
-const selected = ref<string[]>([]);
-const operation = ref<"add" | "remove">("add");
+const job = reactive<{ subjects: string[]; operation: "add" | "remove" }>({
+  subjects: [],
+  operation: "add",
+});
 const { submit, pending } = useMutation();
 const message = useMessage();
 
@@ -30,24 +32,25 @@ const candidates = computed(() => {
   }
 
   const users = preview.value.rows.flatMap(({ user, member }) =>
-    user && (operation.value === "add" ? !member && user.enabled : member)
+    user && (job.operation === "add" ? !member && user.enabled : member)
       ? [user]
       : [],
   );
-  if (operation.value === "remove") {
+  if (job.operation === "remove") {
     users.push(...preview.value.outside);
   }
 
   return [...new Map(users.map((user) => [user.id, user])).values()];
 });
 
-watch(operation, () => {
-  selected.value = [];
-});
+watch(
+  () => job.operation,
+  () => (job.subjects = []),
+);
 
 watch(text, () => {
   preview.value = undefined;
-  selected.value = [];
+  job.subjects = [];
 });
 
 const importMembers = (sourceGroupId: string) =>
@@ -85,14 +88,14 @@ const compare = () =>
       body: { text: text.value },
     });
     preview.value = result;
-    selected.value = [];
+    job.subjects = [];
   });
 
 const enqueue = () =>
   submit(async () => {
     const result = await $fetch(`/api/groups/${groupId.value}/jobs`, {
       method: "POST",
-      body: { subjects: selected.value, operation: operation.value },
+      body: job,
     });
     await navigateTo(`/jobs/${result.id}`);
   });
@@ -103,7 +106,7 @@ const previewColumns: DataTableColumns<MembershipPreview["rows"][number]> = [
     title: "匹配账户",
     key: "username",
     minWidth: 160,
-    render: (row) => row.user?.username ?? "—",
+    render: (row) => row.user?.username ?? " - ",
   },
   {
     title: "当前状态",
@@ -195,35 +198,37 @@ useFetchError(groupsError, refreshGroups);
       </NCard>
       <NCard title="选择变更">
         <NFlex :size="20" vertical>
-          <NRadioGroup v-model:value="operation">
+          <NRadioGroup v-model:value="job.operation">
             <NRadioButton value="add">添加成员</NRadioButton>
             <NRadioButton value="remove">移除成员</NRadioButton>
           </NRadioGroup>
           <NDataTable
             :bordered="false"
-            :checked-row-keys="selected"
+            :checked-row-keys="job.subjects"
             :columns="candidateColumns"
             :data="candidates"
             :row-key="(user) => user.id"
             :scroll-x="450"
-            @update:checked-row-keys="selected = $event as string[]"
+            @update:checked-row-keys="job.subjects = $event as string[]"
           />
           <NFlex align="center" justify="space-between">
             <NText
               depth="3"
-              :type="selected.length > 200 ? 'error' : undefined"
+              :type="job.subjects.length > 200 ? 'error' : undefined"
             >
-              已选 {{ selected.length }} 人
-              <template v-if="selected.length > 200">
+              已选 {{ job.subjects.length }} 人
+              <template v-if="job.subjects.length > 200">
                 （最多选择 200 人）
               </template>
             </NText>
             <ConfirmAction
               confirm-label="确认并创建任务"
               :disabled="
-                pending || selected.length === 0 || selected.length > 200
+                pending ||
+                job.subjects.length === 0 ||
+                job.subjects.length > 200
               "
-              :message="`确认${operation === 'add' ? '添加' : '移除'}这 ${selected.length} 位成员？`"
+              :message="`确认${job.operation === 'add' ? '添加' : '移除'}这 ${job.subjects.length} 位成员？`"
               @confirm="enqueue"
             >
               创建任务

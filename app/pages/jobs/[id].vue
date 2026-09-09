@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DataTableColumns } from "naive-ui";
 import { NTag } from "naive-ui";
+import type { InternalApi } from "nitropack/types";
 
 import { NuxtLink } from "#components";
 import {
@@ -47,7 +48,7 @@ const action = (name: "retry" | "cancel") =>
     await $fetch(`/api/jobs/${id.value}/${name}`, { method: "POST" });
   });
 
-type Item = NonNullable<typeof data.value>["items"][number];
+type Item = InternalApi["/api/jobs/:id"]["get"]["items"][number];
 const columns: DataTableColumns<Item> = [
   {
     title: "操作",
@@ -106,7 +107,7 @@ const columns: DataTableColumns<Item> = [
     title: "说明",
     key: "error",
     minWidth: 200,
-    render: (item) => item.error ?? "—",
+    render: (item) => item.error ?? " - ",
   },
 ];
 

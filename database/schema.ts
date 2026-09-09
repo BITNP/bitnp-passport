@@ -1,9 +1,10 @@
-import { eq, gt, relations } from "drizzle-orm";
+import { eq, gt, isNotNull, or, relations } from "drizzle-orm";
 import {
   bigint,
   boolean,
   check,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -14,7 +15,11 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import type { SiteService } from "#shared/types";
+import type {
+  SiteService,
+  TermActivationPlan,
+  TermCreationPlan,
+} from "#shared/types";
 
 export const termStatus = pgEnum("term_status", [
   "draft",
@@ -158,6 +163,12 @@ export const terms = pgTable(
   {
     id: uuid("id").primaryKey(),
     label: text("label").notNull().unique(),
+    year: integer("year").notNull(),
+    // 群组全部创建完成后写入根群组 ID
+    rootGroupId: text("root_group_id").unique(),
+    clinicCompatible: boolean("clinic_compatible").notNull(),
+    creation: jsonb("creation").$type<TermCreationPlan>(),
+    activation: jsonb("activation").$type<TermActivationPlan>(),
     status: termStatus("status").notNull().default("draft"),
     createdBy: text("created_by").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -165,6 +176,10 @@ export const terms = pgTable(
       .defaultNow(),
   },
   (table) => [
+    check(
+      "term_root_required",
+      or(isNotNull(table.rootGroupId), isNotNull(table.creation))!,
+    ),
     uniqueIndex("one_current_term")
       .on(table.status)
       .where(eq(table.status, "current").inlineParams()),
@@ -181,8 +196,13 @@ export const termGroups = pgTable(
       .notNull()
       .unique()
       .references(() => managedGroups.groupId),
+    code: text("code").notNull(),
+    departmentName: text("department_name").notNull(),
   },
-  (table) => [primaryKey({ columns: [table.termId, table.groupId] })],
+  (table) => [
+    primaryKey({ columns: [table.termId, table.groupId] }),
+    uniqueIndex("term_department_code").on(table.termId, table.code),
+  ],
 );
 
 export const termRelations = relations(terms, ({ many }) => ({

@@ -92,13 +92,22 @@ CREATE TABLE "sessions" (
 	"email" text,
 	"encrypted_tokens" text NOT NULL,
 	"refresh_at" timestamp with time zone NOT NULL,
-	"refresh_expires_at" timestamp with time zone,
+	"expires_at" timestamp with time zone NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "site_settings" (
+	"id" boolean PRIMARY KEY DEFAULT true NOT NULL,
+	"support_url" text NOT NULL,
+	"services" jsonb NOT NULL,
+	CONSTRAINT "site_settings_singleton" CHECK ("site_settings"."id" = true)
 );
 --> statement-breakpoint
 CREATE TABLE "term_groups" (
 	"term_id" uuid NOT NULL,
 	"group_id" text NOT NULL,
+	"code" text NOT NULL,
+	"department_name" text NOT NULL,
 	CONSTRAINT "term_groups_term_id_group_id_pk" PRIMARY KEY("term_id","group_id"),
 	CONSTRAINT "term_groups_group_id_unique" UNIQUE("group_id")
 );
@@ -106,10 +115,17 @@ CREATE TABLE "term_groups" (
 CREATE TABLE "terms" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"label" text NOT NULL,
+	"year" integer NOT NULL,
+	"root_group_id" text,
+	"clinic_compatible" boolean NOT NULL,
+	"creation" jsonb,
+	"activation" jsonb,
 	"status" "term_status" DEFAULT 'draft' NOT NULL,
 	"created_by" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "terms_label_unique" UNIQUE("label")
+	CONSTRAINT "terms_label_unique" UNIQUE("label"),
+	CONSTRAINT "terms_root_group_id_unique" UNIQUE("root_group_id"),
+	CONSTRAINT "term_root_required" CHECK (("terms"."root_group_id" is not null or "terms"."creation" is not null))
 );
 --> statement-breakpoint
 ALTER TABLE "audit_events" ADD CONSTRAINT "audit_events_job_id_jobs_id_fk" FOREIGN KEY ("job_id") REFERENCES "public"."jobs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -129,5 +145,6 @@ CREATE INDEX "logout_sid" ON "logout_tokens" USING btree ("oidc_sid");--> statem
 CREATE INDEX "logout_expiry" ON "logout_tokens" USING btree ("expires_at");--> statement-breakpoint
 CREATE INDEX "session_subject" ON "sessions" USING btree ("subject");--> statement-breakpoint
 CREATE INDEX "session_oidc_sid" ON "sessions" USING btree ("oidc_sid");--> statement-breakpoint
-CREATE INDEX "session_expiry" ON "sessions" USING btree ("refresh_expires_at");--> statement-breakpoint
+CREATE INDEX "session_expiry" ON "sessions" USING btree ("expires_at");--> statement-breakpoint
+CREATE UNIQUE INDEX "term_department_code" ON "term_groups" USING btree ("term_id","code");--> statement-breakpoint
 CREATE UNIQUE INDEX "one_current_term" ON "terms" USING btree ("status") WHERE "terms"."status" = 'current';
