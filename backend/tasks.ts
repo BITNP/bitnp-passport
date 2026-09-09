@@ -221,6 +221,6 @@ export async function failTask(task: TaskData) {
 export async function cleanupExpiredRecords() {
   const now = new Date();
 
-  await db.delete(sessions).where(lt(sessions.refreshExpiresAt, now));
+  await db.delete(sessions).where(lt(sessions.expiresAt, now));
   await db.delete(logoutTokens).where(lt(logoutTokens.expiresAt, now));
 }

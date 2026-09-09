@@ -16,6 +16,10 @@ interface Tokens {
   idToken: string;
 }
 
+// Keep portal sessions independently of the refresh token's reported expiry
+// Keep in sync with the old implementation which is more convenient
+const sessionRetention = 14 * 24 * 60 * 60 * 1000;
+
 // Retain logout records for in-flight callbacks
 const logoutRetention = 12 * 60 * 60;
 
@@ -28,9 +32,8 @@ const cookieOptions = {
   path: "/",
 };
 
-function tokenValues(tokens: oidc.TokenEndpointResponse) {
+function sessionValues(tokens: oidc.TokenEndpointResponse) {
   const now = Date.now();
-  const refreshExpiresIn = tokens.refresh_expires_in as number;
 
   return {
     encryptedTokens: encrypt(
@@ -41,7 +44,7 @@ function tokenValues(tokens: oidc.TokenEndpointResponse) {
       }),
     ),
     refreshAt: new Date(now + Math.max(1, tokens.expires_in! - 30) * 1000),
-    refreshExpiresAt: new Date(now + refreshExpiresIn * 1000),
+    expiresAt: new Date(now + sessionRetention),
   };
 }
 
@@ -60,7 +63,7 @@ export async function createPortalSession(
       ? claims.session_state
       : claims.sid) as string,
   };
-  const values = tokenValues(tokens);
+  const values = sessionValues(tokens);
   const token = randomToken();
   const previous = getCookie(event, cookieName);
 
@@ -105,7 +108,7 @@ export async function createPortalSession(
 
   setCookie(event, cookieName, token, {
     ...cookieOptions,
-    expires: values.refreshExpiresAt,
+    expires: values.expiresAt,
   });
 }
 
@@ -164,19 +167,12 @@ export async function getPortalSession(event: H3Event) {
 
       const [updated] = await tx
         .update(sessions)
-        .set(tokenValues(tokens))
+        .set(sessionValues(tokens))
         .where(eq(sessions.tokenHash, hash))
         .returning();
 
       return updated;
     });
-
-    if (session) {
-      setCookie(event, cookieName, token, {
-        ...cookieOptions,
-        expires: session.refreshExpiresAt ?? undefined,
-      });
-    }
   }
 
   if (!session) {
@@ -184,6 +180,11 @@ export async function getPortalSession(event: H3Event) {
 
     return null;
   }
+
+  setCookie(event, cookieName, token, {
+    ...cookieOptions,
+    expires: session.expiresAt,
+  });
 
   const { accessToken, idToken } = JSON.parse(
     decrypt(session.encryptedTokens),

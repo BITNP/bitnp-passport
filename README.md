@@ -110,7 +110,7 @@ Keycloak 26 的修改密码、删除认证器等操作会跳转到 Keycloak 完�
 - 关闭 Duplicate emails
 - 启用 Forgot password 并配置 SMTP，供用户通过邮件重置密码；按需配置 Verify email、密码策略和多因素认证
 - 将 `ACTIVE_MEMBER_ROLE` 指定的 realm role 分配给现任用户，或通过群组角色映射赋予；门户据此显示“网协现任”
-- 登录有效期由 Keycloak 的 SSO Session、Client Session 等设置控制
+- 门户本地会话保留两周，登录或令牌续期后延长；令牌是否有效仍由 Keycloak 的 SSO Session、Client Session 等设置控制
 
 帮助页的“重置密码”和账户安全页的“忘记密码？”均通过 `/auth/reset-password` 直接进入 Keycloak 的重置流程。Keycloak 9 和 26 共用 `protocol/openid-connect/forgot-credentials` 入口，复用门户的 OIDC 回调，完成后返回账户安全页。
 

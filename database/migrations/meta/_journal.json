@@ -15,6 +15,13 @@
       "when": 1788902048246,
       "tag": "0001_site_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788925447003,
+      "tag": "0002_portal_session_expiry",
+      "breakpoints": true
     }
   ]
 }

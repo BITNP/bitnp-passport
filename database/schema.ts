@@ -74,9 +74,7 @@ export const sessions = pgTable(
     email: text("email"),
     encryptedTokens: text("encrypted_tokens").notNull(),
     refreshAt: timestamp("refresh_at", { withTimezone: true }).notNull(),
-    refreshExpiresAt: timestamp("refresh_expires_at", {
-      withTimezone: true,
-    }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -84,7 +82,7 @@ export const sessions = pgTable(
   (table) => [
     index("session_subject").on(table.subject),
     index("session_oidc_sid").on(table.oidcSid),
-    index("session_expiry").on(table.refreshExpiresAt),
+    index("session_expiry").on(table.expiresAt),
   ],
 );
 
