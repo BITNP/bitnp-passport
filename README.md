@@ -74,7 +74,7 @@ openssl rand -base64 32
 
 1. 开启 Client authentication
 2. 开启 Service accounts，关闭 Standard flow、Implicit flow 和 Direct access grants
-3. 在 Service account roles 中，授予 `master-realm` 客户端的 `manage-users` 和 `view-realm` 角色
+3. 在 Service account roles 中，授予 `master-realm` 客户端的 `manage-users`、`view-realm` 和 `view-clients` 角色
 4. 将客户端密钥填入 `KEYCLOAK_SERVICE_CLIENT_SECRET`
 
 如果现有实例启用了细粒度管理权限，还需允许服务账户查询用户与群组、创建群组和管理成员。服务账户用于门户访问 Keycloak，门户管理员另行初始化。

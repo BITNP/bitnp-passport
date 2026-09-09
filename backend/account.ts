@@ -1,14 +1,11 @@
 import type { FetchOptions } from "ofetch";
 import { ofetch } from "ofetch";
 
-import { managedGroups as groupSettings } from "#database/schema";
 import type { Actor, Profile, ProfileInput } from "#shared/types";
 
 import { config } from "./config.ts";
-import { db } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
-import * as keycloak from "./keycloak.ts";
-import { groupAccess } from "./permissions.ts";
+import { permissionDetails } from "./permissions.ts";
 
 interface CredentialType {
   type: string;
@@ -79,32 +76,12 @@ export async function security(accessToken: string) {
 }
 
 export async function overview(actor: Actor & { accessToken: string }) {
-  const [userProfile, memberships, access, roles, settings] = await Promise.all(
-    [
-      readProfile(actor.accessToken),
-      keycloak.groupsForUser(actor.subject),
-      groupAccess(actor),
-      keycloak.userRoles(actor.subject),
-      db
-        .select()
-        .from(groupSettings)
-        .orderBy(groupSettings.label, groupSettings.groupId),
-    ],
-  );
-  const labels = new Map(settings.map((group) => [group.groupId, group.label]));
+  const [profile, permissions] = await Promise.all([
+    readProfile(actor.accessToken),
+    permissionDetails(actor.subject),
+  ]);
 
-  return {
-    profile: userProfile,
-    memberships: memberships.map((group) => ({
-      id: group.id,
-      label: labels.get(group.id) ?? group.name,
-    })),
-    groups: settings.filter(
-      (group) =>
-        access.administrator || access.groupIds.includes(group.groupId),
-    ),
-    activeMember: roles.some((role) => role.name === config.activeRole),
-  };
+  return { profile, permissions };
 }
 
 export async function updateProfile(accessToken: string, input: ProfileInput) {

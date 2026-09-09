@@ -2,9 +2,12 @@
 definePageMeta({ middleware: ["auth", "admin"] });
 
 const route = useRoute();
-const { data, error, refresh } = await useFetch(
-  () => `/api/admin/users/${encodeURIComponent(String(route.params.id))}`,
-);
+const [{ data, error, refresh }, { data: session }] = await Promise.all([
+  useFetch(
+    () => `/api/admin/users/${encodeURIComponent(String(route.params.id))}`,
+  ),
+  usePortalSession(),
+]);
 const keycloakPages = {
   settings: "用户信息",
   groups: "群组管理",
@@ -99,89 +102,62 @@ useFetchError(error, refresh);
           </NCard>
         </NGi>
         <NGi span="1 m:2">
-          <NCard title="群组与权限">
-            <NDescriptions :column="1" label-placement="left">
-              <NDescriptionsItem label="所属群组">
-                <NFlex v-if="data.groups.length > 0" :size="8" vertical>
-                  <div v-for="group in data.groups" :key="group.id">
-                    <NuxtLink
-                      :to="
-                        group.managed
-                          ? `/groups/${encodeURIComponent(group.id)}`
-                          : `/admin?groupId=${encodeURIComponent(group.id)}`
-                      "
-                    >
-                      {{ group.label }}
-                    </NuxtLink>
-                    <NText class="group-path" depth="3" tag="div">
-                      {{ group.path }}
-                    </NText>
-                  </div>
-                </NFlex>
-                <NText v-else depth="3">暂无群组</NText>
-              </NDescriptionsItem>
-              <NDescriptionsItem label="本站权限">
-                <NFlex align="center" :size="8">
-                  <template v-if="data.permissions.administrator">
-                    <NTag :bordered="false" size="small" type="info">
-                      系统管理员
-                    </NTag>
-                    <NuxtLink to="/groups">全部群组</NuxtLink>
-                  </template>
-                  <template v-else-if="data.permissions.groups.length > 0">
-                    <NTag :bordered="false" size="small" type="info">
-                      群组管理员
-                    </NTag>
-                    <NuxtLink
-                      v-for="group in data.permissions.groups"
-                      :key="group.groupId"
-                      :to="`/groups/${encodeURIComponent(group.groupId)}`"
-                    >
-                      {{ group.label }}
-                    </NuxtLink>
-                  </template>
-                  <NText v-else depth="3">无管理权限</NText>
-                </NFlex>
-              </NDescriptionsItem>
-              <NDescriptionsItem label="Keycloak Realm 角色">
-                <NFlex v-if="data.roles.length > 0" :size="8">
-                  <NTag
-                    v-for="role in data.roles"
-                    :key="role.id"
-                    :bordered="false"
-                    size="small"
-                  >
-                    {{ role.name }}
-                  </NTag>
-                </NFlex>
-                <NText v-else depth="3">暂无 Realm 角色</NText>
-              </NDescriptionsItem>
-            </NDescriptions>
+          <NCard title="权限信息">
+            <PermissionSources
+              :permissions="data.permissions"
+              :viewer-administrator="session?.administrator ?? false"
+            />
           </NCard>
         </NGi>
       </NGrid>
-      <NCard
-        v-if="Object.keys(data.user.attributes ?? {}).length > 0"
-        title="Keycloak 属性"
-      >
-        <NTable :bordered="false" class="attributes" size="small">
-          <thead>
-            <tr>
-              <th>属性</th>
-              <th>值</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(values, name) in data.user.attributes" :key="name">
-              <td class="mono">{{ name }}</td>
-              <td>
-                <div v-for="(value, index) in values" :key="index">
-                  {{ value }}
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </NTable>
+      <NCard>
+        <NCollapse>
+          <NCollapseItem name="keycloak" title="Keycloak 详情">
+            <NFlex :size="16" vertical>
+              <NDescriptions :column="1" label-placement="left" size="small">
+                <NDescriptionsItem label="Realm 角色">
+                  <NFlex v-if="data.roles.length > 0" :size="8">
+                    <NTag
+                      v-for="role in data.roles"
+                      :key="role.id"
+                      :bordered="false"
+                      size="small"
+                    >
+                      {{ role.name }}
+                    </NTag>
+                  </NFlex>
+                  <NText v-else depth="3">无</NText>
+                </NDescriptionsItem>
+              </NDescriptions>
+              <NTable
+                v-if="Object.keys(data.user.attributes ?? {}).length > 0"
+                :bordered="false"
+                class="attributes"
+                size="small"
+              >
+                <thead>
+                  <tr>
+                    <th>属性</th>
+                    <th>值</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="(values, name) in data.user.attributes"
+                    :key="name"
+                  >
+                    <td class="mono">{{ name }}</td>
+                    <td>
+                      <div v-for="(value, index) in values" :key="index">
+                        {{ value }}
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </NTable>
+            </NFlex>
+          </NCollapseItem>
+        </NCollapse>
       </NCard>
     </template>
   </NuxtLayout>
@@ -190,10 +166,6 @@ useFetchError(error, refresh);
 <style scoped>
 .user-details {
   overflow-wrap: anywhere;
-}
-
-.group-path {
-  font-size: 12px;
 }
 
 .attributes {

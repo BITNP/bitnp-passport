@@ -100,23 +100,90 @@ export async function groupsForUser(id: string) {
   return groups as Required<GroupRepresentation>[];
 }
 
-export async function inheritedGroupIds(id: string) {
-  const memberships = await groupsForUser(id);
-  const ids = new Set(memberships.map((group) => group.id));
+export async function inheritedGroups(
+  memberships: Required<GroupRepresentation>[],
+) {
+  const groups = new Map(memberships.map((group) => [group.id, group]));
 
   for (const group of memberships) {
     let parentId: string | undefined = group.parentId;
 
-    while (parentId && !ids.has(parentId)) {
+    while (parentId && !groups.has(parentId)) {
       const parent = await request(() =>
         client.groups.findOne({ id: parentId! }),
       );
-      ids.add(parentId);
+      groups.set(parentId, parent as Required<GroupRepresentation>);
       parentId = parent!.parentId;
     }
   }
 
-  return ids;
+  return [...groups.values()];
+}
+
+export async function activeMemberSources(
+  id: string,
+  groups: Required<GroupRepresentation>[],
+) {
+  type Role = Awaited<
+    ReturnType<typeof client.roles.getCompositeRoles>
+  >[number];
+  const composites = new Map<string, Role[]>();
+  const sources: { groupId: string | null; role: string }[] = [];
+  const origins = await Promise.all(
+    [null, ...groups.map((group) => group.id)].map(async (groupId) => ({
+      groupId,
+      mappings: await request(() =>
+        groupId === null
+          ? client.users.listRoleMappings({ id })
+          : client.groups.listRoleMappings({ id: groupId }),
+      ),
+    })),
+  );
+
+  for (const { groupId, mappings } of origins) {
+    const assignedRoles = [
+      ...(mappings.realmMappings ?? []).map((role) => ({
+        role,
+        name: role.name!,
+      })),
+      ...Object.entries(mappings.clientMappings ?? {}).flatMap(
+        ([clientId, mapping]) =>
+          ((mapping.mappings ?? []) as Role[]).map((role) => ({
+            role,
+            name: `${clientId}: ${role.name}`,
+          })),
+      ),
+    ];
+
+    for (const assignment of assignedRoles) {
+      const pending = [assignment.role];
+      const visited = new Set<string>();
+
+      while (pending.length > 0) {
+        const role = pending.pop()!;
+        if (!role.clientRole && role.name === config.activeRole) {
+          sources.push({ groupId, role: assignment.name });
+
+          break;
+        }
+        if (visited.has(role.id!) || !role.composite) {
+          continue;
+        }
+        visited.add(role.id!);
+
+        let children = composites.get(role.id!);
+        if (!children) {
+          children = await request(() =>
+            client.roles.getCompositeRoles({ id: role.id! }),
+          );
+          composites.set(role.id!, children);
+        }
+        pending.push(...children);
+      }
+    }
+  }
+
+  return sources;
 }
 
 export async function group(id: string) {

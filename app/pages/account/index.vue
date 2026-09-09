@@ -114,55 +114,10 @@ useFetchError(loadError, refresh);
       </NGi>
       <NGi>
         <NCard title="权限信息">
-          <NDescriptions :column="1" label-placement="left">
-            <NDescriptionsItem label="身份">
-              <NFlex align="center" :size="8">
-                <NTag
-                  :bordered="false"
-                  size="small"
-                  :type="account.activeMember ? 'success' : 'warning'"
-                >
-                  {{ account.activeMember ? "网协现任" : "非网协现任" }}
-                </NTag>
-                <NTag
-                  v-for="group in account.memberships"
-                  :key="group.id"
-                  :bordered="false"
-                  size="small"
-                  type="info"
-                >
-                  <NuxtLink
-                    v-if="
-                      account.groups.some(
-                        (managed) => managed.groupId === group.id,
-                      )
-                    "
-                    :to="`/groups/${encodeURIComponent(group.id)}`"
-                  >
-                    {{ group.label }}
-                  </NuxtLink>
-                  <template v-else>{{ group.label }}</template>
-                </NTag>
-              </NFlex>
-            </NDescriptionsItem>
-            <NDescriptionsItem label="管理权限">
-              <NTag
-                v-if="session?.administrator || account.groups.length > 0"
-                :bordered="false"
-                size="small"
-                type="info"
-              >
-                <NuxtLink
-                  :to="
-                    session?.administrator ? '/admin/administrators' : '/groups'
-                  "
-                >
-                  {{ session?.administrator ? "系统管理员" : "群组管理员" }}
-                </NuxtLink>
-              </NTag>
-              <NText v-else depth="3" italic>无管理权限</NText>
-            </NDescriptionsItem>
-          </NDescriptions>
+          <PermissionSources
+            :permissions="account.permissions"
+            :viewer-administrator="session?.administrator ?? false"
+          />
         </NCard>
       </NGi>
     </NGrid>

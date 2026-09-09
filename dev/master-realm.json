@@ -144,7 +144,7 @@
       "enabled": true,
       "serviceAccountClientId": "bitnp-passport-service",
       "clientRoles": {
-        "master-realm": ["manage-users", "view-realm"]
+        "master-realm": ["manage-users", "view-realm", "view-clients"]
       }
     }
   ]
