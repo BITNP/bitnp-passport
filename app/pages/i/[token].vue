@@ -18,10 +18,13 @@ useHead({
 
 const join = () =>
   submit(async () => {
-    await $fetch(`/api/invitations/${encodeURIComponent(token)}/join`, {
-      method: "POST",
-    });
-    await refresh();
+    try {
+      await $fetch(`/api/invitations/${encodeURIComponent(token)}/join`, {
+        method: "POST",
+      });
+    } finally {
+      await refresh();
+    }
   });
 
 const switchAccount = () =>

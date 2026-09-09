@@ -19,6 +19,7 @@ import { groupAccess } from "../permissions.ts";
 interface AuditFilter {
   first: number;
   groupId?: string;
+  invitationId?: string;
   actor?: string;
   operation?: AuditOperation;
   outcome?: typeof auditEvents.$inferSelect.outcome;
@@ -104,6 +105,9 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
   const filter = and(
     visible,
     query.groupId ? eq(auditEvents.groupId, query.groupId) : undefined,
+    query.invitationId
+      ? eq(auditEvents.target, { type: "invitation", id: query.invitationId })
+      : undefined,
     query.actor ? await actorCondition(query.actor) : undefined,
     query.operation ? eq(auditEvents.operation, query.operation) : undefined,
     query.outcome ? eq(auditEvents.outcome, query.outcome) : undefined,
@@ -130,6 +134,7 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
         groupLabel: managedGroups.label,
         targetGroupLabel: targetGroups.label,
         termLabel: terms.label,
+        invitationNote: invitations.note,
         invitationCreatedAt: invitations.createdAt,
         invitationGroupId: invitations.groupId,
       })
@@ -216,16 +221,20 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
             break;
           }
           case "invitation": {
+            const canManage =
+              row.invitationGroupId !== null &&
+              (administrator || groupIds.includes(row.invitationGroupId));
             target = {
               id,
-              label: row.invitationCreatedAt
-                ? `邀请 · ${row.invitationCreatedAt.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}`
+              label:
+                canManage && row.invitationNote?.length
+                  ? row.invitationNote
+                  : row.invitationCreatedAt
+                    ? `邀请 · ${row.invitationCreatedAt.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}`
+                    : null,
+              to: canManage
+                ? `/groups/${encodeURIComponent(row.invitationGroupId!)}`
                 : null,
-              to:
-                row.invitationGroupId &&
-                (administrator || groupIds.includes(row.invitationGroupId))
-                  ? `/groups/${encodeURIComponent(row.invitationGroupId)}`
-                  : null,
             };
 
             break;

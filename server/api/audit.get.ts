@@ -8,6 +8,7 @@ import { events } from "#shared/events";
 const input = paginationQuery
   .extend({
     groupId: z.string().min(1).optional(),
+    invitationId: z.uuid().optional(),
     actor: z.string().trim().min(1).optional(),
     operation: z.enum(Object.keys(events) as AuditOperation[]).optional(),
     outcome: z.enum(auditOutcome.enumValues).optional(),

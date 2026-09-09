@@ -20,6 +20,7 @@ export async function listInvitations(actor: Actor, groupId: string) {
     .select({
       id: invitations.id,
       token: invitations.token,
+      note: invitations.note,
       createdAt: invitations.createdAt,
       expiresAt: invitations.expiresAt,
       revokedAt: invitations.revokedAt,
@@ -37,7 +38,7 @@ export async function listInvitations(actor: Actor, groupId: string) {
 export async function createInvitation(
   actor: Actor,
   groupId: string,
-  days: number,
+  { days, note }: { days: number; note: string },
 ) {
   await requireGroupManager(actor, groupId);
 
@@ -50,7 +51,7 @@ export async function createInvitation(
       operation: "invitation.create",
       groupId,
       target: { type: "invitation", id },
-      detail: { days },
+      detail: { days, note },
     },
     () =>
       db.transaction(async (tx) => {
@@ -69,11 +70,48 @@ export async function createInvitation(
         await tx.insert(invitations).values({
           id,
           token,
+          note,
           groupId,
           createdBy: actor.subject,
           createdAt,
           expiresAt: new Date(createdAt.getTime() + days * 86_400_000),
         });
+      }),
+  );
+}
+
+export async function updateInvitationNote(
+  actor: Actor,
+  groupId: string,
+  id: string,
+  note: string,
+) {
+  await requireGroupManager(actor, groupId);
+
+  return audited(
+    actor,
+    {
+      operation: "invitation.update",
+      groupId,
+      target: { type: "invitation", id },
+      detail: { after: { note } },
+    },
+    (recordBefore) =>
+      db.transaction(async (tx) => {
+        const [invitation] = await tx
+          .select({ note: invitations.note })
+          .from(invitations)
+          .where(and(eq(invitations.id, id), eq(invitations.groupId, groupId)))
+          .for("update");
+        if (!invitation) {
+          throw new ApplicationError(404, "邀请不存在");
+        }
+
+        recordBefore(invitation);
+        await tx
+          .update(invitations)
+          .set({ note })
+          .where(eq(invitations.id, id));
       }),
   );
 }
@@ -206,7 +244,7 @@ export async function joinInvitation(actor: Actor, token: string) {
     {
       operation: "invitation.join",
       groupId: reference.groupId,
-      target: { type: "user", id: actor.subject },
+      target: { type: "invitation", id: reference.id },
     },
     () =>
       db.transaction(async (tx) => {
@@ -228,6 +266,11 @@ export async function joinInvitation(actor: Actor, token: string) {
           .for("update");
         if (!invitation) {
           throw new ApplicationError(404, "邀请链接无效");
+        }
+
+        const groups = await keycloak.groupsForUser(actor.subject);
+        if (groups.some((group) => group.id === invitation.groupId)) {
+          throw new ApplicationError(409, "你已加入此群组");
         }
 
         await keycloak.addMember(actor.subject, invitation.groupId);

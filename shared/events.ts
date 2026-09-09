@@ -25,6 +25,11 @@ export const events = {
     context: ["groupId"],
     targets: ["invitation"],
   },
+  "invitation.update": {
+    label: "修改邀请备注",
+    context: ["groupId"],
+    targets: ["invitation"],
+  },
   "invitation.renew": {
     label: "续期邀请",
     context: ["groupId"],
@@ -38,7 +43,7 @@ export const events = {
   "invitation.join": {
     label: "通过邀请加入",
     context: ["groupId"],
-    targets: ["user"],
+    targets: ["invitation"],
   },
   "admin.grant": { label: "授予管理员", context: [], targets: ["user"] },
   "admin.revoke": { label: "撤销管理员", context: [], targets: ["user"] },

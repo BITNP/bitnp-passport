@@ -146,6 +146,7 @@ export const invitations = pgTable(
   {
     id: uuid("id").primaryKey(),
     token: text("token").notNull().unique(),
+    note: text("note").notNull().default(""),
     groupId: text("group_id")
       .notNull()
       .references(() => managedGroups.groupId),
