@@ -2,12 +2,64 @@
 definePageMeta({ middleware: ["auth", "admin"] });
 
 const route = useRoute();
-const [{ data, error, refresh }, { data: session }] = await Promise.all([
+const [
+  { data, error, refresh },
+  { data: session },
+  {
+    data: groups,
+    error: groupsError,
+    refresh: refreshGroups,
+    status: groupsStatus,
+  },
+] = await Promise.all([
   useFetch(
     () => `/api/admin/users/${encodeURIComponent(String(route.params.id))}`,
   ),
   usePortalSession(),
+  useFetch("/api/groups"),
 ]);
+
+const selectedGroupId = ref<string | null>(null);
+const availableGroups = computed(() =>
+  groups.value?.filter(
+    (group) =>
+      !data.value?.permissions.memberships.some(
+        (membership) => membership.id === group.groupId,
+      ),
+  ),
+);
+const { submit, pending } = useMutation(refresh);
+const message = useMessage();
+
+const addGroup = () =>
+  submit(async () => {
+    await $fetch(
+      `/api/groups/${encodeURIComponent(selectedGroupId.value!)}/members`,
+      {
+        method: "POST",
+        body: { identifier: data.value!.user.username },
+      },
+    );
+    selectedGroupId.value = null;
+    message.success("已加入群组");
+  });
+
+const removeGroup = (groupId: string) =>
+  submit(async () => {
+    await $fetch(`/api/groups/${encodeURIComponent(groupId)}/members`, {
+      method: "DELETE",
+      body: { subject: data.value!.user.id },
+    });
+    message.success("已从群组移除");
+  });
+
+watch(
+  () => route.params.id,
+  () => {
+    selectedGroupId.value = null;
+  },
+);
+
 const keycloakPages = {
   settings: "用户信息",
   groups: "群组管理",
@@ -15,6 +67,7 @@ const keycloakPages = {
 };
 
 useFetchError(error, refresh);
+useFetchError(groupsError, refreshGroups);
 </script>
 
 <template>
@@ -117,6 +170,66 @@ useFetchError(error, refresh);
           </NCard>
         </NGi>
       </NGrid>
+      <NCard title="所属群组">
+        <NFlex :size="20" vertical>
+          <NForm v-if="availableGroups" @submit.prevent="addGroup">
+            <NFormItem label="添加到群组" :show-feedback="false">
+              <NInputGroup>
+                <GroupSelect
+                  v-model:value="selectedGroupId"
+                  clearable
+                  :disabled="pending || !data.user.enabled"
+                  :groups="availableGroups"
+                  :loading="groupsStatus === 'pending'"
+                />
+                <NButton
+                  attr-type="submit"
+                  :disabled="!selectedGroupId || !data.user.enabled"
+                  :loading="pending"
+                  type="primary"
+                >
+                  添加
+                </NButton>
+              </NInputGroup>
+            </NFormItem>
+          </NForm>
+          <NList v-if="data.permissions.memberships.length > 0">
+            <NListItem
+              v-for="group in data.permissions.memberships"
+              :key="group.id"
+            >
+              <NuxtLink
+                :to="
+                  group.managed
+                    ? `/groups/${encodeURIComponent(group.id)}`
+                    : `/admin?groupId=${encodeURIComponent(group.id)}`
+                "
+              >
+                {{ group.label }}
+              </NuxtLink>
+              <NText depth="3" tag="div">{{ group.path }}</NText>
+              <template #suffix>
+                <ConfirmAction
+                  v-if="group.managed"
+                  :disabled="pending"
+                  :message="`确认将 ${data.user.username} 从 ${group.label} 移除？`"
+                  @confirm="removeGroup(group.id)"
+                >
+                  移除
+                </ConfirmAction>
+                <LinkButton
+                  v-else
+                  size="small"
+                  :to="`/admin?groupId=${encodeURIComponent(group.id)}`"
+                >
+                  配置群组
+                </LinkButton>
+              </template>
+            </NListItem>
+          </NList>
+          <NEmpty v-else description="暂无群组" />
+        </NFlex>
+      </NCard>
       <NCard>
         <NCollapse>
           <NCollapseItem name="keycloak" title="Keycloak 详情">
