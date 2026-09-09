@@ -3,7 +3,7 @@ import type { DataTableColumns } from "naive-ui";
 import { NTag, NText } from "naive-ui";
 import type { InternalApi } from "nitropack/types";
 
-import { LinkButton } from "#components";
+import { NuxtLink } from "#components";
 
 type Group = InternalApi["/api/groups"]["get"][number];
 
@@ -29,7 +29,12 @@ const columns: DataTableColumns<Group> = [
     title: "群组名称",
     key: "label",
     minWidth: 180,
-    render: (group) => h(NText, { strong: true }, () => group.label),
+    render: (group) =>
+      h(
+        NuxtLink,
+        { to: `/groups/${encodeURIComponent(group.groupId)}` },
+        () => group.label,
+      ),
   },
   {
     title: "管理备注",
@@ -50,17 +55,6 @@ const columns: DataTableColumns<Group> = [
           type: group.allowInvites ? "success" : "default",
         },
         () => (group.allowInvites ? "已开放" : "已关闭"),
-      ),
-  },
-  {
-    title: "操作",
-    key: "actions",
-    width: 100,
-    render: (group) =>
-      h(
-        LinkButton,
-        { to: `/groups/${encodeURIComponent(group.groupId)}`, size: "small" },
-        () => "管理",
       ),
   },
 ];
