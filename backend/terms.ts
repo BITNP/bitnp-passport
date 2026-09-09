@@ -6,13 +6,13 @@ import type { z } from "zod";
 import { managedGroups, termGroups, terms } from "#database/schema";
 import type { Actor } from "#shared/types";
 
-import { audited } from "../audit.ts";
-import { db } from "../database.ts";
-import { ApplicationError } from "../errors.ts";
-import * as keycloak from "../keycloak.ts";
-import { requireAdministrator } from "../permissions.ts";
-import type { termInput } from "./shared.ts";
-import { belongsTo, directory, termRoot } from "./shared.ts";
+import { audited } from "./audit.ts";
+import { db } from "./database.ts";
+import { ApplicationError } from "./errors.ts";
+import * as keycloak from "./keycloak.ts";
+import { requireAdministrator } from "./permissions.ts";
+import type { termInput } from "./terms/shared.ts";
+import { belongsTo, directory, termRoot } from "./terms/shared.ts";
 
 async function validateGroups(input: z.infer<typeof termInput>) {
   const groups = directory(await keycloak.groupTree());
