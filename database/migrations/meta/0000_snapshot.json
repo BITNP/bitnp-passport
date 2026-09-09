@@ -1,5 +1,5 @@
 {
-  "id": "5bcf4b1d-cda8-4d7a-bb4f-ddc4552e25af",
+  "id": "706a9ada-fbc1-4869-b5cf-65169fb1653b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -209,21 +209,7 @@
           "with": {}
         }
       },
-      "foreignKeys": {
-        "group_delegations_group_id_managed_groups_group_id_fk": {
-          "name": "group_delegations_group_id_managed_groups_group_id_fk",
-          "tableFrom": "group_delegations",
-          "tableTo": "managed_groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "group_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {
         "group_delegations_group_id_type_subject_pk": {
           "name": "group_delegations_group_id_type_subject_pk",
@@ -254,6 +240,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
         },
         "group_id": {
           "name": "group_id",
@@ -499,21 +492,7 @@
           "with": {}
         }
       },
-      "foreignKeys": {
-        "jobs_group_id_managed_groups_group_id_fk": {
-          "name": "jobs_group_id_managed_groups_group_id_fk",
-          "tableFrom": "jobs",
-          "tableTo": "managed_groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "group_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -912,19 +891,6 @@
           ],
           "columnsTo": [
             "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "term_groups_group_id_managed_groups_group_id_fk": {
-          "name": "term_groups_group_id_managed_groups_group_id_fk",
-          "tableFrom": "term_groups",
-          "tableTo": "managed_groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "group_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"

@@ -30,6 +30,7 @@ CREATE TABLE "group_delegations" (
 CREATE TABLE "invitations" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"token" text NOT NULL,
+	"note" text DEFAULT '' NOT NULL,
 	"group_id" text NOT NULL,
 	"created_by" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -129,12 +130,9 @@ CREATE TABLE "terms" (
 );
 --> statement-breakpoint
 ALTER TABLE "audit_events" ADD CONSTRAINT "audit_events_job_id_jobs_id_fk" FOREIGN KEY ("job_id") REFERENCES "public"."jobs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "group_delegations" ADD CONSTRAINT "group_delegations_group_id_managed_groups_group_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."managed_groups"("group_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invitations" ADD CONSTRAINT "invitations_group_id_managed_groups_group_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."managed_groups"("group_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "job_items" ADD CONSTRAINT "job_items_job_id_jobs_id_fk" FOREIGN KEY ("job_id") REFERENCES "public"."jobs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "jobs" ADD CONSTRAINT "jobs_group_id_managed_groups_group_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."managed_groups"("group_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "term_groups" ADD CONSTRAINT "term_groups_term_id_terms_id_fk" FOREIGN KEY ("term_id") REFERENCES "public"."terms"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "term_groups" ADD CONSTRAINT "term_groups_group_id_managed_groups_group_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."managed_groups"("group_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "audit_created" ON "audit_events" USING btree ("created_at" DESC NULLS LAST);--> statement-breakpoint
 CREATE INDEX "audit_group" ON "audit_events" USING btree ("group_id","created_at" DESC NULLS LAST);--> statement-breakpoint
 CREATE INDEX "delegation_subject" ON "group_delegations" USING btree ("type","subject");--> statement-breakpoint
