@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { formatDateTime } from "#shared/utils";
+
 definePageMeta({ middleware: "auth" });
 
 const {
@@ -28,9 +30,7 @@ const labels: Record<string, string> = {
 };
 
 const createdAt = (value: number | null | undefined) =>
-  value && value > 0
-    ? new Date(value).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })
-    : "未知";
+  value && value > 0 ? formatDateTime(value) : "未知";
 
 const startAction = (action: string) =>
   submit(async () => {

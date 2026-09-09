@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { formatDateTime } from "#shared/utils";
+
 const { groupId, allowInvites } = defineProps<{
   groupId: string;
   allowInvites: boolean;
@@ -23,9 +25,6 @@ const durations = [1, 7, 14, 30].map((value) => ({
   label: `${value} 天`,
   value,
 }));
-
-const date = (value: string) =>
-  new Date(value).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
 
 const createInvitation = () =>
   submit(async () => {
@@ -131,13 +130,13 @@ useFetchError(error, refresh);
               <NFlex align="center" justify="space-between" :size="12">
                 <NFlex :size="12">
                   <NText depth="3">
-                    创建：{{ date(invitation.createdAt) }}
+                    创建：{{ formatDateTime(invitation.createdAt) }}
                   </NText>
                   <NText depth="3">
-                    到期：{{ date(invitation.expiresAt) }}
+                    到期：{{ formatDateTime(invitation.expiresAt) }}
                   </NText>
                   <NText v-if="invitation.revokedAt" depth="3">
-                    撤销：{{ date(invitation.revokedAt) }}
+                    撤销：{{ formatDateTime(invitation.revokedAt) }}
                   </NText>
                 </NFlex>
                 <NFlex align="center" :size="8">

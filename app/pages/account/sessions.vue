@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { formatDateTime } from "#shared/utils";
+
 definePageMeta({ middleware: "auth" });
 
 const {
@@ -8,11 +10,6 @@ const {
 } = await useFetch("/api/account/sessions");
 const { submit, pending } = useMutation();
 const message = useMessage();
-
-const lastAccess = (seconds: number) =>
-  new Date(seconds * 1000).toLocaleString("zh-CN", {
-    timeZone: "Asia/Shanghai",
-  });
 
 const signOut = (id?: string) =>
   submit(async () => {
@@ -76,7 +73,7 @@ useFetchError(loadError, refresh);
                   {{ session.ipAddress }}
                 </NDescriptionsItem>
                 <NDescriptionsItem label="最近活动">
-                  {{ lastAccess(session.lastAccess) }}
+                  {{ formatDateTime(session.lastAccess * 1000) }}
                 </NDescriptionsItem>
                 <NDescriptionsItem label="使用的服务">
                   {{

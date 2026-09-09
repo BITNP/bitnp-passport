@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { formatDateTime } from "#shared/utils";
+
 const route = useRoute();
 const token = String(route.params.token);
 
@@ -59,8 +61,7 @@ const switchAccount = () =>
         </NDescriptionsItem>
         <NDescriptionsItem label="有效期至">
           {{
-            new Date(invitation.expiresAt).toLocaleString("zh-CN", {
-              timeZone: "Asia/Shanghai",
+            formatDateTime(invitation.expiresAt, {
               dateStyle: "medium",
               timeStyle: "short",
             })

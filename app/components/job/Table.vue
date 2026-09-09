@@ -5,6 +5,7 @@ import type { InternalApi } from "nitropack/types";
 
 import { NuxtLink } from "#components";
 import { jobStatusLabels } from "#shared/labels";
+import { formatDateTime } from "#shared/utils";
 
 type Job = InternalApi["/api/jobs"]["get"]["jobs"][number];
 
@@ -63,10 +64,7 @@ const columns: DataTableColumns<Job> = [
     title: "创建时间",
     key: "createdAt",
     width: 210,
-    render: (job) =>
-      new Date(job.createdAt).toLocaleString("zh-CN", {
-        timeZone: "Asia/Shanghai",
-      }),
+    render: (job) => formatDateTime(job.createdAt),
   },
 ];
 </script>

@@ -5,6 +5,7 @@ import type { InternalApi } from "nitropack/types";
 import type { AuditConfiguration } from "#shared/events";
 import { events } from "#shared/events";
 import { auditFieldLabels, auditOutcomeLabels } from "#shared/labels";
+import { formatDateTime } from "#shared/utils";
 
 const { event, groups } = defineProps<{
   event: InternalApi["/api/audit"]["get"]["events"][number];
@@ -94,11 +95,7 @@ const columns = computed<DataTableColumns<(typeof fields.value)[number]>>(
             {{ events[event.operation].label }}
           </NDescriptionsItem>
           <NDescriptionsItem label="时间">
-            {{
-              new Date(event.createdAt).toLocaleString("zh-CN", {
-                timeZone: "Asia/Shanghai",
-              })
-            }}
+            {{ formatDateTime(event.createdAt) }}
           </NDescriptionsItem>
           <NDescriptionsItem label="结果">
             {{ auditOutcomeLabels[event.outcome] }}

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { InternalApi } from "nitropack/types";
 
+import { formatDateTime } from "#shared/utils";
+
 const { user } = defineProps<{
   user: InternalApi["/api/admin/users/:id"]["get"]["user"];
 }>();
@@ -52,11 +54,7 @@ const keycloakPages = {
       </NDescriptionsItem>
       <NDescriptionsItem label="创建时间">
         {{
-          user.createdTimestamp
-            ? new Date(user.createdTimestamp).toLocaleString("zh-CN", {
-                timeZone: "Asia/Shanghai",
-              })
-            : " - "
+          user.createdTimestamp ? formatDateTime(user.createdTimestamp) : " - "
         }}
       </NDescriptionsItem>
       <NDescriptionsItem label="用户 ID">

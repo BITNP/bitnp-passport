@@ -3,6 +3,7 @@ import type { DataTableColumns } from "naive-ui";
 import type { InternalApi } from "nitropack/types";
 
 import { AuditReference } from "#components";
+import { formatDateTime } from "#shared/utils";
 
 type Usage = InternalApi["/api/audit"]["get"]["events"][number];
 
@@ -36,10 +37,7 @@ const columns: DataTableColumns<Usage> = [
     title: "加入时间",
     key: "completedAt",
     width: 185,
-    render: (usage) =>
-      new Date(usage.completedAt!).toLocaleString("zh-CN", {
-        timeZone: "Asia/Shanghai",
-      }),
+    render: (usage) => formatDateTime(usage.completedAt!),
   },
 ];
 

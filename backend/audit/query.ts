@@ -10,6 +10,7 @@ import {
 } from "#database/schema";
 import type { AuditOperation, AuditTarget } from "#shared/events";
 import type { Actor } from "#shared/types";
+import { formatDateTime } from "#shared/utils";
 
 import { db } from "../database.ts";
 import { ApplicationError } from "../errors.ts";
@@ -230,7 +231,7 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
                 canManage && row.invitationNote?.length
                   ? row.invitationNote
                   : row.invitationCreatedAt
-                    ? `邀请 · ${row.invitationCreatedAt.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}`
+                    ? `邀请 · ${formatDateTime(row.invitationCreatedAt)}`
                     : null,
               to: canManage
                 ? `/groups/${encodeURIComponent(row.invitationGroupId!)}`

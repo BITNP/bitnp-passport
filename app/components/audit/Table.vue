@@ -6,6 +6,7 @@ import type { InternalApi } from "nitropack/types";
 import { AuditReference, NuxtLink } from "#components";
 import { events } from "#shared/events";
 import { auditOutcomeLabels } from "#shared/labels";
+import { formatDateTime } from "#shared/utils";
 
 type AuditEvent = InternalApi["/api/audit"]["get"]["events"][number];
 
@@ -25,10 +26,7 @@ const columns: DataTableColumns<AuditEvent> = [
     title: "时间",
     key: "createdAt",
     width: 185,
-    render: (event) =>
-      new Date(event.createdAt).toLocaleString("zh-CN", {
-        timeZone: "Asia/Shanghai",
-      }),
+    render: (event) => formatDateTime(event.createdAt),
   },
   {
     title: "操作者",

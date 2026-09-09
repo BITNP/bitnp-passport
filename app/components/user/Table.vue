@@ -6,6 +6,7 @@ import type { LocationQueryRaw } from "vue-router";
 
 import { NuxtLink } from "#components";
 import type { UserListItem } from "#shared/types";
+import { formatDateTime } from "#shared/utils";
 
 const { userQuery } = defineProps<{
   users: T[];
@@ -81,11 +82,7 @@ const columns: DataTableColumns<T> = [
     key: "createdTimestamp",
     width: 200,
     render: (user) =>
-      user.createdTimestamp
-        ? new Date(user.createdTimestamp).toLocaleString("zh-CN", {
-            timeZone: "Asia/Shanghai",
-          })
-        : " - ",
+      user.createdTimestamp ? formatDateTime(user.createdTimestamp) : " - ",
   },
   {
     title: "操作",
