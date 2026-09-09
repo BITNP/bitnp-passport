@@ -198,32 +198,18 @@ useFetchError(groupsError, refreshGroups);
               v-for="group in data.permissions.memberships"
               :key="group.id"
             >
-              <NuxtLink
-                :to="
-                  group.managed
-                    ? `/groups/${encodeURIComponent(group.id)}`
-                    : `/admin?groupId=${encodeURIComponent(group.id)}`
-                "
-              >
+              <NuxtLink :to="`/groups/${encodeURIComponent(group.id)}`">
                 {{ group.label }}
               </NuxtLink>
               <NText depth="3" tag="div">{{ group.path }}</NText>
               <template #suffix>
                 <ConfirmAction
-                  v-if="group.managed"
                   :disabled="pending"
                   :message="`确认将 ${data.user.username} 从 ${group.label} 移除？`"
                   @confirm="removeGroup(group.id)"
                 >
                   移除
                 </ConfirmAction>
-                <LinkButton
-                  v-else
-                  size="small"
-                  :to="`/admin?groupId=${encodeURIComponent(group.id)}`"
-                >
-                  配置群组
-                </LinkButton>
               </template>
             </NListItem>
           </NList>

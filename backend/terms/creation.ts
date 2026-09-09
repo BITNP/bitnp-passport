@@ -9,11 +9,11 @@ import type { Actor, TermCreationPlan } from "#shared/types";
 import { audited } from "../audit.ts";
 import { db } from "../database.ts";
 import { ApplicationError } from "../errors.ts";
+import { groupDirectory } from "../groups/directory.ts";
 import * as keycloak from "../keycloak.ts";
 import { requireAdministrator } from "../permissions.ts";
 import {
   belongsTo,
-  directory,
   readCreatedTerm,
   termInput,
   termRoot,
@@ -33,11 +33,7 @@ async function planCreation(
   if (input.year <= source.year) {
     throw new ApplicationError(422, "新任期年份必须晚于来源任期");
   }
-  const [tree, settings] = await Promise.all([
-    keycloak.groupTree(),
-    db.select().from(managedGroups),
-  ]);
-  const nodes = directory(tree);
+  const nodes = await groupDirectory();
   const root = termRoot(nodes, source.rootGroupId);
   const parent = input.parentId ? termRoot(nodes, input.parentId) : undefined;
   if (parent && belongsTo(parent.path, root.path)) {
@@ -57,7 +53,7 @@ async function planCreation(
   if ([...nodes.values()].some((group) => group.path === path)) {
     throw new ApplicationError(409, `目标群组已存在：${path}`);
   }
-  const rootSettings = settings.find((group) => group.groupId === root.id)!;
+  const rootSettings = nodes.get(root.id)!;
   const plan: TermCreationPlan = {
     parentId: input.parentId,
     root: {
@@ -88,7 +84,6 @@ async function planCreation(
         `请先为来源任期的群组补充部门信息：${parentPath}`,
       );
     }
-    const configuration = settings.find((item) => item.groupId === group.id)!;
     const code = department.code;
     const name = input.clinicCompatible ? `${input.year}-${code}` : code;
     const path = `${parent.path}/${name}`;
@@ -100,8 +95,8 @@ async function planCreation(
       name,
       path,
       label: `${input.year} ${department.departmentName}`,
-      note: configuration.note,
-      allowInvites: configuration.allowInvites,
+      note: group.note,
+      allowInvites: group.allowInvites,
     });
     parents.set(group.path, { code, path });
   }

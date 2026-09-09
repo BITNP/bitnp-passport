@@ -241,12 +241,7 @@ useFetchError(loadError, refresh);
                     {{ group ? "保存" : "创建群组" }}
                   </NButton>
                   <LinkButton
-                    v-if="
-                      group &&
-                      directory.settings.some(
-                        (item) => item.groupId === editor?.groupId,
-                      )
-                    "
+                    v-if="group"
                     :to="`/groups/${encodeURIComponent(group.id)}`"
                   >
                     成员与授权

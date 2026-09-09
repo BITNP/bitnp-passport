@@ -127,9 +127,7 @@ export const managedGroups = pgTable("managed_groups", {
 export const groupDelegations = pgTable(
   "group_delegations",
   {
-    groupId: text("group_id")
-      .notNull()
-      .references(() => managedGroups.groupId, { onDelete: "cascade" }),
+    groupId: text("group_id").notNull(),
     type: delegateType("type").notNull().default("user"),
     subject: text("subject").notNull(),
     grantedBy: text("granted_by").notNull(),
@@ -198,10 +196,7 @@ export const termGroups = pgTable(
     termId: uuid("term_id")
       .notNull()
       .references(() => terms.id),
-    groupId: text("group_id")
-      .notNull()
-      .unique()
-      .references(() => managedGroups.groupId),
+    groupId: text("group_id").notNull().unique(),
     code: text("code").notNull(),
     departmentName: text("department_name").notNull(),
   },
@@ -228,9 +223,7 @@ export const jobs = pgTable(
     id: uuid("id").primaryKey(),
     queueId: uuid("queue_id").notNull(),
     actorSubject: text("actor_subject").notNull(),
-    groupId: text("group_id")
-      .notNull()
-      .references(() => managedGroups.groupId),
+    groupId: text("group_id").notNull(),
     status: jobStatus("status").notNull().default("queued"),
     error: text("error"),
     startedAt: timestamp("started_at", { withTimezone: true }),

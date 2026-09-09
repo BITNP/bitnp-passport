@@ -15,6 +15,7 @@ import type { Actor } from "#shared/types";
 
 import { db } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
+import * as keycloak from "./keycloak.ts";
 import { requireGroupManager } from "./permissions.ts";
 import { operationQueue, queue } from "./queue.ts";
 
@@ -25,6 +26,7 @@ export async function createMembershipJob(
   operation: "add" | "remove",
 ) {
   await requireGroupManager(actor, groupId);
+  await keycloak.group(groupId);
 
   const boss = await queue();
   const id = randomUUID();
@@ -95,7 +97,7 @@ export async function listJobs(actor: Actor, first: number, groupId?: string) {
         error: jobs.error,
       })
       .from(jobs)
-      .innerJoin(managedGroups, eq(jobs.groupId, managedGroups.groupId))
+      .leftJoin(managedGroups, eq(jobs.groupId, managedGroups.groupId))
       .where(visible)
       .orderBy(desc(jobs.createdAt), desc(jobs.id))
       .offset(first)
@@ -103,7 +105,33 @@ export async function listJobs(actor: Actor, first: number, groupId?: string) {
     db.$count(jobs, visible),
   ]);
 
-  return { jobs: rows, total };
+  const missingGroupIds = new Set(
+    rows.filter((row) => row.groupLabel === null).map((row) => row.groupId),
+  );
+  const groupNames = await Promise.all(
+    [...missingGroupIds].map(async (id) => {
+      try {
+        return { id, label: (await keycloak.group(id)).name };
+      } catch (error) {
+        // 群组删除后仍保留历史任务
+        if (error instanceof ApplicationError && error.statusCode === 404) {
+          return { id, label: id };
+        }
+
+        throw error;
+      }
+    }),
+  );
+
+  return {
+    jobs: rows.map((row) => ({
+      ...row,
+      groupLabel:
+        row.groupLabel ??
+        groupNames.find((group) => group.id === row.groupId)!.label,
+    })),
+    total,
+  };
 }
 
 export async function jobDetail(actor: Actor, id: string) {

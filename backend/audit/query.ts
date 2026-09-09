@@ -177,20 +177,13 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
   ]);
 
   function groupReference(id: string, label: string | null): Reference {
-    // 未在通行证配置的群组只显示名称，没有管理入口
-    if (label === null) {
-      return {
-        id,
-        label: groupNames.find((group) => group.id === id)!.name,
-        to: null,
-      };
-    }
+    const name = label ?? groupNames.find((group) => group.id === id)!.name;
 
     return {
       id,
-      label,
+      label: name,
       to:
-        administrator || groupIds.includes(id)
+        name !== null && (administrator || groupIds.includes(id))
           ? `/groups/${encodeURIComponent(id)}`
           : null,
     };

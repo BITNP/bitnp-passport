@@ -34,9 +34,9 @@ export async function listGroups(actor: Actor) {
 }
 
 export async function groupDetail(actor: Actor, groupId: string) {
-  const settings = await requireGroupManager(actor, groupId);
+  await requireGroupManager(actor, groupId);
 
-  const [directory, members, delegations] = await Promise.all([
+  const [directory, members, delegations, settings] = await Promise.all([
     keycloak.group(groupId),
     keycloak.members(groupId),
     db
@@ -44,6 +44,9 @@ export async function groupDetail(actor: Actor, groupId: string) {
       .from(groupDelegations)
       .where(eq(groupDelegations.groupId, groupId))
       .orderBy(groupDelegations.createdAt),
+    db.query.managedGroups.findFirst({
+      where: eq(managedGroups.groupId, groupId),
+    }),
   ]);
 
   const delegates = await Promise.all(
@@ -70,7 +73,12 @@ export async function groupDetail(actor: Actor, groupId: string) {
   );
 
   return {
-    settings,
+    settings: {
+      groupId,
+      label: settings?.label ?? directory.name,
+      note: settings?.note ?? "",
+      allowInvites: settings?.allowInvites ?? false,
+    },
     directory,
     members,
     delegates,
@@ -217,6 +225,7 @@ export async function grantDelegate(
   },
 ) {
   await requireAdministrator(actor);
+  await keycloak.group(groupId);
 
   let subject: string;
 

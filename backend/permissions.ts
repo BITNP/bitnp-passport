@@ -1,14 +1,11 @@
 import { and, eq, inArray, or } from "drizzle-orm";
 
-import {
-  groupDelegations,
-  managedGroups as groups,
-  portalAdmins,
-} from "#database/schema";
+import { groupDelegations, portalAdmins } from "#database/schema";
 import type { Actor } from "#shared/types";
 
 import { db } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
+import { groupDirectory } from "./groups/directory.ts";
 import * as keycloak from "./keycloak.ts";
 
 export async function isAdministrator(actor: Actor) {
@@ -68,48 +65,46 @@ export async function groupAccess(actor: Actor) {
 }
 
 export async function permissionDetails(subject: string) {
-  const [administrator, memberships, settings] = await Promise.all([
+  const [administrator, memberships, directory] = await Promise.all([
     isAdministrator({ subject }),
     keycloak.groupsForUser(subject),
-    db
-      .select({ groupId: groups.groupId, label: groups.label })
-      .from(groups)
-      .orderBy(groups.label, groups.groupId),
+    groupDirectory(),
   ]);
   const inherited = await keycloak.inheritedGroups(memberships);
-  const labels = new Map(settings.map((group) => [group.groupId, group.label]));
-  const directory = new Map(
+  const membershipDetails = new Map(
     inherited.map((group) => [
       group.id,
       {
         id: group.id,
-        label: labels.get(group.id) ?? group.name,
+        label: directory.get(group.id)?.label ?? group.name,
         path: group.path,
-        managed: labels.has(group.id),
       },
     ]),
   );
   const [delegations, activeSources] = await Promise.all([
-    delegationsFor(subject, [...directory.keys()]),
+    delegationsFor(subject, [...membershipDetails.keys()]),
     keycloak.activeMemberSources(subject, inherited),
   ]);
 
   return {
     administrator,
-    memberships: memberships.map((group) => directory.get(group.id)!),
-    groups: settings.flatMap((group) => {
+    memberships: memberships.map((group) => membershipDetails.get(group.id)!),
+    groups: [...directory.values()].flatMap((group) => {
       const sources = delegations
-        .filter((delegation) => delegation.groupId === group.groupId)
+        .filter((delegation) => delegation.groupId === group.id)
         .map((delegation) =>
           delegation.type === "user"
             ? null
-            : directory.get(delegation.subject)!,
+            : membershipDetails.get(delegation.subject)!,
         );
 
-      return sources.length > 0 ? [{ ...group, sources }] : [];
+      return sources.length > 0
+        ? [{ groupId: group.id, label: group.label, sources }]
+        : [];
     }),
     activeSources: activeSources.map((source) => ({
-      group: source.groupId === null ? null : directory.get(source.groupId)!,
+      group:
+        source.groupId === null ? null : membershipDetails.get(source.groupId)!,
       role: source.role,
     })),
   };
@@ -117,30 +112,28 @@ export async function permissionDetails(subject: string) {
 
 export async function requireGroupManager(actor: Actor, groupId: string) {
   const { administrator, groupIds } = await groupAccess(actor);
-  const [group] = await db
-    .select()
-    .from(groups)
-    .where(
-      and(
-        eq(groups.groupId, groupId),
-        administrator ? undefined : inArray(groups.groupId, groupIds),
-      ),
-    )
-    .limit(1);
-
-  if (!group) {
+  if (!administrator && !groupIds.includes(groupId)) {
     throw new ApplicationError(403, "你没有管理此组的权限");
   }
-
-  return group;
 }
 
 export async function managedGroups(actor: Actor) {
   const { administrator, groupIds } = await groupAccess(actor);
 
-  return db
-    .select()
-    .from(groups)
-    .where(administrator ? undefined : inArray(groups.groupId, groupIds))
-    .orderBy(groups.label, groups.groupId);
+  const directory = await groupDirectory();
+
+  return [...directory.values()]
+    .filter((group) => administrator || groupIds.includes(group.id))
+    .map((group) => ({
+      groupId: group.id,
+      label: group.label,
+      path: group.path,
+      note: group.note,
+      allowInvites: group.allowInvites,
+    }))
+    .sort(
+      (left, right) =>
+        left.label.localeCompare(right.label) ||
+        left.groupId.localeCompare(right.groupId),
+    );
 }

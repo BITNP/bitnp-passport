@@ -139,8 +139,12 @@ async function planActivation(
     if (!groupId || !subject) {
       continue;
     }
+    let groupLabel: string;
     let subjectLabel: string;
     try {
+      groupLabel =
+        settings.find((item) => item.groupId === groupId)?.label ??
+        (await keycloak.group(groupId)).name;
       subjectLabel =
         grant.type === "user"
           ? (await keycloak.user(subject)).username
@@ -157,7 +161,7 @@ async function planActivation(
     transfers.push({
       key: JSON.stringify([grant.groupId, grant.type, grant.subject]),
       to: { groupId, type: grant.type, subject },
-      groupLabel: settings.find((item) => item.groupId === groupId)!.label,
+      groupLabel,
       subjectLabel,
     });
   }

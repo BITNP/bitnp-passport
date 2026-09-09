@@ -104,7 +104,6 @@ const available = computed(() => {
   return directory.value.filter(
     (group) =>
       group.path.startsWith(`${root.path}/`) &&
-      groupLabels.value.has(group.groupId) &&
       !assigned.has(group.groupId),
   );
 });

@@ -60,7 +60,7 @@ export async function createInvitation(
           .from(managedGroups)
           .where(eq(managedGroups.groupId, groupId))
           .for("update");
-        if (!group!.allowInvites) {
+        if (!group?.allowInvites) {
           throw new ApplicationError(403, "此群组未开放邀请");
         }
 
@@ -84,7 +84,7 @@ export async function renewInvitation(
   id: string,
   days: number,
 ) {
-  const group = await requireGroupManager(actor, groupId);
+  await requireGroupManager(actor, groupId);
 
   return audited(
     actor,
@@ -94,30 +94,36 @@ export async function renewInvitation(
       target: { type: "invitation", id },
       detail: { days },
     },
-    async () => {
-      if (!group.allowInvites) {
-        throw new ApplicationError(403, "此群组未开放邀请");
-      }
+    () =>
+      db.transaction(async (tx) => {
+        const [group] = await tx
+          .select({ allowInvites: managedGroups.allowInvites })
+          .from(managedGroups)
+          .where(eq(managedGroups.groupId, groupId))
+          .for("update");
+        if (!group?.allowInvites) {
+          throw new ApplicationError(403, "此群组未开放邀请");
+        }
 
-      const [invitation] = await db
-        .update(invitations)
-        .set({
-          expiresAt: sql`greatest(${invitations.expiresAt}, now()) + ${days} * interval '24 hours'`,
-        })
-        .where(
-          and(
-            eq(invitations.id, id),
-            eq(invitations.groupId, groupId),
-            // 只更新到期时间，不能恢复已撤销的链接
-            isNull(invitations.revokedAt),
-          ),
-        )
-        .returning({ id: invitations.id });
+        const [invitation] = await tx
+          .update(invitations)
+          .set({
+            expiresAt: sql`greatest(${invitations.expiresAt}, now()) + ${days} * interval '24 hours'`,
+          })
+          .where(
+            and(
+              eq(invitations.id, id),
+              eq(invitations.groupId, groupId),
+              // 只更新到期时间，不能恢复已撤销的链接
+              isNull(invitations.revokedAt),
+            ),
+          )
+          .returning({ id: invitations.id });
 
-      if (!invitation) {
-        throw new ApplicationError(404, "邀请不存在或已撤销");
-      }
-    },
+        if (!invitation) {
+          throw new ApplicationError(404, "邀请不存在或已撤销");
+        }
+      }),
   );
 }
 

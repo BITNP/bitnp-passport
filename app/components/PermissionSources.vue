@@ -14,13 +14,10 @@ const membershipIds = computed(
 );
 
 function groupLink(group: PermissionGroup) {
-  if (viewerAdministrator) {
-    return group.managed
-      ? `/groups/${encodeURIComponent(group.id)}`
-      : `/admin?groupId=${encodeURIComponent(group.id)}`;
-  }
-
-  if (permissions.groups.some((target) => target.groupId === group.id)) {
+  if (
+    viewerAdministrator ||
+    permissions.groups.some((target) => target.groupId === group.id)
+  ) {
     return `/groups/${encodeURIComponent(group.id)}`;
   }
 }
