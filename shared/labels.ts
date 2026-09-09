@@ -1,3 +1,5 @@
+import type { AuditConfiguration } from "./events.ts";
+
 export const jobStatusLabels = {
   queued: "等待执行",
   running: "执行中",
@@ -30,30 +32,15 @@ export const auditOutcomeLabels = {
   unknown: "结果未确认",
 };
 
-export const auditOperationLabels: Record<string, string> = {
-  "site.update": "修改站点设置",
-  "group.configure": "配置群组",
-  "group.create": "创建群组",
-  "member.add": "添加成员",
-  "member.remove": "移除成员",
-  "delegate.grant": "授予委托权限",
-  "delegate.revoke": "撤销委托权限",
-  "invitation.create": "创建邀请",
-  "invitation.renew": "续期邀请",
-  "invitation.rotate": "替换邀请",
-  "invitation.revoke": "撤销邀请",
-  "invitation.join": "通过邀请加入",
-  "admin.grant": "授予管理员",
-  "admin.revoke": "撤销管理员",
-  "admin.bootstrap": "初始化管理员",
-  "job.create": "创建批量任务",
-  "job.retry": "重试任务",
-  "job.cancel": "取消任务",
-  "job.add": "批量添加成员",
-  "job.remove": "批量移除成员",
-  "term.create": "创建任期",
-  "term.update": "编辑任期",
-  "term.create-from": "创建下一届",
-  "term.provision": "继续创建任期群组",
-  "term.activate": "启用任期",
+export const auditFieldLabels: Record<keyof AuditConfiguration, string> = {
+  name: "路径名称",
+  label: "显示名称",
+  note: "管理备注",
+  allowInvites: "允许创建邀请",
+  supportUrl: "工单地址",
+  services: "服务入口",
+  year: "年份",
+  rootGroupId: "根群组",
+  clinicCompatible: "诊所兼容",
+  groups: "任期群组",
 };

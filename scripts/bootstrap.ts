@@ -1,6 +1,7 @@
 import { closeDatabase, db } from "#backend/database";
 import * as keycloak from "#backend/keycloak";
 import { logger } from "#backend/logger";
+import type { AuditRecord } from "#database/schema";
 import { auditEvents, portalAdmins } from "#database/schema";
 
 const log = logger.child({ component: "bootstrap" });
@@ -30,10 +31,10 @@ try {
       await tx.insert(auditEvents).values({
         actorSubject: "bootstrap",
         operation: "admin.grant",
-        target: subject,
+        target: { type: "user", id: subject },
         outcome: "succeeded",
         completedAt: new Date(),
-      });
+      } satisfies AuditRecord);
     },
     { isolationLevel: "serializable" },
   );

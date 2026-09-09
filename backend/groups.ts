@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { groupDelegations, invitations, managedGroups } from "#database/schema";
@@ -89,18 +89,34 @@ export async function configureGroup(
 ) {
   await requireAdministrator(actor);
 
-  const { groupId, name, ...settings } = input;
-  const current = await keycloak.group(groupId);
+  const { groupId, ...configuration } = input;
+  const { name, ...settings } = configuration;
 
   return audited(
     actor,
-    { operation: "group.configure", groupId: input.groupId, detail: input },
-    async () => {
-      if (name !== current.name) {
-        await keycloak.renameGroup(groupId, name);
-      }
+    {
+      operation: "group.configure",
+      groupId,
+      detail: { after: configuration },
+    },
+    (recordBefore) =>
+      db.transaction(async (tx) => {
+        // 首次配置还没有元数据行可锁，也要按群组串行保存，才能记录正确的前值
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtextextended(${groupId}, 0))`,
+        );
+        const [previous] = await tx
+          .select()
+          .from(managedGroups)
+          .where(eq(managedGroups.groupId, groupId))
+          .for("update");
+        const current = await keycloak.group(groupId);
+        recordBefore({ name: current.name, ...previous });
 
-      await db.transaction(async (tx) => {
+        if (name !== current.name) {
+          await keycloak.renameGroup(groupId, name);
+        }
+
         await tx
           .insert(managedGroups)
           .values({ groupId, ...settings, createdBy: actor.subject })
@@ -109,21 +125,20 @@ export async function configureGroup(
             set: settings,
           });
 
-        if (!input.allowInvites) {
+        if (!settings.allowInvites) {
           await tx
             .update(invitations)
             .set({ revokedAt: new Date() })
             .where(
               and(
-                eq(invitations.groupId, input.groupId),
+                eq(invitations.groupId, groupId),
                 isNull(invitations.revokedAt),
               ),
             );
         }
-      });
 
-      return { groupId };
-    },
+        return { groupId };
+      }),
   );
 }
 
@@ -169,7 +184,7 @@ export async function addMember(
     {
       operation: "member.add",
       groupId,
-      target: user.id,
+      target: { type: "user", id: user.id },
     },
     () => keycloak.addMember(user.id, groupId),
   );
@@ -184,7 +199,11 @@ export async function removeMember(
 
   return audited(
     actor,
-    { operation: "member.remove", groupId, target: subject },
+    {
+      operation: "member.remove",
+      groupId,
+      target: { type: "user", id: subject },
+    },
     () => keycloak.removeMember(subject, groupId),
   );
 }
@@ -217,8 +236,7 @@ export async function grantDelegate(
     {
       operation: "delegate.grant",
       groupId,
-      target: subject,
-      detail: { type: input.type },
+      target: { type: input.type, id: subject },
     },
     async () => {
       await db
@@ -246,8 +264,7 @@ export async function revokeDelegate(
     {
       operation: "delegate.revoke",
       groupId,
-      target: input.subject,
-      detail: { type: input.type },
+      target: { type: input.type, id: input.subject },
     },
     async () => {
       await db

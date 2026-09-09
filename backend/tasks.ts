@@ -105,7 +105,7 @@ export async function runTask(task: Job<TaskData>) {
               operation: `job.${item.operation}`,
               jobId,
               groupId: job.groupId,
-              target: item.itemKey,
+              target: { type: "user", id: item.itemKey },
             },
             async () => {
               if (item.operation === "add") {

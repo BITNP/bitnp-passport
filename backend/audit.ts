@@ -1,69 +1,26 @@
-import { and, desc, eq, getTableColumns, inArray, or, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
-import { auditEvents, managedGroups } from "#database/schema";
+import { auditEvents } from "#database/schema";
+import type { AuditEvent } from "#shared/events";
 import type { Actor } from "#shared/types";
 
 import { db } from "./database.ts";
 import { ApplicationError, errorMessage } from "./errors.ts";
-import { groupAccess } from "./permissions.ts";
-
-interface Event {
-  operation: string;
-  groupId?: string;
-  target?: string;
-  jobId?: string;
-  detail?: Record<string, unknown>;
-}
-
-export async function listAudit(actor: Actor, first: number, groupId?: string) {
-  const { administrator, groupIds } = await groupAccess(actor);
-  // 管理员可以查看全部审计事件，因此不需要限制
-  let visible;
-
-  if (!administrator) {
-    visible = or(
-      // 用户自己触发的事件
-      eq(auditEvents.actorSubject, actor.subject),
-      // 直接授权或通过群组继承的管理范围
-      inArray(auditEvents.groupId, groupIds),
-    );
-  }
-
-  const filter = and(
-    visible,
-    groupId ? eq(auditEvents.groupId, groupId) : undefined,
-  );
-  const [rows, total] = await Promise.all([
-    db
-      .select({
-        ...getTableColumns(auditEvents),
-        id: sql`${auditEvents.id}`.mapWith(String),
-        groupLabel: managedGroups.label,
-      })
-      .from(auditEvents)
-      .leftJoin(managedGroups, eq(auditEvents.groupId, managedGroups.groupId))
-      .where(filter)
-      .orderBy(desc(auditEvents.id))
-      .offset(first)
-      .limit(50),
-    db.$count(auditEvents, filter),
-  ]);
-
-  return {
-    events: rows,
-    total,
-  };
-}
+import { pick } from "./utils.ts";
 
 export async function audited<T>(
   actor: Actor,
-  event: Event,
-  run: () => Promise<T>,
+  event: AuditEvent,
+  run: (
+    recordBefore: (before: Record<string, unknown> | null) => void,
+  ) => Promise<T>,
 ) {
+  let detail = event.detail ?? {};
   const [inserted] = await db
     .insert(auditEvents)
     .values({
       ...event,
+      detail,
       actorSubject: actor.subject,
       outcome: "pending",
     })
@@ -73,7 +30,14 @@ export async function audited<T>(
   let result: T;
 
   try {
-    result = await run();
+    // 配置保存会在事务内记录旧值，要等事务提交后结束
+    result = await run((before) => {
+      detail = {
+        ...detail,
+        before:
+          before === null ? null : pick(before, Object.keys(detail.after!)),
+      };
+    });
   } catch (error) {
     const outcome =
       error instanceof ApplicationError && error.statusCode < 500
@@ -82,7 +46,12 @@ export async function audited<T>(
 
     await db
       .update(auditEvents)
-      .set({ outcome, error: errorMessage(error), completedAt: new Date() })
+      .set({
+        outcome,
+        detail,
+        error: errorMessage(error),
+        completedAt: new Date(),
+      })
       .where(eq(auditEvents.id, id));
 
     throw error;
@@ -90,7 +59,7 @@ export async function audited<T>(
 
   await db
     .update(auditEvents)
-    .set({ outcome: "succeeded", completedAt: new Date() })
+    .set({ outcome: "succeeded", detail, completedAt: new Date() })
     .where(eq(auditEvents.id, id));
 
   return result;

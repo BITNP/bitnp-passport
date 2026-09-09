@@ -43,7 +43,7 @@ export async function grantAdministrator(actor: Actor, identifier: string) {
 
   return audited(
     actor,
-    { operation: "admin.grant", target: user.id },
+    { operation: "admin.grant", target: { type: "user", id: user.id } },
     async () => {
       await db
         .insert(portalAdmins)
@@ -60,7 +60,7 @@ export async function revokeAdministrator(actor: Actor, subject: string) {
 
   return audited(
     actor,
-    { operation: "admin.revoke", target: subject },
+    { operation: "admin.revoke", target: { type: "user", id: subject } },
     // 同时撤销最后两位管理员时，两次请求可能各自看到另一位仍在，导致全部被撤销
     // 用 serializable 事务将删除与剩余管理员检查作为整体
     () =>

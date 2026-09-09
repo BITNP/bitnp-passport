@@ -37,6 +37,13 @@ useFetchError(error, refresh);
       >
         <NGi span="1 m:3">
           <NCard title="账户信息">
+            <template #header-extra>
+              <NuxtLink
+                :to="{ path: '/audit', query: { actor: data.user.username } }"
+              >
+                操作记录
+              </NuxtLink>
+            </template>
             <NDescriptions :column="1" label-placement="left">
               <NDescriptionsItem label="用户名">
                 {{ data.user.username }}

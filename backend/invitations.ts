@@ -46,7 +46,12 @@ export async function createInvitation(
 
   return audited(
     actor,
-    { operation: "invitation.create", groupId, target: id, detail: { days } },
+    {
+      operation: "invitation.create",
+      groupId,
+      target: { type: "invitation", id },
+      detail: { days },
+    },
     () =>
       db.transaction(async (tx) => {
         // 与关闭群组邀请使用同一行锁，确保新链接不会遗漏撤销
@@ -83,7 +88,12 @@ export async function renewInvitation(
 
   return audited(
     actor,
-    { operation: "invitation.renew", groupId, target: id, detail: { days } },
+    {
+      operation: "invitation.renew",
+      groupId,
+      target: { type: "invitation", id },
+      detail: { days },
+    },
     async () => {
       if (!group.allowInvites) {
         throw new ApplicationError(403, "此群组未开放邀请");
@@ -120,7 +130,11 @@ export async function revokeInvitation(
 
   return audited(
     actor,
-    { operation: "invitation.revoke", groupId, target: id },
+    {
+      operation: "invitation.revoke",
+      groupId,
+      target: { type: "invitation", id },
+    },
     async () => {
       await db
         .update(invitations)
@@ -186,7 +200,7 @@ export async function joinInvitation(actor: Actor, token: string) {
     {
       operation: "invitation.join",
       groupId: reference.groupId,
-      target: actor.subject,
+      target: { type: "user", id: actor.subject },
     },
     () =>
       db.transaction(async (tx) => {

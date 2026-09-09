@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq, exists, or, sql } from "drizzle-orm";
 import { fromDrizzle } from "pg-boss";
 
+import type { AuditRecord } from "#database/schema";
 import {
   auditEvents,
   jobItems,
@@ -60,7 +61,7 @@ export async function createMembershipJob(
       outcome: "succeeded",
       completedAt: new Date(),
       detail: { operation, count: members.length },
-    });
+    } satisfies AuditRecord);
   });
 
   return { id };
@@ -170,9 +171,10 @@ export async function retryJob(actor: Actor, id: string) {
       actorSubject: actor.subject,
       operation: "job.retry",
       jobId: id,
+      groupId: job.groupId,
       outcome: "succeeded",
       completedAt: new Date(),
-    });
+    } satisfies AuditRecord);
   });
 }
 
@@ -200,8 +202,9 @@ export async function cancelJob(actor: Actor, id: string) {
       actorSubject: actor.subject,
       operation: "job.cancel",
       jobId: id,
+      groupId: job.groupId,
       outcome: "succeeded",
       completedAt: new Date(),
-    });
+    } satisfies AuditRecord);
   });
 }

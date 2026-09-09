@@ -16,6 +16,12 @@ import {
 } from "drizzle-orm/pg-core";
 
 import type {
+  AuditDetail,
+  AuditEvent,
+  AuditOperation,
+  AuditTarget,
+} from "#shared/events";
+import type {
   SiteService,
   TermActivationPlan,
   TermCreationPlan,
@@ -263,15 +269,12 @@ export const auditEvents = pgTable(
       .primaryKey()
       .generatedAlwaysAsIdentity(),
     actorSubject: text("actor_subject").notNull(),
-    operation: text("operation").notNull(),
+    operation: text("operation").$type<AuditOperation>().notNull(),
     groupId: text("group_id"),
-    target: text("target"),
+    target: jsonb("target").$type<AuditTarget>(),
     jobId: uuid("job_id").references(() => jobs.id),
     outcome: auditOutcome("outcome").notNull(),
-    detail: jsonb("detail")
-      .$type<Record<string, unknown>>()
-      .notNull()
-      .default({}),
+    detail: jsonb("detail").$type<AuditDetail>().notNull().default({}),
     error: text("error"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -283,3 +286,5 @@ export const auditEvents = pgTable(
     index("audit_group").on(table.groupId, table.createdAt.desc()),
   ],
 );
+
+export type AuditRecord = typeof auditEvents.$inferInsert & AuditEvent;

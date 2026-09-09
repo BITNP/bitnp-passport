@@ -23,11 +23,22 @@ export async function updateSite(
 
   return audited(
     actor,
-    { operation: "site.update", detail: input },
-    async () => {
-      await db.update(siteSettings).set(input).where(eq(siteSettings.id, true));
+    { operation: "site.update", detail: { after: input } },
+    (recordBefore) =>
+      db.transaction(async (tx) => {
+        const [previous] = await tx
+          .select()
+          .from(siteSettings)
+          .where(eq(siteSettings.id, true))
+          .for("update");
+        recordBefore(previous!);
 
-      return input;
-    },
+        await tx
+          .update(siteSettings)
+          .set(input)
+          .where(eq(siteSettings.id, true));
+
+        return input;
+      }),
   );
 }

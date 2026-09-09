@@ -9,7 +9,7 @@ CREATE TABLE "audit_events" (
 	"actor_subject" text NOT NULL,
 	"operation" text NOT NULL,
 	"group_id" text,
-	"target" text,
+	"target" jsonb,
 	"job_id" uuid,
 	"outcome" "audit_outcome" NOT NULL,
 	"detail" jsonb DEFAULT '{}'::jsonb NOT NULL,

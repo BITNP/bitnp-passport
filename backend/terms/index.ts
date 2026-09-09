@@ -75,11 +75,11 @@ export async function saveTerm(
     actor,
     {
       operation: id ? "term.update" : "term.create",
-      target: termId,
-      detail: input,
+      target: { type: "term", id: termId },
+      detail: { after: input },
     },
-    async () => {
-      await db.transaction(async (tx) => {
+    (recordBefore) =>
+      db.transaction(async (tx) => {
         if (id) {
           const rows = await tx
             .select()
@@ -93,6 +93,16 @@ export async function saveTerm(
           if (rows.some((row) => row.activation)) {
             throw new ApplicationError(409, "请先完成正在进行的任期切换");
           }
+
+          recordBefore({
+            ...term,
+            groups: await tx.query.termGroups.findMany({
+              columns: { termId: false },
+              where: eq(termGroups.termId, id),
+            }),
+          });
+        } else {
+          recordBefore(null);
         }
 
         await tx
@@ -115,9 +125,8 @@ export async function saveTerm(
         await tx
           .insert(termGroups)
           .values(groups.map((group) => ({ ...group, termId })));
-      });
 
-      return { id: termId };
-    },
+        return { id: termId };
+      }),
   );
 }

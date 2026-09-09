@@ -211,7 +211,11 @@ export async function createFromTerm(
 
   return audited(
     actor,
-    { operation: "term.create-from", target: id, detail: input },
+    {
+      operation: "term.create-from",
+      target: { type: "term", id },
+      detail: input,
+    },
     async () => {
       await db.insert(terms).values({
         id,
@@ -230,7 +234,9 @@ export async function createFromTerm(
 export async function provisionTerm(actor: Actor, id: string) {
   await requireAdministrator(actor);
 
-  return audited(actor, { operation: "term.provision", target: id }, () =>
-    provision(id, actor),
+  return audited(
+    actor,
+    { operation: "term.provision", target: { type: "term", id } },
+    () => provision(id, actor),
   );
 }

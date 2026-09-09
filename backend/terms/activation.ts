@@ -211,7 +211,11 @@ export async function activateTerm(
 
   return audited(
     actor,
-    { operation: "term.activate", target: id, detail: input },
+    {
+      operation: "term.activate",
+      target: { type: "term", id },
+      detail: input,
+    },
     async () => {
       // A shared ordered row lock serializes different target drafts. The committed
       // plan makes an interrupted Keycloak switch resumable before another can start.
