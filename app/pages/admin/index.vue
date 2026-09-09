@@ -1,148 +1,60 @@
 <script setup lang="ts">
-import type { GroupNode } from "#shared/types";
+import { flattenGroups } from "~/utils/groupDirectory";
 
 definePageMeta({ middleware: ["auth", "admin"] });
 
 const route = useRoute();
 const {
   data: directory,
-  error: loadError,
+  error,
   refresh,
   status,
 } = await useFetch("/api/admin/groups");
-const { submit, pending } = useMutation();
-const message = useMessage();
+const mutation = useMutation();
+const { pending } = mutation;
 const search = ref("");
-const expanded = ref<(string | number)[]>([]);
-
-const editor = ref<{
-  groupId?: string;
-  parentId?: string;
-  name: string;
-  label: string;
-  note: string;
-  allowInvites: boolean;
-}>();
-
-const nodes = computed(() => {
-  const result = new Map<string, GroupNode & { ancestors: string[] }>();
-
-  function visit(groups: GroupNode[], ancestors: string[]) {
-    for (const group of groups) {
-      result.set(group.id, { ...group, ancestors });
-      visit(group.children, [...ancestors, group.id]);
-    }
-  }
-
-  if (directory.value) {
-    visit(directory.value.groups, []);
-  }
-
-  return result;
-});
-
-const group = computed(() =>
-  editor.value?.groupId ? nodes.value.get(editor.value.groupId) : undefined,
+const selection = ref<{ groupId?: string; parentId?: string }>();
+const groups = computed(() =>
+  flattenGroups(directory.value?.groups ?? [], directory.value?.settings ?? []),
 );
+const editor = computed(() => {
+  const { groupId, parentId } = selection.value ?? {};
 
-const parent = computed(() =>
-  editor.value?.parentId ? nodes.value.get(editor.value.parentId) : undefined,
-);
-
-const labels = computed(
-  () =>
-    new Map(
-      directory.value?.settings.map((group) => [group.groupId, group.label]),
+  return {
+    group: groups.value.find((group) => group.groupId === groupId),
+    parent: groups.value.find((group) => group.groupId === parentId),
+    settings: directory.value?.settings.find(
+      (settings) => settings.groupId === groupId,
     ),
-);
-
-const groupLabel = (group: GroupNode) =>
-  labels.value.get(group.id) ?? group.name;
-
-function matchesGroup(pattern: string, group: GroupNode) {
-  const query = pattern.trim().toLocaleLowerCase();
-
-  return [group.path, groupLabel(group)].some((value) =>
-    value.toLocaleLowerCase().includes(query),
-  );
-}
-
-const searchGroups = computed(() =>
-  [...nodes.value.values()].map((group) => ({
-    groupId: group.id,
-    label: groupLabel(group),
-    path: group.path,
-  })),
-);
-
-function edit(group: GroupNode) {
-  const settings = directory.value!.settings.find(
-    (item) => item.groupId === group.id,
-  );
-  editor.value = {
-    groupId: group.id,
-    name: group.name,
-    label: settings?.label ?? "",
-    note: settings?.note ?? "",
-    allowInvites: settings?.allowInvites ?? false,
   };
-
-  expanded.value = [
-    ...new Set([...expanded.value, ...nodes.value.get(group.id)!.ancestors]),
-  ];
-}
+});
 
 const select = (groupId: string) =>
   navigateTo({ path: "/admin", query: { groupId } }, { replace: true });
 
-function create(parent?: GroupNode) {
-  editor.value = {
-    parentId: parent?.id,
-    name: "",
-    label: "",
-    note: "",
-    allowInvites: false,
-  };
+function create(parentId?: string) {
+  selection.value = { parentId };
 
   return navigateTo("/admin", { replace: true });
 }
 
-const save = () =>
-  submit(async () => {
-    const draft = editor.value!;
-    const result = await $fetch(
-      draft.groupId ? "/api/admin/groups" : "/api/admin/groups/create",
-      {
-        method: "POST",
-        body: {
-          ...draft,
-          label: draft.label.trim() || draft.name,
-        },
-      },
-    );
-    await refresh();
-    search.value = "";
-    await select(result.groupId);
-    message.success("群组已保存");
-  });
+async function refreshSelection(groupId: string) {
+  await refresh();
+  search.value = "";
+  await select(groupId);
+}
 
 watch(
-  () => [nodes.value, route.query.groupId] as const,
-  ([groups, groupId]) => {
-    if (typeof groupId !== "string") {
-      return;
-    }
-
-    const group = groups.get(groupId);
-
-    if (group) {
-      edit(group);
+  () => route.query.groupId,
+  (groupId) => {
+    if (typeof groupId === "string") {
+      selection.value = { groupId };
     }
   },
   { immediate: true },
 );
 
-useFetchError(loadError, refresh);
+useFetchError(error, refresh);
 </script>
 
 <template>
@@ -156,101 +68,25 @@ useFetchError(loadError, refresh);
       :y-gap="20"
     >
       <NGi>
-        <NCard size="small" title="群组">
-          <template #header-extra>
-            <NButton :disabled="pending" size="small" @click="create()">
-              新建群组
-            </NButton>
-          </template>
-          <NFlex :size="16" vertical>
-            <GroupAutocomplete
-              v-model:value="search"
-              :disabled="pending"
-              :groups="searchGroups"
-              @select="select"
-            />
-            <NSpin :show="status === 'pending'">
-              <NScrollbar class="group-tree">
-                <NTree
-                  v-if="directory.groups.length > 0"
-                  v-model:expanded-keys="expanded"
-                  block-line
-                  :cancelable="false"
-                  :data="directory.groups"
-                  :disabled="pending"
-                  :filter="
-                    (pattern, node) =>
-                      matchesGroup(pattern, nodes.get(String(node.id))!)
-                  "
-                  key-field="id"
-                  label-field="name"
-                  :pattern="search"
-                  :render-label="
-                    ({ option }) => groupLabel(nodes.get(String(option.id))!)
-                  "
-                  :selected-keys="editor?.groupId ? [editor.groupId] : []"
-                  show-line
-                  @update:selected-keys="select(String($event[0]))"
-                />
-                <NEmpty v-else description="暂无群组" />
-              </NScrollbar>
-            </NSpin>
-          </NFlex>
-        </NCard>
+        <GroupTree
+          v-model:search="search"
+          :disabled="pending"
+          :groups
+          :loading="status === 'pending'"
+          :selected-id="selection?.groupId"
+          :tree="directory.groups"
+          @create="create()"
+          @select="select"
+        />
       </NGi>
       <NGi span="1 m:2">
-        <NCard v-if="editor" :title="group ? groupLabel(group) : '新建群组'">
-          <template v-if="group" #header-extra>
-            <NButton :disabled="pending" size="small" @click="create(group)">
-              新建子群组
-            </NButton>
-          </template>
-          <NFlex :size="20" vertical>
-            <NText class="group-path" depth="3">
-              <template v-if="group">{{ group.path }}</template>
-              <template v-else-if="parent">父群组：{{ parent.path }}</template>
-              <template v-else>顶层群组</template>
-            </NText>
-            <NForm :disabled="pending" @submit.prevent="save">
-              <NFormItem label="路径名" required>
-                <NInput
-                  v-model:value="editor.name"
-                  :input-props="{ required: true }"
-                  placeholder="例如：techdept"
-                />
-              </NFormItem>
-              <NFormItem label="显示名称">
-                <NInput
-                  v-model:value="editor.label"
-                  placeholder="留空使用路径名称"
-                />
-              </NFormItem>
-              <NFormItem label="管理备注">
-                <NInput
-                  v-model:value="editor.note"
-                  :autosize="{ minRows: 3, maxRows: 6 }"
-                  type="textarea"
-                />
-              </NFormItem>
-              <NFlex :size="20" vertical>
-                <NCheckbox v-model:checked="editor.allowInvites">
-                  允许群组管理员创建邀请链接
-                </NCheckbox>
-                <NFlex align="center">
-                  <NButton attr-type="submit" :loading="pending" type="primary">
-                    {{ group ? "保存" : "创建群组" }}
-                  </NButton>
-                  <LinkButton
-                    v-if="group"
-                    :to="`/groups/${encodeURIComponent(group.id)}`"
-                  >
-                    成员与授权
-                  </LinkButton>
-                </NFlex>
-              </NFlex>
-            </NForm>
-          </NFlex>
-        </NCard>
+        <GroupEditor
+          v-if="selection && (!selection.groupId || editor.group)"
+          :mutation
+          :refresh="refreshSelection"
+          :selection="editor"
+          @create-child="create"
+        />
         <NCard v-else class="editor-empty">
           <NEmpty description="选择群组进行编辑" />
         </NCard>
@@ -260,21 +96,7 @@ useFetchError(loadError, refresh);
 </template>
 
 <style scoped>
-.group-tree {
-  max-height: 65vh;
-}
-
-.group-path {
-  overflow-wrap: anywhere;
-}
-
 .editor-empty {
   padding-block: 64px;
-}
-
-@media (max-width: 1023px) {
-  .group-tree {
-    max-height: 35vh;
-  }
 }
 </style>

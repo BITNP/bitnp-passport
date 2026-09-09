@@ -66,7 +66,7 @@ useFetchError(sessionError, refreshSession);
         >
           管理后台
         </LinkButton>
-        <ColorModeSwitch />
+        <SiteColorModeSwitch />
         <template v-if="session">
           <NuxtLink class="username" to="/account">
             <NButton size="small" tag="span" text>

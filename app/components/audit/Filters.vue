@@ -2,6 +2,14 @@
 import { events } from "#shared/events";
 import { auditOutcomeLabels } from "#shared/labels";
 
+interface FilterForm {
+  groupId: string | null;
+  actor: string | null;
+  operation: string | null;
+  outcome: string | null;
+  period: [number, number] | null;
+}
+
 const emit = defineEmits<{
   search: [query: Record<string, string>];
   refresh: [];
@@ -13,14 +21,6 @@ const { filters, groups, administrator, loading } = defineProps<{
   administrator?: boolean;
   loading?: boolean;
 }>();
-
-interface FilterForm {
-  groupId: string | null;
-  actor: string | null;
-  operation: string | null;
-  outcome: string | null;
-  period: [number, number] | null;
-}
 
 const emptyFilters: Omit<FilterForm, "period"> = {
   groupId: null,

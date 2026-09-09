@@ -1,23 +1,26 @@
 <script setup lang="ts">
 import type { InternalApi } from "nitropack/types";
 
+type TermsData = InternalApi["/api/admin/terms"]["get"];
+
 const emit = defineEmits<{ close: [] }>();
 
-const { target, terms, pending, submit, refresh } = defineProps<{
-  target: { termId: string };
-  terms: InternalApi["/api/admin/terms"]["get"]["terms"];
-  pending: boolean;
-  submit: ReturnType<typeof useMutation>["submit"];
-  refresh: () => Promise<InternalApi["/api/admin/terms"]["get"]>;
+const { selection, terms, mutation, refresh } = defineProps<{
+  selection: { termId: string };
+  terms: TermsData["terms"];
+  mutation: ReturnType<typeof useMutation>;
+  refresh: () => Promise<void>;
 }>();
 
 const message = useMessage();
+const { submit, pending } = mutation;
+
 const form = reactive<{ previousTermId?: string; delegations: string[] }>({
   delegations: [],
 });
 const previousOptions = computed(() =>
   terms
-    .filter((term) => term.id !== target.termId && !term.creation)
+    .filter((term) => term.id !== selection.termId && !term.creation)
     .map((term) => ({ value: term.id, label: term.label })),
 );
 
@@ -27,7 +30,7 @@ const previewActivation = () =>
   submit(async () => {
     activation.value = undefined;
     const preview = await $fetch(
-      `/api/admin/terms/${target.termId}/activation`,
+      `/api/admin/terms/${selection.termId}/activation`,
       {
         query: { previousTermId: form.previousTermId },
       },
@@ -40,21 +43,24 @@ const previewActivation = () =>
 const activate = () =>
   submit(async () => {
     try {
-      await $fetch(`/api/admin/terms/${target.termId}/activate`, {
+      await $fetch(`/api/admin/terms/${selection.termId}/activate`, {
         method: "POST",
         body: form,
       });
-      await refreshNuxtData("portal-session");
       message.success("本届任期已启用");
     } finally {
       // 失败后从列表重新打开已保存的换届计划，避免沿用可编辑的旧预览
-      emit("close");
-      await refresh();
+      activation.value = undefined;
+      try {
+        await refresh();
+      } finally {
+        emit("close");
+      }
     }
   });
 
 watch(
-  () => target,
+  () => selection,
   (target, previous) => {
     if (target.termId !== previous?.termId) {
       form.previousTermId = undefined;

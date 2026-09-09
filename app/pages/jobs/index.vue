@@ -1,11 +1,4 @@
 <script setup lang="ts">
-import type { DataTableColumns } from "naive-ui";
-import { NTag } from "naive-ui";
-import type { InternalApi } from "nitropack/types";
-
-import { NuxtLink } from "#components";
-import { jobStatusLabels } from "#shared/labels";
-
 definePageMeta({ middleware: "auth" });
 useHead({ title: "后台任务" });
 
@@ -53,65 +46,6 @@ const selectedGroup = computed(() =>
   groups.value?.find((group) => group.groupId === groupId.value),
 );
 
-const date = (value: string) =>
-  new Date(value).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
-
-type Job = InternalApi["/api/jobs"]["get"]["jobs"][number];
-const columns: DataTableColumns<Job> = [
-  {
-    title: "任务",
-    key: "id",
-    minWidth: 180,
-    render: (job) =>
-      h(NuxtLink, { to: `/jobs/${job.id}` }, () => "批量成员变更"),
-  },
-  {
-    title: "群组",
-    key: "groupLabel",
-    minWidth: 160,
-    render: (job) => {
-      const group = groups.value?.find(
-        (group) => group.groupId === job.groupId,
-      );
-      if (!group) {
-        return job.groupLabel;
-      }
-
-      return h(
-        NuxtLink,
-        { to: `/groups/${encodeURIComponent(group.groupId)}` },
-        () => group.label,
-      );
-    },
-  },
-  {
-    title: "状态",
-    key: "status",
-    width: 120,
-    render: (job) =>
-      h(
-        NTag,
-        {
-          size: "small",
-          bordered: false,
-          type:
-            job.status === "succeeded"
-              ? "success"
-              : job.status === "failed"
-                ? "error"
-                : "default",
-        },
-        () => jobStatusLabels[job.status],
-      ),
-  },
-  {
-    title: "创建时间",
-    key: "createdAt",
-    width: 210,
-    render: (job) => date(job.createdAt),
-  },
-];
-
 useFetchError(error, refresh);
 useFetchError(groupsError, refreshGroups);
 </script>
@@ -138,14 +72,11 @@ useFetchError(groupsError, refreshGroups);
           />
           <NButton @click="refresh()">刷新</NButton>
         </NFlex>
-        <NDataTable
+        <JobTable
           v-if="data"
-          :bordered="false"
-          :columns
-          :data="data.jobs"
+          :groups="groups ?? undefined"
+          :jobs="data.jobs"
           :loading="loadStatus === 'pending'"
-          :row-key="(job) => job.id"
-          :scroll-x="680"
         />
         <ListPagination
           v-if="data"

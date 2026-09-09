@@ -2,17 +2,20 @@
 import type { InternalApi } from "nitropack/types";
 
 import { termStatusLabels } from "#shared/labels";
+import { flattenGroups } from "~/utils/groupDirectory";
+
+type Term = InternalApi["/api/admin/terms"]["get"]["terms"][number];
 
 definePageMeta({ middleware: ["auth", "admin"] });
 
 const { data, error: loadError, refresh } = await useFetch("/api/admin/terms");
-const { submit, pending } = useMutation();
+const mutation = useMutation();
+const { submit, pending } = mutation;
 const message = useMessage();
 
-type Term = InternalApi["/api/admin/terms"]["get"]["terms"][number];
-
 const panel = ref<
-  | { type: "edit"; term?: Term; copy: boolean }
+  | { type: "edit"; term?: Term }
+  | { type: "create"; source: Term }
   | { type: "activate"; termId: string }
 >();
 
@@ -21,14 +24,14 @@ const groupLabels = computed(
     new Map(data.value?.groups.map((group) => [group.groupId, group.label])),
 );
 
+const directory = computed(() =>
+  data.value ? flattenGroups(data.value.directory, data.value.groups) : [],
+);
+
 async function refreshTerms() {
   await refresh();
 
-  return data.value!;
-}
-
-function edit(term?: Term, copy = false) {
-  panel.value = { type: "edit", term, copy };
+  return data.value;
 }
 
 const resumeCreation = (id: string) =>
@@ -49,7 +52,9 @@ useFetchError(loadError, refresh);
     <template v-if="data">
       <NCard title="已有任期">
         <template #header-extra>
-          <NButton :disabled="pending" @click="edit()">关联已有群组</NButton>
+          <NButton :disabled="pending" @click="panel = { type: 'edit' }">
+            关联已有群组
+          </NButton>
         </template>
         <NList v-if="data.terms.length > 0">
           <NListItem v-for="term in data.terms" :key="term.id">
@@ -89,7 +94,7 @@ useFetchError(loadError, refresh);
                     v-if="term.status === 'draft' && !term.activation"
                     :disabled="pending"
                     size="small"
-                    @click="edit(term)"
+                    @click="panel = { type: 'edit', term }"
                   >
                     编辑
                   </NButton>
@@ -104,7 +109,7 @@ useFetchError(loadError, refresh);
                   <NButton
                     :disabled="pending || term.activation"
                     size="small"
-                    @click="edit(term, true)"
+                    @click="panel = { type: 'create', source: term }"
                   >
                     创建下一届
                   </NButton>
@@ -118,19 +123,26 @@ useFetchError(loadError, refresh);
 
       <TermEditor
         v-if="panel?.type === 'edit'"
-        :data
-        :pending
+        :directory
+        :mutation
+        :refresh
+        :selection="panel"
+        :terms="data.terms"
+        @close="panel = undefined"
+      />
+      <TermCreation
+        v-else-if="panel?.type === 'create'"
+        :directory
+        :mutation
         :refresh="refreshTerms"
         :selection="panel"
-        :submit
         @close="panel = undefined"
       />
       <TermActivation
         v-else-if="panel?.type === 'activate'"
-        :pending
-        :refresh="refreshTerms"
-        :submit
-        :target="panel"
+        :mutation
+        :refresh
+        :selection="panel"
         :terms="data.terms"
         @close="panel = undefined"
       />

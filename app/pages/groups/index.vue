@@ -5,6 +5,8 @@ import type { InternalApi } from "nitropack/types";
 
 import { LinkButton } from "#components";
 
+type Group = InternalApi["/api/groups"]["get"][number];
+
 definePageMeta({ middleware: "auth" });
 useHead({ title: "群组" });
 
@@ -22,7 +24,6 @@ const filteredGroups = computed(() => {
   );
 });
 
-type Group = InternalApi["/api/groups"]["get"][number];
 const columns: DataTableColumns<Group> = [
   {
     title: "群组名称",

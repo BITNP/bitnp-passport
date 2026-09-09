@@ -1,172 +1,20 @@
 <script setup lang="ts">
-import type { DataTableColumns } from "naive-ui";
-import type { InternalApi } from "nitropack/types";
-
-import { ConfirmAction, NuxtLink } from "#components";
-import type { GroupNode } from "#shared/types";
-
 definePageMeta({ middleware: "auth" });
 
 const route = useRoute();
 const groupId = computed(() => String(route.params.id));
 
-const [
-  { data: group, error: loadError, refresh, status: loadStatus },
-  { data: session },
-] = await Promise.all([
-  useFetch(() => `/api/groups/${encodeURIComponent(groupId.value)}`),
-  usePortalSession(),
-]);
-
-const { submit, pending } = useMutation(refresh);
-const message = useMessage();
-const identifier = ref("");
-const delegate = reactive({
-  groupId,
-  type: ref<"user" | "group">("user"),
-  identifier: ref<string | null>(null),
-});
-
-const {
-  data: delegateDirectory,
-  error: delegateLoadError,
-  status: delegateLoadStatus,
-  execute: loadDelegateGroups,
-} = await useFetch("/api/admin/groups", {
-  immediate: false,
-  watch: false,
-});
-
-const delegateGroups = computed(() => {
-  const labels = new Map(
-    delegateDirectory.value?.settings.map((group) => [
-      group.groupId,
-      group.label,
-    ]),
-  );
-  const groups: { groupId: string; label: string; path: string }[] = [];
-
-  function visit(nodes: GroupNode[]) {
-    for (const group of nodes) {
-      groups.push({
-        groupId: group.id,
-        label: labels.get(group.id) ?? group.name,
-        path: group.path,
-      });
-      visit(group.children);
-    }
-  }
-
-  visit(delegateDirectory.value?.groups ?? []);
-
-  return groups;
-});
-
-async function changeDelegateType(type: string) {
-  delegate.identifier = null;
-
-  if (type === "group") {
-    await loadDelegateGroups();
-  }
-}
+const [{ data: group, error, refresh, status }, { data: session }] =
+  await Promise.all([
+    useFetch(() => `/api/groups/${encodeURIComponent(groupId.value)}`),
+    usePortalSession(),
+  ]);
 
 useHead({
   title: () => group.value?.settings.label ?? "群组",
 });
 
-const addMember = () =>
-  submit(async () => {
-    await $fetch(`/api/groups/${encodeURIComponent(groupId.value)}/members`, {
-      method: "POST",
-      body: { identifier: identifier.value },
-    });
-    identifier.value = "";
-    message.success("成员已添加");
-  });
-
-const removeMember = (subject: string) =>
-  submit(async () => {
-    await $fetch(`/api/groups/${encodeURIComponent(groupId.value)}/members`, {
-      method: "DELETE",
-      body: { subject },
-    });
-    message.success("成员已移除");
-  });
-
-const grantDelegate = () =>
-  submit(async () => {
-    await $fetch("/api/admin/delegations", {
-      method: "POST",
-      body: delegate,
-    });
-    delegate.identifier = null;
-    message.success("委托权限已授予");
-  });
-
-type Delegate = InternalApi["/api/groups/:id"]["get"]["delegates"][number];
-
-const revokeDelegate = (delegate: Delegate) =>
-  submit(async () => {
-    await $fetch("/api/admin/delegations", {
-      method: "DELETE",
-      body: delegate,
-    });
-    message.success("委托权限已撤销");
-  });
-
-type Member = InternalApi["/api/groups/:id"]["get"]["members"][number];
-const columns: DataTableColumns<Member> = [
-  {
-    title: "用户名",
-    key: "username",
-    minWidth: 160,
-    render: (member) => {
-      if (session.value?.administrator) {
-        return h(
-          NuxtLink,
-          { to: `/admin/users/${encodeURIComponent(member.id)}` },
-          () => member.username,
-        );
-      }
-
-      if (session.value?.user.subject === member.id) {
-        return h(NuxtLink, { to: "/account" }, () => member.username);
-      }
-
-      return member.username;
-    },
-  },
-  {
-    title: "姓名",
-    key: "name",
-    minWidth: 120,
-    render: (member) => [member.lastName, member.firstName].join("") || " - ",
-  },
-  {
-    title: "邮箱",
-    key: "email",
-    minWidth: 240,
-    render: (member) => member.email || " - ",
-  },
-  {
-    title: "操作",
-    key: "actions",
-    width: 100,
-    render: (member) =>
-      h(
-        ConfirmAction,
-        {
-          disabled: pending.value,
-          message: `确认将 ${member.username} 从本群组移除？`,
-          onConfirm: () => removeMember(member.id),
-        },
-        { default: () => "移除" },
-      ),
-  },
-];
-
-useFetchError(loadError, refresh);
-useFetchError(delegateLoadError, loadDelegateGroups);
+useFetchError(error, refresh);
 </script>
 
 <template>
@@ -203,157 +51,30 @@ useFetchError(delegateLoadError, loadDelegateGroups);
       </template>
     </NPageHeader>
     <template v-if="group">
-      <NCard id="members" class="group-section" title="群组成员">
-        <template #header-extra>
-          <LinkButton
-            size="small"
-            :to="`/groups/${encodeURIComponent(groupId)}/batch`"
-          >
-            批量管理
-          </LinkButton>
-        </template>
-        <NFlex :size="20" vertical>
-          <NText v-if="group.settings.note" depth="3">
-            {{ group.settings.note }}
-          </NText>
-          <NForm @submit.prevent="addMember">
-            <NFormItem
-              label="添加成员"
-              :label-props="{ for: 'member' }"
-              :show-feedback="false"
-            >
-              <NInputGroup>
-                <UserAutocomplete
-                  v-if="session?.administrator"
-                  v-model:value="identifier"
-                  :input-props="{
-                    id: 'member',
-                    autocomplete: 'off',
-                    required: true,
-                  }"
-                />
-                <NInput
-                  v-else
-                  v-model:value="identifier"
-                  :input-props="{
-                    id: 'member',
-                    autocomplete: 'off',
-                    required: true,
-                  }"
-                  placeholder="准确的用户名或邮箱"
-                />
-                <NButton attr-type="submit" :loading="pending" type="primary">
-                  添加
-                </NButton>
-              </NInputGroup>
-            </NFormItem>
-          </NForm>
-          <NDataTable
-            :bordered="false"
-            :columns
-            :data="group.members"
-            :loading="loadStatus === 'pending'"
-            :pagination="{
-              pageSize: 50,
-              pageSlot: 5,
-              showQuickJumper: true,
-              size: 'small',
-            }"
-            :row-key="(member) => member.id"
-            :scroll-x="680"
-          />
-        </NFlex>
-      </NCard>
-      <GroupInvitations
+      <GroupMembers
+        id="members"
+        class="group-section"
+        :group-id
+        :loading="status === 'pending'"
+        :members="group.members"
+        :note="group.settings.note"
+        :refresh
+        :session
+      />
+      <InvitationList
         id="invitations"
         :allow-invites="group.settings.allowInvites"
         class="group-section"
         :group-id
       />
-      <NCard id="delegations" class="group-section" title="管理授权">
-        <NFlex :size="20" vertical>
-          <NForm v-if="session?.administrator" @submit.prevent="grantDelegate">
-            <NFormItem label="授权对象">
-              <NRadioGroup
-                v-model:value="delegate.type"
-                @update:value="changeDelegateType"
-              >
-                <NRadioButton value="user">用户</NRadioButton>
-                <NRadioButton value="group">群组</NRadioButton>
-              </NRadioGroup>
-            </NFormItem>
-            <NFormItem
-              :feedback="
-                delegate.type === 'group'
-                  ? '包含该群组及所有子群组的成员。'
-                  : undefined
-              "
-              :label="delegate.type === 'user' ? '用户名或邮箱' : '选择群组'"
-            >
-              <NInputGroup>
-                <UserAutocomplete
-                  v-if="delegate.type === 'user'"
-                  v-model:value="delegate.identifier"
-                  :input-props="{
-                    id: 'delegate',
-                    autocomplete: 'off',
-                    required: true,
-                  }"
-                />
-                <GroupSelect
-                  v-else
-                  v-model:value="delegate.identifier"
-                  :groups="delegateGroups"
-                  :loading="delegateLoadStatus === 'pending'"
-                />
-                <NButton
-                  attr-type="submit"
-                  :disabled="!delegate.identifier"
-                  :loading="pending"
-                  type="primary"
-                >
-                  授权
-                </NButton>
-              </NInputGroup>
-            </NFormItem>
-          </NForm>
-          <NList v-if="group.delegates.length > 0">
-            <NListItem
-              v-for="item in group.delegates"
-              :key="`${item.type}:${item.subject}`"
-            >
-              <NFlex align="center" :size="12">
-                <NTag :bordered="false" size="small">
-                  {{ item.type === "user" ? "用户" : "群组" }}
-                </NTag>
-                <NuxtLink
-                  v-if="item.name && session?.administrator"
-                  :to="
-                    item.type === 'user'
-                      ? `/admin/users/${encodeURIComponent(item.subject)}`
-                      : `/admin?groupId=${encodeURIComponent(item.subject)}`
-                  "
-                >
-                  {{ item.name }}
-                </NuxtLink>
-                <NText v-else-if="item.name">{{ item.name }}</NText>
-                <NText v-else depth="3">未找到记录（{{ item.subject }}）</NText>
-              </NFlex>
-              <template #suffix>
-                <ConfirmAction
-                  v-if="session?.administrator"
-                  :disabled="pending"
-                  message="确认撤销这项群组管理权限？"
-                  @confirm="revokeDelegate(item)"
-                >
-                  撤销委托
-                </ConfirmAction>
-              </template>
-            </NListItem>
-          </NList>
-          <NEmpty v-else description="暂无管理授权" />
-        </NFlex>
-      </NCard>
+      <GroupDelegations
+        id="delegations"
+        class="group-section"
+        :delegates="group.delegates"
+        :group-id
+        :refresh
+        :session
+      />
     </template>
   </NuxtLayout>
 </template>

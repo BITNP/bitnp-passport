@@ -1,14 +1,5 @@
 <script setup lang="ts">
-import type { DataTableColumns } from "naive-ui";
-import { NTag } from "naive-ui";
-import type { InternalApi } from "nitropack/types";
-
-import { NuxtLink } from "#components";
-import {
-  itemStatusLabels,
-  jobOperationLabels,
-  jobStatusLabels,
-} from "#shared/labels";
+import { jobStatusLabels } from "#shared/labels";
 
 definePageMeta({ middleware: "auth" });
 useHead({ title: "任务详情" });
@@ -19,11 +10,9 @@ const id = computed(() => encodeURIComponent(String(route.params.id)));
 const [
   { data, error: loadError, refresh, status },
   { data: groups, error: groupsError, refresh: refreshGroups },
-  { data: session },
 ] = await Promise.all([
   useFetch(() => `/api/jobs/${id.value}`),
   useFetch("/api/groups"),
-  usePortalSession(),
 ]);
 const group = computed(() =>
   groups.value?.find((group) => group.groupId === data.value?.job.groupId),
@@ -47,69 +36,6 @@ const action = (name: "retry" | "cancel") =>
   submit(async () => {
     await $fetch(`/api/jobs/${id.value}/${name}`, { method: "POST" });
   });
-
-type Item = InternalApi["/api/jobs/:id"]["get"]["items"][number];
-const columns: DataTableColumns<Item> = [
-  {
-    title: "操作",
-    key: "operation",
-    width: 120,
-    render: (item) => jobOperationLabels[item.operation],
-  },
-  {
-    title: "目标 ID",
-    key: "itemKey",
-    minWidth: 300,
-    render: (item) => {
-      if (session.value?.user.subject === item.itemKey) {
-        return h(
-          NuxtLink,
-          { to: "/account", class: "mono" },
-          () => item.itemKey,
-        );
-      }
-
-      if (session.value?.administrator) {
-        return h(
-          NuxtLink,
-          {
-            to: `/admin/users/${encodeURIComponent(item.itemKey)}`,
-            class: "mono",
-          },
-          () => item.itemKey,
-        );
-      }
-
-      return h("span", { class: "mono" }, item.itemKey);
-    },
-  },
-  {
-    title: "状态",
-    key: "status",
-    width: 110,
-    render: (item) =>
-      h(
-        NTag,
-        {
-          size: "small",
-          bordered: false,
-          type:
-            item.status === "succeeded"
-              ? "success"
-              : item.status === "failed"
-                ? "error"
-                : "default",
-        },
-        () => itemStatusLabels[item.status],
-      ),
-  },
-  {
-    title: "说明",
-    key: "error",
-    minWidth: 200,
-    render: (item) => item.error ?? " - ",
-  },
-];
 
 useFetchError(loadError, refresh);
 useFetchError(groupsError, refreshGroups);
@@ -194,15 +120,7 @@ useFetchError(groupsError, refreshGroups);
           </NFlex>
         </NFlex>
       </NCard>
-      <NCard title="执行明细">
-        <NDataTable
-          :bordered="false"
-          :columns
-          :data="data.items"
-          :row-key="(item) => `${item.operation}:${item.itemKey}`"
-          :scroll-x="720"
-        />
-      </NCard>
+      <JobItems :items="data.items" />
     </template>
   </NuxtLayout>
 </template>

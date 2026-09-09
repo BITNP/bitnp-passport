@@ -1,4 +1,6 @@
 <script setup lang="ts">
+type GroupOption = (typeof options.value)[number];
+
 const emit = defineEmits<{ select: [groupId: string] }>();
 
 const { groups } = defineProps<{
@@ -22,8 +24,6 @@ const options = computed(() => {
       description: group.path ? `${group.label} · ${group.path}` : group.label,
     }));
 });
-
-type GroupOption = (typeof options.value)[number];
 </script>
 
 <template>

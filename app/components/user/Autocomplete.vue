@@ -1,4 +1,6 @@
 <script setup lang="ts">
+type UserOption = (typeof options.value)[number];
+
 const value = defineModel<string | null>("value", { required: true });
 
 const search = computed(() => value.value?.trim() ?? "");
@@ -24,8 +26,6 @@ const options = computed(() => {
       .join(" · "),
   }));
 });
-
-type UserOption = (typeof options.value)[number];
 
 useFetchError(error, refresh);
 </script>

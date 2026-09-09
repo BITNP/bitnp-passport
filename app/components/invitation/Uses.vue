@@ -4,6 +4,8 @@ import type { InternalApi } from "nitropack/types";
 
 import { AuditReference } from "#components";
 
+type Usage = InternalApi["/api/audit"]["get"]["events"][number];
+
 const { groupId, invitation } = defineProps<{
   groupId: string;
   invitation: { id: string; note: string };
@@ -20,7 +22,6 @@ const { data, error, refresh, status } = await useFetch("/api/audit", {
   })),
 });
 
-type Usage = InternalApi["/api/audit"]["get"]["events"][number];
 const columns: DataTableColumns<Usage> = [
   {
     title: "用户",
