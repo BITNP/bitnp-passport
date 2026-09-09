@@ -7,7 +7,6 @@ const settings = z.object({
   OIDC_ISSUER_URL: httpUrl,
   OIDC_CLIENT_ID: z.string().min(1),
   OIDC_CLIENT_SECRET: z.string().min(1),
-  KEYCLOAK_VERSION: z.enum(["9", "26"]),
   KEYCLOAK_SERVICE_CLIENT_ID: z.string().min(1),
   KEYCLOAK_SERVICE_CLIENT_SECRET: z.string().min(1),
   SESSION_ENCRYPTION_KEY: z
@@ -24,7 +23,6 @@ export const config = {
   issuer: value.OIDC_ISSUER_URL,
   clientId: value.OIDC_CLIENT_ID,
   clientSecret: value.OIDC_CLIENT_SECRET,
-  keycloakVersion: value.KEYCLOAK_VERSION,
   serviceClientId: value.KEYCLOAK_SERVICE_CLIENT_ID,
   serviceClientSecret: value.KEYCLOAK_SERVICE_CLIENT_SECRET,
   encryptionKey: Buffer.from(value.SESSION_ENCRYPTION_KEY, "base64"),

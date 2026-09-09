@@ -73,20 +73,6 @@ export interface ProfileInput {
   email?: string | null;
 }
 
-export interface Credential {
-  id: string;
-  type: string;
-  userLabel?: string | null;
-  createdDate?: number | null;
-}
-
-export interface CredentialType {
-  type: string;
-  createAction?: string | null;
-  updateAction?: string | null;
-  removeable: boolean;
-}
-
 export interface TaskData {
   jobId: string;
   queueId: string;

@@ -7,9 +7,5 @@ export default defineEventHandler(async (event) => {
     getRouterParam(event, "id")!,
   );
 
-  if (!action) {
-    return { url: null };
-  }
-
   return { url: await beginAccountAction(event, session, action) };
 });

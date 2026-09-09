@@ -59,9 +59,7 @@ export async function createPortalSession(
     username: user.preferred_username!,
     displayName: user.name ?? user.preferred_username!,
     email: user.email,
-    oidcSid: (config.keycloakVersion === "9"
-      ? claims.session_state
-      : claims.sid) as string,
+    oidcSid: claims.sid as string,
   };
   const values = sessionValues(tokens);
   const token = randomToken();

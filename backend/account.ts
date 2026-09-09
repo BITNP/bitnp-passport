@@ -1,15 +1,29 @@
-// TODO: remove adapters after upgrading to keycloak 26
-import { managedGroups as groupSettings } from "#database/schema";
-import type { Actor, ProfileInput } from "#shared/types";
+import type { FetchOptions } from "ofetch";
+import { ofetch } from "ofetch";
 
-import * as keycloak9 from "./account/keycloak9.ts";
-import * as keycloak26 from "./account/keycloak26.ts";
-import { request } from "./account/shared.ts";
+import { managedGroups as groupSettings } from "#database/schema";
+import type { Actor, Profile, ProfileInput } from "#shared/types";
+
 import { config } from "./config.ts";
 import { db } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
 import * as keycloak from "./keycloak.ts";
 import { groupAccess } from "./permissions.ts";
+
+interface CredentialType {
+  type: string;
+  createAction?: string | null;
+  updateAction?: string | null;
+  removeable: boolean;
+  userCredentialMetadatas: {
+    credential: {
+      id: string;
+      type: string;
+      userLabel?: string | null;
+      createdDate?: number | null;
+    };
+  }[];
+}
 
 interface Device {
   os?: string | null;
@@ -30,15 +44,44 @@ interface Device {
   }[];
 }
 
-const adapter = config.keycloakVersion === "9" ? keycloak9 : keycloak26;
+const client = ofetch.create({
+  baseURL: config.issuer,
+  headers: { Accept: "application/json" },
+  redirect: "error",
+  timeout: 10_000,
+  retry: 0,
+});
 
-export const updatePassword = adapter.updatePassword;
-export const security = adapter.security;
+const request = <T = void>(
+  accessToken: string,
+  path: string,
+  method = "GET",
+  body?: FetchOptions["body"],
+) =>
+  client<T>(`/account/${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body,
+  });
+
+const readProfile = (accessToken: string) =>
+  request<Profile>(accessToken, "?userProfileMetadata=true");
+
+export async function security(accessToken: string) {
+  const types = await request<CredentialType[]>(accessToken, "credentials");
+
+  return {
+    credentials: types.map(({ userCredentialMetadatas, ...type }) => ({
+      ...type,
+      credentials: userCredentialMetadatas.map(({ credential }) => credential),
+    })),
+  };
+}
 
 export async function overview(actor: Actor & { accessToken: string }) {
   const [userProfile, memberships, access, roles, settings] = await Promise.all(
     [
-      adapter.readProfile(actor.accessToken),
+      readProfile(actor.accessToken),
       keycloak.groupsForUser(actor.subject),
       groupAccess(actor),
       keycloak.userRoles(actor.subject),
@@ -65,9 +108,17 @@ export async function overview(actor: Actor & { accessToken: string }) {
 }
 
 export async function updateProfile(accessToken: string, input: ProfileInput) {
-  await adapter.updateProfile(accessToken, input);
+  const profile = await readProfile(accessToken);
 
-  return adapter.readProfile(accessToken);
+  await request(accessToken, "", "POST", {
+    username: profile.username,
+    attributes: profile.attributes,
+    firstName: input.name,
+    lastName: null,
+    email: input.email,
+  });
+
+  return readProfile(accessToken);
 }
 
 export async function removeCredential(accessToken: string, id: string) {
@@ -79,7 +130,7 @@ export async function removeCredential(accessToken: string, id: string) {
     throw new ApplicationError(403, "此凭据不能移除");
   }
 
-  return adapter.removeCredential(accessToken, id);
+  return `delete_credential:${id}`;
 }
 
 export async function requireAction(accessToken: string, action: string) {

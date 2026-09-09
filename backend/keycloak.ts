@@ -2,8 +2,6 @@ import type { GroupNode } from "#shared/types";
 
 import { config } from "./config.ts";
 import { ApplicationError } from "./errors.ts";
-import * as keycloak9 from "./keycloak/keycloak9.ts";
-import * as keycloak26 from "./keycloak/keycloak26.ts";
 import type {
   GroupRepresentation,
   UserRepresentation,
@@ -22,8 +20,6 @@ const userSummary = (user: UserRepresentation) =>
     "createdTimestamp",
   ]);
 
-const adapter = config.keycloakVersion === "9" ? keycloak9 : keycloak26;
-
 const findGroupsWithRole = client.roles.makeRequest<
   { name: string; first: number; max: number; briefRepresentation: boolean },
   GroupRepresentation[]
@@ -39,7 +35,7 @@ export function userConsoleUrl(
   page: "settings" | "groups" | "sessions" = "settings",
 ) {
   const url = new URL(consoleUrl);
-  url.hash = adapter.userConsolePath(id, page);
+  url.hash = `/${encodeURIComponent(client.realmName)}/users/${encodeURIComponent(id)}/${page}`;
 
   return url.href;
 }
@@ -78,7 +74,9 @@ export async function searchUsers(search: string, first: number) {
 
 export async function resolveUser(identifier: string) {
   const field = identifier.includes("@") ? "email" : "username";
-  const user = await request(() => adapter.findUser(field, identifier));
+  const [user] = await request(() =>
+    client.users.find({ [field]: identifier, exact: true, max: 1 }),
+  );
 
   if (!user) {
     throw new ApplicationError(404, `找不到用户：${identifier}`);
@@ -104,8 +102,21 @@ export async function groupsForUser(id: string) {
 
 export async function inheritedGroupIds(id: string) {
   const memberships = await groupsForUser(id);
+  const ids = new Set(memberships.map((group) => group.id));
 
-  return request(() => adapter.inheritedGroupIds(memberships));
+  for (const group of memberships) {
+    let parentId: string | undefined = group.parentId;
+
+    while (parentId && !ids.has(parentId)) {
+      const parent = await request(() =>
+        client.groups.findOne({ id: parentId! }),
+      );
+      ids.add(parentId);
+      parentId = parent!.parentId;
+    }
+  }
+
+  return ids;
 }
 
 export async function group(id: string) {
@@ -115,16 +126,39 @@ export async function group(id: string) {
 }
 
 export async function groupTree() {
-  const groups = await request(() => adapter.groupTree());
+  const groups = await request(() =>
+    allPages((first, max) =>
+      client.groups.find({ first, max, briefRepresentation: true }),
+    ),
+  );
 
-  const node = (group: GroupRepresentation): GroupNode => ({
-    id: group.id!,
-    name: group.name!,
-    path: group.path!,
-    children: group.subGroups?.map(node) ?? [],
-  });
+  async function node(group: GroupRepresentation): Promise<GroupNode> {
+    const children: GroupNode[] = [];
+    if (group.subGroupCount! > 0) {
+      const subGroups = await request(() =>
+        allPages((first, max) =>
+          client.groups.listSubGroups({
+            parentId: group.id!,
+            first,
+            max,
+            briefRepresentation: true,
+          }),
+        ),
+      );
+      for (const child of subGroups) {
+        children.push(await node(child));
+      }
+    }
 
-  return groups.map(node);
+    return { id: group.id!, name: group.name!, path: group.path!, children };
+  }
+
+  const tree: GroupNode[] = [];
+  for (const group of groups) {
+    tree.push(await node(group));
+  }
+
+  return tree;
 }
 
 export const renameGroup = (id: string, name: string) =>
@@ -161,13 +195,30 @@ export async function createGroup(name: string, parentId?: string) {
   return decodeURIComponent(id);
 }
 
+async function findGroup(name: string, parentId?: string) {
+  const siblings = await request(() =>
+    allPages((first, max) =>
+      parentId
+        ? client.groups.listSubGroups({
+            parentId,
+            first,
+            max,
+            briefRepresentation: false,
+          })
+        : client.groups.find({ first, max, briefRepresentation: false }),
+    ),
+  );
+
+  return siblings.find((group) => group.name === name);
+}
+
 export async function ensureTermGroup(
   termId: string,
   code: string,
   name: string,
   parentId?: string,
 ) {
-  const existing = await request(() => adapter.findGroup(name, parentId));
+  const existing = await findGroup(name, parentId);
   if (existing) {
     if (
       existing.attributes?.["bitnp-pass-term"]?.[0] !== termId ||
@@ -223,8 +274,13 @@ export async function activeRoleGroups() {
   };
 }
 
-export const groupHasActiveRole = (id: string) =>
-  request(() => adapter.groupHasRole(id, config.activeRole));
+export async function groupHasActiveRole(id: string) {
+  const roles = await request(() =>
+    client.groups.listCompositeRealmRoleMappings({ id }),
+  );
+
+  return roles.some((role) => role.name === config.activeRole);
+}
 
 export async function groupActiveRoleSource(id: string, roleId: string) {
   const mappings = await request(() => client.groups.listRoleMappings({ id }));

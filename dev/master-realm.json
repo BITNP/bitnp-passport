@@ -39,11 +39,7 @@
       "serviceAccountsEnabled": false,
       "frontchannelLogout": false,
       "fullScopeAllowed": true,
-      "redirectUris": [
-        "http://localhost:3000/auth/callback",
-        "http://localhost:3000",
-        "http://localhost:3000/i/*"
-      ],
+      "redirectUris": ["http://localhost:3000/auth/callback"],
       "webOrigins": ["http://localhost:3000"],
       "defaultClientScopes": ["profile", "email", "roles", "web-origins"],
       "attributes": {

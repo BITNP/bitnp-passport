@@ -7,17 +7,6 @@ const {
   refresh,
 } = await useFetch("/api/account/security");
 const { submit, pending } = useMutation();
-const message = useMessage();
-const form = reactive({
-  currentPassword: "",
-  newPassword: "",
-  confirmation: "",
-});
-const confirmationError = computed(() =>
-  form.confirmation && form.newPassword !== form.confirmation
-    ? "两次输入的新密码不一致"
-    : undefined,
-);
 const password = computed(() =>
   security.value?.credentials.find((type) => type.type === "password"),
 );
@@ -26,7 +15,7 @@ const authenticators = computed(
     security.value?.credentials.filter(
       (type) =>
         type.type !== "password" &&
-        // Keycloak 9 会返回未配置且创建动作已禁用的认证项，过滤它们以免显示空卡片
+        // 无凭据且不能添加的认证方式没有可用操作
         (type.credentials.length > 0 || type.createAction),
     ) ?? [],
 );
@@ -42,21 +31,6 @@ const createdAt = (value: number | null | undefined) =>
   value && value > 0
     ? new Date(value).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })
     : "未知";
-
-async function changePassword() {
-  if (confirmationError.value) {
-    return;
-  }
-
-  await submit(async () => {
-    await $fetch("/api/account/password", { method: "POST", body: form });
-    message.success("密码已修改");
-    await refresh();
-  });
-  form.currentPassword = "";
-  form.newPassword = "";
-  form.confirmation = "";
-}
 
 const startAction = (action: string) =>
   submit(async () => {
@@ -75,12 +49,7 @@ const removeCredential = (id: string) =>
         method: "DELETE",
       },
     );
-    if (result.url) {
-      await navigateTo(result.url, { external: true });
-    } else {
-      message.success("凭据已移除");
-      await refresh();
-    }
+    await navigateTo(result.url, { external: true });
   });
 
 useFetchError(loadError, refresh);
@@ -90,78 +59,13 @@ useFetchError(loadError, refresh);
   <NuxtLayout name="account" title="账户安全">
     <template v-if="security">
       <NCard
-        v-if="
-          password &&
-          ((security.passwordForm && password.credentials.length > 0) ||
-            password.updateAction ||
-            password.createAction)
-        "
+        v-if="password && (password.updateAction || password.createAction)"
         title="密码"
       >
         <template #header-extra>
           <NButton href="/auth/reset-password" tag="a" text>忘记密码？</NButton>
         </template>
-        <NForm
-          v-if="security.passwordForm && password.credentials.length > 0"
-          class="password-form"
-          @submit.prevent="changePassword"
-        >
-          <NFormItem
-            label="当前密码"
-            :label-props="{ for: 'current-password' }"
-            required
-          >
-            <NInput
-              v-model:value="form.currentPassword"
-              :input-props="{
-                id: 'current-password',
-                autocomplete: 'current-password',
-                required: true,
-              }"
-              show-password-on="click"
-              type="password"
-            />
-          </NFormItem>
-          <NFormItem
-            label="新密码"
-            :label-props="{ for: 'new-password' }"
-            required
-          >
-            <NInput
-              v-model:value="form.newPassword"
-              :input-props="{
-                id: 'new-password',
-                autocomplete: 'new-password',
-                required: true,
-              }"
-              show-password-on="click"
-              type="password"
-            />
-          </NFormItem>
-          <NFormItem
-            :feedback="confirmationError"
-            label="再次输入新密码"
-            :label-props="{ for: 'confirm-password' }"
-            required
-            :validation-status="confirmationError ? 'error' : undefined"
-          >
-            <NInput
-              v-model:value="form.confirmation"
-              :input-props="{
-                id: 'confirm-password',
-                autocomplete: 'new-password',
-                required: true,
-              }"
-              show-password-on="click"
-              type="password"
-            />
-          </NFormItem>
-          <NButton attr-type="submit" :loading="pending" type="primary">
-            修改密码
-          </NButton>
-        </NForm>
         <NButton
-          v-else
           :loading="pending"
           type="primary"
           @click="
@@ -222,9 +126,3 @@ useFetchError(loadError, refresh);
     </template>
   </NuxtLayout>
 </template>
-
-<style scoped>
-.password-form {
-  max-width: 440px;
-}
-</style>
