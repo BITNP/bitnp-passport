@@ -127,6 +127,8 @@ export async function managedGroups(actor: Actor) {
     .sort(
       (left, right) =>
         (right.createdAt?.getTime() ?? 0) - (left.createdAt?.getTime() ?? 0) ||
+        // 旧群组同批导入时创建时间相同，按已关联任期将较新年份排在前面
+        (right.termYear ?? 0) - (left.termYear ?? 0) ||
         left.label.localeCompare(right.label) ||
         left.id.localeCompare(right.id),
     )
