@@ -86,30 +86,53 @@ export const events = {
 
 export type AuditOperation = keyof typeof events;
 
-export interface AuditConfiguration {
-  code?: string;
-  departmentName?: string;
-  name?: string;
-  label?: string;
-  note?: string;
-  allowInvites?: boolean;
-  supportUrl?: string;
-  services?: SiteService[];
-  year?: number;
-  rootGroupId?: string;
-  clinicCompatible?: boolean;
-  groups?: { groupId: string; code: string; departmentName: string }[];
+interface TermAuditConfiguration {
+  label: string;
+  year: number;
+  rootGroupId: string;
+  clinicCompatible: boolean;
+  groups: { groupId: string; code: string; departmentName: string }[];
 }
 
-export type AuditDetail = Record<string, unknown> & {
-  before?: AuditConfiguration | null;
-  after?: AuditConfiguration;
-};
+interface AuditConfigurations {
+  "site.update": { supportUrl: string; services: SiteService[] };
+  "group.configure": {
+    name: string;
+    label: string;
+    note: string;
+    allowInvites: boolean;
+  };
+  "invitation.update": { note: string };
+  "department.create": { code: string; departmentName: string };
+  "term.create": TermAuditConfiguration;
+  "term.update": TermAuditConfiguration;
+}
+
+export type AuditConfiguration = AuditConfigurations[keyof AuditConfigurations];
+
+type ConfigurationEntry<Configuration> =
+  Configuration extends AuditConfiguration
+    ? {
+        [Key in keyof Configuration]: [Key, Configuration[Key]];
+      }[keyof Configuration]
+    : never;
+
+export type AuditConfigurationEntry = ConfigurationEntry<AuditConfiguration>;
+
+export type AuditDetail<Operation extends AuditOperation = AuditOperation> =
+  Record<string, unknown> &
+    (Operation extends keyof AuditConfigurations
+      ? {
+          // 旧配置可能尚未完整建立，处理中或早期失败的记录也可能没有旧值。
+          before?: Partial<AuditConfigurations[Operation]> | null;
+          after?: AuditConfigurations[Operation];
+        }
+      : { before?: never; after?: never });
 
 export type AuditEvent = {
   [Operation in AuditOperation]: {
     operation: Operation;
-    detail?: AuditDetail;
+    detail?: AuditDetail<Operation>;
   } & Record<(typeof events)[Operation]["context"][number], string> &
     ((typeof events)[Operation]["targets"][number] extends never
       ? { target?: never }

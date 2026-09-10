@@ -1,4 +1,4 @@
-import type { AuditConfiguration } from "./events.ts";
+import type { AuditConfigurationEntry } from "./events.ts";
 
 export const jobStatusLabels = {
   queued: "等待执行",
@@ -32,7 +32,7 @@ export const auditOutcomeLabels = {
   unknown: "结果未确认",
 };
 
-export const auditFieldLabels: Record<keyof AuditConfiguration, string> = {
+export const auditFieldLabels: Record<AuditConfigurationEntry[0], string> = {
   code: "部门标识",
   departmentName: "部门名称",
   name: "路径名称",

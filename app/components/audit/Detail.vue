@@ -2,7 +2,7 @@
 import type { DataTableColumns } from "naive-ui";
 import type { InternalApi } from "nitropack/types";
 
-import type { AuditConfiguration } from "#shared/events";
+import type { AuditConfigurationEntry } from "#shared/events";
 import { events } from "#shared/events";
 import { auditFieldLabels, auditOutcomeLabels } from "#shared/labels";
 import { formatDateTime } from "#shared/utils";
@@ -18,19 +18,26 @@ const fields = computed(() => {
     return [];
   }
 
-  return (Object.keys(after) as (keyof AuditConfiguration)[]).map((key) => ({
-    key,
-    before: before?.[key],
-    after: after[key],
-  }));
+  const previous = new Map<
+    AuditConfigurationEntry[0],
+    AuditConfigurationEntry[1]
+  >(Object.entries(before ?? {}) as AuditConfigurationEntry[]);
+
+  return (Object.entries(after) as AuditConfigurationEntry[]).map(
+    ([key, value]) => ({
+      key,
+      before: previous.get(key),
+      after: value,
+    }),
+  );
 });
 
 const groupName = (id: string) =>
   groups.find((group) => group.groupId === id)?.label ?? id;
 
 function formatValue(
-  value: AuditConfiguration[keyof AuditConfiguration],
-  key: keyof AuditConfiguration,
+  value: AuditConfigurationEntry[1] | undefined,
+  key: AuditConfigurationEntry[0],
 ): string {
   if (value === undefined) {
     return "未记录";
