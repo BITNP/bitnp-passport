@@ -75,7 +75,7 @@ const save = () =>
       </NText>
       <NFlex v-if="selection.group" align="center" :size="12">
         <NTag size="small" :type="selection.settings ? 'success' : 'default'">
-          {{ selection.settings ? "已纳入门户" : "未纳入门户" }}
+          {{ selection.settings ? "已纳入通行证" : "未纳入通行证" }}
         </NTag>
         <NText v-if="!selection.settings" depth="3">
           保存配置后，此群组将出现在有管理权限的用户的日常群组列表中
@@ -110,7 +110,7 @@ const save = () =>
                   ? "创建群组"
                   : selection.settings
                     ? "保存"
-                    : "保存并纳入门户"
+                    : "保存并纳入通行证"
               }}
             </NButton>
             <LinkButton
