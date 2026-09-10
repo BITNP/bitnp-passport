@@ -33,6 +33,8 @@ export const auditOutcomeLabels = {
 };
 
 export const auditFieldLabels: Record<keyof AuditConfiguration, string> = {
+  code: "部门标识",
+  departmentName: "部门名称",
   name: "路径名称",
   label: "显示名称",
   note: "管理备注",

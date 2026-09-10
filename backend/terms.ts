@@ -1,9 +1,14 @@
 import { randomUUID } from "node:crypto";
 
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type { z } from "zod";
 
-import { managedGroups, termGroups, terms } from "#database/schema";
+import {
+  departments,
+  managedGroups,
+  termGroups,
+  terms,
+} from "#database/schema";
 import type { Actor } from "#shared/types";
 
 import { audited } from "./audit.ts";
@@ -30,11 +35,28 @@ async function validateGroups(input: z.infer<typeof termInput>) {
     ids.add(group.groupId);
     codes.add(group.code);
   }
+
+  const records = await db
+    .select({ code: departments.code, name: departments.name })
+    .from(departments)
+    .where(inArray(departments.code, [...codes]));
+  const names = new Map(
+    records.map((department) => [department.code, department.name]),
+  );
+
+  return input.groups.map((group) => {
+    const departmentName = names.get(group.code);
+    if (departmentName === undefined) {
+      throw new ApplicationError(422, "请选择已有部门");
+    }
+
+    return { ...group, departmentName };
+  });
 }
 
 export async function listTerms(actor: Actor) {
   await requireAdministrator(actor);
-  const [rows, groups, tree] = await Promise.all([
+  const [rows, groups, tree, departmentRows] = await Promise.all([
     db.query.terms.findMany({
       columns: {
         creation: false,
@@ -56,9 +78,13 @@ export async function listTerms(actor: Actor) {
       .from(managedGroups)
       .orderBy(managedGroups.label),
     keycloak.groupTree(),
+    db
+      .select({ code: departments.code, name: departments.name })
+      .from(departments)
+      .orderBy(asc(departments.name), asc(departments.code)),
   ]);
 
-  return { terms: rows, groups, directory: tree };
+  return { terms: rows, groups, directory: tree, departments: departmentRows };
 }
 
 export async function saveTerm(
@@ -67,16 +93,18 @@ export async function saveTerm(
   id?: string,
 ) {
   await requireAdministrator(actor);
-  await validateGroups(input);
+  const { groups, ...settings } = {
+    ...input,
+    groups: await validateGroups(input),
+  };
   const termId = id ?? randomUUID();
-  const { groups, ...settings } = input;
 
   return audited(
     actor,
     {
       operation: id ? "term.update" : "term.create",
       target: { type: "term", id: termId },
-      detail: { after: input },
+      detail: { after: { ...settings, groups } },
     },
     (recordBefore) =>
       db.transaction(async (tx) => {

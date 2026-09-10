@@ -72,6 +72,7 @@ export const events = {
     context: ["groupId", "jobId"],
     targets: ["user"],
   },
+  "department.create": { label: "新增部门", context: [], targets: [] },
   "term.create": { label: "创建任期", context: [], targets: ["term"] },
   "term.update": { label: "编辑任期", context: [], targets: ["term"] },
   "term.create-from": { label: "创建下一届", context: [], targets: ["term"] },
@@ -86,6 +87,8 @@ export const events = {
 export type AuditOperation = keyof typeof events;
 
 export interface AuditConfiguration {
+  code?: string;
+  departmentName?: string;
   name?: string;
   label?: string;
   note?: string;

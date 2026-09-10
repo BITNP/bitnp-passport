@@ -11,12 +11,7 @@ export type DatabaseReader = Pick<typeof db, "query" | "select" | "$count">;
 
 const department = z.object({
   groupId: z.string().min(1),
-  code: z
-    .string()
-    .trim()
-    .min(1)
-    .regex(/^[^/\p{Cc}]+$/u),
-  departmentName: z.string().trim().min(1),
+  code: z.string().min(1),
 });
 
 export const termInput = z.object({

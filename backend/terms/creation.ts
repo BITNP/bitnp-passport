@@ -3,7 +3,12 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { managedGroups, termGroups, terms } from "#database/schema";
+import {
+  departments,
+  managedGroups,
+  termGroups,
+  terms,
+} from "#database/schema";
 import type { Actor, TermCreationPlan } from "#shared/types";
 
 import { audited } from "../audit.ts";
@@ -12,12 +17,7 @@ import { ApplicationError } from "../errors.ts";
 import { groupDirectory } from "../groups/directory.ts";
 import * as keycloak from "../keycloak.ts";
 import { requireAdministrator } from "../permissions.ts";
-import {
-  belongsTo,
-  readCreatedTerm,
-  termInput,
-  termRoot,
-} from "./shared.ts";
+import { belongsTo, readCreatedTerm, termInput, termRoot } from "./shared.ts";
 
 export const creationInput = termInput
   .pick({ label: true, year: true, clinicCompatible: true })
@@ -65,14 +65,20 @@ async function planCreation(
     groups: [],
   };
 
-  const departments = new Map(
+  const sourceDepartments = new Map(
     source.groups.map((group) => [group.groupId, group]),
+  );
+  const names = new Map(
+    (await db.select().from(departments)).map((department) => [
+      department.code,
+      department.name,
+    ]),
   );
   const parents = new Map<string, { code: string | null; path: string }>([
     [root.path, { code: null, path }],
   ]);
   for (const group of nodes.values()) {
-    const department = departments.get(group.id);
+    const department = sourceDepartments.get(group.id);
     if (!department || !belongsTo(group.path, root.path)) {
       continue;
     }
@@ -85,16 +91,17 @@ async function planCreation(
       );
     }
     const code = department.code;
+    const departmentName = names.get(code)!;
     const name = input.clinicCompatible ? `${input.year}-${code}` : code;
     const path = `${parent.path}/${name}`;
     plan.groups.push({
       sourceGroupId: group.id,
       code,
-      departmentName: department.departmentName,
+      departmentName,
       parentCode: parent.code,
       name,
       path,
-      label: `${input.year} ${department.departmentName}`,
+      label: `${input.year} ${departmentName}`,
       note: group.note,
       allowInvites: group.allowInvites,
     });

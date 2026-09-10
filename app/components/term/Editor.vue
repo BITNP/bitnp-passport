@@ -2,29 +2,35 @@
 import type { InternalApi } from "nitropack/types";
 
 type TermsData = InternalApi["/api/admin/terms"]["get"];
+type Department = TermsData["departments"][number];
 
 interface Editor {
   label: string;
   year: number | null;
   rootGroupId: string | null;
   clinicCompatible: boolean;
-  groups: { groupId: string | null; code: string; departmentName: string }[];
+  groups: { groupId: string | null; code: string | null }[];
 }
 
-const emit = defineEmits<{ close: [] }>();
-
-const { selection, terms, directory, mutation, refresh } = defineProps<{
-  selection: { term?: TermsData["terms"][number] };
-  terms: TermsData["terms"];
-  mutation: ReturnType<typeof useMutation>;
-  refresh: () => Promise<void>;
-  directory: {
-    groupId: string;
-    name: string;
-    label: string;
-    path: string;
-  }[];
+const emit = defineEmits<{
+  close: [];
+  departmentCreated: [department: Department];
 }>();
+
+const { selection, terms, departments, directory, mutation, refresh } =
+  defineProps<{
+    selection: { term?: TermsData["terms"][number] };
+    terms: TermsData["terms"];
+    departments: Department[];
+    mutation: ReturnType<typeof useMutation>;
+    refresh: () => Promise<void>;
+    directory: {
+      groupId: string;
+      name: string;
+      label: string;
+      path: string;
+    }[];
+  }>();
 
 const message = useMessage();
 const { submit, pending } = mutation;
@@ -34,14 +40,20 @@ const createEditor = (): Editor => ({
   year: selection.term?.year ?? null,
   rootGroupId: selection.term?.rootGroupId ?? null,
   clinicCompatible: selection.term?.clinicCompatible ?? true,
-  groups: structuredClone(toRaw(selection.term?.groups ?? [])),
+  groups:
+    selection.term?.groups.map(({ groupId, code }) => ({ groupId, code })) ??
+    [],
 });
 
 const editor = ref(createEditor());
+const newDepartment = ref<{ code: string; name: string }>();
 
 watch(
   () => selection,
-  () => (editor.value = createEditor()),
+  () => {
+    editor.value = createEditor();
+    newDepartment.value = undefined;
+  },
 );
 
 const available = computed(() => {
@@ -63,25 +75,86 @@ const available = computed(() => {
   );
 });
 
+function availableGroups(index: number) {
+  const selected = new Set(
+    editor.value.groups
+      .filter((_, row) => row !== index)
+      .map((group) => group.groupId),
+  );
+
+  return available.value.filter((group) => !selected.has(group.groupId));
+}
+
+function departmentOptions(index: number) {
+  const selected = new Set(
+    editor.value.groups
+      .filter((_, row) => row !== index)
+      .map((group) => group.code),
+  );
+
+  return departments.map((department) => ({
+    label: department.name,
+    value: department.code,
+    disabled: selected.has(department.code),
+  }));
+}
+
 function selectGroup(index: number, groupId: string) {
   const node = directory.find((group) => group.groupId === groupId)!;
   const prefix = `${editor.value.year}-`;
-  const displayPrefix = `${editor.value.year} `;
+  const code =
+    editor.value.clinicCompatible && node.name.startsWith(prefix)
+      ? node.name.slice(prefix.length)
+      : node.name;
+  const matched = departments.some((department) => department.code === code);
+  const selected = editor.value.groups.some(
+    (group, row) => row !== index && group.code === code,
+  );
 
   editor.value.groups[index] = {
     groupId,
-    code:
-      editor.value.clinicCompatible && node.name.startsWith(prefix)
-        ? node.name.slice(prefix.length)
-        : node.name,
-    departmentName: node.label.startsWith(displayPrefix)
-      ? node.label.slice(displayPrefix.length)
-      : node.label,
+    code: matched && !selected ? code : null,
   };
 }
 
-const save = () =>
-  submit(async () => {
+const canSave = computed(() => {
+  const { label, year, rootGroupId, groups } = editor.value;
+
+  return (
+    !newDepartment.value &&
+    label.trim().length > 0 &&
+    year !== null &&
+    rootGroupId !== null &&
+    groups.length > 0 &&
+    groups.every((group) => group.groupId && group.code) &&
+    new Set(groups.map((group) => group.groupId)).size === groups.length &&
+    new Set(groups.map((group) => group.code)).size === groups.length
+  );
+});
+
+function createDepartment() {
+  if (!newDepartment.value?.code.trim() || !newDepartment.value.name.trim()) {
+    return;
+  }
+  const body = { ...newDepartment.value };
+
+  return submit(async () => {
+    const department = await $fetch("/api/admin/departments", {
+      method: "POST",
+      body,
+    });
+    emit("departmentCreated", department);
+    newDepartment.value = undefined;
+    message.success("部门已建立，可在各届任期中选择");
+  });
+}
+
+function save() {
+  if (!canSave.value) {
+    return;
+  }
+
+  return submit(async () => {
     if (selection.term) {
       await $fetch(`/api/admin/terms/${selection.term.id}`, {
         method: "PUT",
@@ -98,6 +171,7 @@ const save = () =>
       emit("close");
     }
   });
+}
 </script>
 
 <template>
@@ -138,36 +212,28 @@ const save = () =>
         <NDynamicInput
           v-model:value="editor.groups"
           :disabled="pending || !editor.rootGroupId"
-          :on-create="() => ({ groupId: null, code: '', departmentName: '' })"
+          :on-create="() => ({ groupId: null, code: null })"
         >
-          <template #create-button-default>添加部门</template>
+          <template #create-button-default>添加关联</template>
           <template #default="{ value, index }">
             <NCard embedded size="small">
-              <NGrid cols="1 m:3" responsive="screen" :x-gap="12" :y-gap="12">
+              <NGrid cols="1 m:2" responsive="screen" :x-gap="12" :y-gap="12">
                 <NGi>
                   <NFormItem label="群组" :show-feedback="false">
                     <GroupSelect
-                      :groups="available"
+                      :groups="availableGroups(index)"
                       :value="value.groupId"
                       @update:value="selectGroup(index, $event)"
                     />
                   </NFormItem>
                 </NGi>
                 <NGi>
-                  <NFormItem label="部门标识" :show-feedback="false">
-                    <NInput
+                  <NFormItem label="部门" :show-feedback="false">
+                    <NSelect
                       v-model:value="value.code"
-                      :input-props="{ required: true }"
-                      placeholder="例如：clinic"
-                    />
-                  </NFormItem>
-                </NGi>
-                <NGi>
-                  <NFormItem label="部门名称" :show-feedback="false">
-                    <NInput
-                      v-model:value="value.departmentName"
-                      :input-props="{ required: true }"
-                      placeholder="例如：电脑诊所"
+                      filterable
+                      :options="departmentOptions(index)"
+                      placeholder="选择已有部门"
                     />
                   </NFormItem>
                 </NGi>
@@ -177,16 +243,62 @@ const save = () =>
         </NDynamicInput>
       </NFormItem>
       <NFlex :size="16" vertical>
-        <NText depth="3">部门标识用于对应不同任期的同一部门</NText>
+        <NFlex align="center" justify="space-between">
+          <NButton
+            v-if="!newDepartment"
+            :disabled="pending"
+            @click="newDepartment = { code: '', name: '' }"
+          >
+            新增部门
+          </NButton>
+        </NFlex>
+        <NCard
+          v-if="newDepartment"
+          embedded
+          size="small"
+          title="新增部门"
+          @keydown.enter.prevent.stop="createDepartment"
+        >
+          <NGrid cols="1 m:2" responsive="screen" :x-gap="12">
+            <NGi>
+              <NFormItem label="部门名称" required>
+                <NInput
+                  v-model:value="newDepartment.name"
+                  placeholder="例如：电脑诊所"
+                />
+              </NFormItem>
+            </NGi>
+            <NGi>
+              <NFormItem label="固定标识" required>
+                <NInput
+                  v-model:value="newDepartment.code"
+                  placeholder="例如：clinic，不带年份"
+                />
+              </NFormItem>
+            </NGi>
+          </NGrid>
+          <NFlex :size="12" vertical>
+            <NFlex>
+              <NButton
+                :disabled="
+                  !newDepartment.name.trim() || !newDepartment.code.trim()
+                "
+                :loading="pending"
+                type="primary"
+                @click="createDepartment"
+              >
+                建立部门
+              </NButton>
+              <NButton :disabled="pending" @click="newDepartment = undefined">
+                取消新增
+              </NButton>
+            </NFlex>
+          </NFlex>
+        </NCard>
         <NFlex>
           <NButton
             attr-type="submit"
-            :disabled="
-              editor.year === null ||
-              !editor.rootGroupId ||
-              editor.groups.length === 0 ||
-              editor.groups.some((group) => !group.groupId)
-            "
+            :disabled="!canSave"
             :loading="pending"
             type="primary"
           >

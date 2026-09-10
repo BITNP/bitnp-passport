@@ -34,6 +34,15 @@ async function refreshTerms() {
   return data.value;
 }
 
+function addDepartment(
+  department: InternalApi["/api/admin/terms"]["get"]["departments"][number],
+) {
+  data.value = {
+    ...data.value!,
+    departments: [...data.value!.departments, department],
+  };
+}
+
 const resumeCreation = (id: string) =>
   submit(async () => {
     try {
@@ -135,12 +144,14 @@ useFetchError(loadError, refresh);
         >
           <TermEditor
             v-if="panel?.type === 'edit'"
+            :departments="data.departments"
             :directory
             :mutation
             :refresh
             :selection="panel"
             :terms="data.terms"
             @close="panel = undefined"
+            @department-created="addDepartment"
           />
           <TermCreation
             v-else-if="panel?.type === 'create'"

@@ -191,6 +191,15 @@ export const terms = pgTable(
   ],
 );
 
+export const departments = pgTable("departments", {
+  code: text("code").primaryKey(),
+  name: text("name").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const termGroups = pgTable(
   "term_groups",
   {
@@ -198,7 +207,9 @@ export const termGroups = pgTable(
       .notNull()
       .references(() => terms.id),
     groupId: text("group_id").notNull().unique(),
-    code: text("code").notNull(),
+    code: text("code")
+      .notNull()
+      .references(() => departments.code),
     departmentName: text("department_name").notNull(),
   },
   (table) => [
