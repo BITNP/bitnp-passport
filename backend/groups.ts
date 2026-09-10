@@ -57,7 +57,14 @@ export async function groupDetail(actor: Actor, groupId: string) {
         if (delegation.type === "user") {
           name = (await keycloak.user(delegation.subject)).username;
         } else {
-          name = (await keycloak.group(delegation.subject)).path;
+          const [group, configuration] = await Promise.all([
+            keycloak.group(delegation.subject),
+            db.query.managedGroups.findFirst({
+              columns: { label: true },
+              where: eq(managedGroups.groupId, delegation.subject),
+            }),
+          ]);
+          name = configuration?.label ?? group.name;
         }
       } catch (error) {
         // Keep delegations visible after a 404 so they can still be revoked
