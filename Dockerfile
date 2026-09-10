@@ -1,5 +1,5 @@
-FROM ghcr.io/pnpm/pnpm:12.3.4 AS base
-RUN pnpm runtime set node 26 -g
+FROM node:26-alpine AS base
+RUN npm install --global pnpm@12.3.4
 WORKDIR /app
 
 FROM base AS build
@@ -10,7 +10,7 @@ FROM base AS dependencies
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
-FROM node:26-bookworm-slim AS runtime
+FROM node:26-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=dependencies /app/node_modules ./node_modules
