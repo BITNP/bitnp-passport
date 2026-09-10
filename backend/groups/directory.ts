@@ -16,6 +16,7 @@ export async function groupDirectory() {
     string,
     GroupNode & {
       configured: boolean;
+      createdAt: Date | null;
       label: string;
       note: string;
       allowInvites: boolean;
@@ -28,6 +29,7 @@ export async function groupDirectory() {
       directory.set(group.id, {
         ...group,
         configured: settings !== undefined,
+        createdAt: settings?.createdAt ?? null,
         label: settings?.label ?? group.name,
         note: settings?.note ?? "",
         allowInvites: settings?.allowInvites ?? false,

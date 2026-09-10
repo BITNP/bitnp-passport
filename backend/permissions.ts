@@ -124,6 +124,12 @@ export async function managedGroups(actor: Actor) {
 
   return [...directory.values()]
     .filter((group) => administrator || groupIds.includes(group.id))
+    .sort(
+      (left, right) =>
+        (right.createdAt?.getTime() ?? 0) - (left.createdAt?.getTime() ?? 0) ||
+        left.label.localeCompare(right.label) ||
+        left.id.localeCompare(right.id),
+    )
     .map((group) => ({
       groupId: group.id,
       configured: group.configured,
@@ -131,10 +137,5 @@ export async function managedGroups(actor: Actor) {
       path: group.path,
       note: group.note,
       allowInvites: group.allowInvites,
-    }))
-    .sort(
-      (left, right) =>
-        left.label.localeCompare(right.label) ||
-        left.groupId.localeCompare(right.groupId),
-    );
+    }));
 }
