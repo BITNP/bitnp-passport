@@ -135,6 +135,7 @@ export async function managedGroups(actor: Actor) {
     .map((group) => ({
       groupId: group.id,
       configured: group.configured,
+      isTermRoot: group.isTermRoot,
       label: group.label,
       path: group.path,
       note: group.note,

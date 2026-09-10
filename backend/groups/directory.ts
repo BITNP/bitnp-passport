@@ -14,8 +14,10 @@ export async function groupDirectory() {
     }),
   ]);
   const termYears = new Map<string, number>();
+  const termRoots = new Set<string>();
   for (const term of terms) {
     if (term.rootGroupId) {
+      termRoots.add(term.rootGroupId);
       termYears.set(term.rootGroupId, term.year);
     }
     for (const group of term.groups) {
@@ -29,6 +31,7 @@ export async function groupDirectory() {
     string,
     GroupNode & {
       configured: boolean;
+      isTermRoot: boolean;
       createdAt: Date | null;
       termYear: number | null;
       label: string;
@@ -43,6 +46,7 @@ export async function groupDirectory() {
       directory.set(group.id, {
         ...group,
         configured: settings !== undefined,
+        isTermRoot: termRoots.has(group.id),
         createdAt: settings?.createdAt ?? null,
         termYear: termYears.get(group.id) ?? null,
         label: settings?.label ?? group.name,

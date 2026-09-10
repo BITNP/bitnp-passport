@@ -14,7 +14,7 @@ const [{ data: groups, error, refresh, status }, { data: session }] =
   await Promise.all([useFetch("/api/groups"), usePortalSession()]);
 
 const portalGroups = computed(() =>
-  groups.value?.filter((group) => group.configured),
+  groups.value?.filter((group) => group.configured && !group.isTermRoot),
 );
 const search = ref("");
 const filteredGroups = computed(() => {
