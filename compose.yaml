@@ -7,6 +7,17 @@ services:
       - "127.0.0.1:3000:3000"
     restart: unless-stopped
     stop_grace_period: 45s
+    healthcheck:
+      # podman-compose 的 CMD 转义有 Bug
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS --max-time 4 http://127.0.0.1:3000/api/site >/dev/null",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
   worker:
     image: ${BITNP_PASSPORT_IMAGE}
