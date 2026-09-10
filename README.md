@@ -134,6 +134,26 @@ docker compose logs --tail=100 web worker
 
 Compose 将网站绑定到宿主机的 `127.0.0.1:3000`。配置宿主机上的反向代理，将 `APP_URL` 对应域名的全部请求转发到 `http://127.0.0.1:3000`，并提供 HTTPS。
 
+## 导入旧版群组配置
+
+项目内置 [旧门户的固定配置](https://github.com/BITNP/keycloak-account-service/blob/master/group_config.json)，保存在 `scripts/group_config.json`，随镜像一起打包。使用新环境的数据库和 Keycloak 连接，指定已迁移的旧门户客户端 ID，即可批量纳入已有群组并迁移管理授权：
+
+```sh
+pnpm config:import --client '旧门户客户端ID' --apply
+```
+
+容器中执行：
+
+```sh
+docker compose run --rm web node scripts/import-legacy.ts --client '旧门户客户端ID' --apply
+```
+
+内置配置包含 7 条年度模板和 3 条固定路径，年度模板会匹配所有符合路径规则的届别。已有记录保持不变。省略 `--apply` 只打印清单；如需其他配置，可传入文件路径：
+
+```sh
+pnpm config:import ./custom-group-config.json --client '旧门户客户端ID' --apply
+```
+
 ## 本地开发
 
 ### 首次启动
