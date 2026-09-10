@@ -121,31 +121,54 @@ useFetchError(loadError, refresh);
         <NEmpty v-else description="尚未建立任期" />
       </NCard>
 
-      <TermEditor
-        v-if="panel?.type === 'edit'"
-        :directory
-        :mutation
-        :refresh
-        :selection="panel"
-        :terms="data.terms"
-        @close="panel = undefined"
-      />
-      <TermCreation
-        v-else-if="panel?.type === 'create'"
-        :directory
-        :mutation
-        :refresh="refreshTerms"
-        :selection="panel"
-        @close="panel = undefined"
-      />
-      <TermActivation
-        v-else-if="panel?.type === 'activate'"
-        :mutation
-        :refresh
-        :selection="panel"
-        :terms="data.terms"
-        @close="panel = undefined"
-      />
+      <NModal
+        :close-on-esc="!pending"
+        :mask-closable="false"
+        :show="Boolean(panel)"
+        @update:show="panel = undefined"
+      >
+        <div
+          aria-label="任期配置"
+          aria-modal="true"
+          class="term-panel"
+          role="dialog"
+        >
+          <TermEditor
+            v-if="panel?.type === 'edit'"
+            :directory
+            :mutation
+            :refresh
+            :selection="panel"
+            :terms="data.terms"
+            @close="panel = undefined"
+          />
+          <TermCreation
+            v-else-if="panel?.type === 'create'"
+            :directory
+            :mutation
+            :refresh="refreshTerms"
+            :selection="panel"
+            @close="panel = undefined"
+          />
+          <TermActivation
+            v-else-if="panel?.type === 'activate'"
+            :mutation
+            :refresh
+            :selection="panel"
+            :terms="data.terms"
+            @close="panel = undefined"
+          />
+        </div>
+      </NModal>
     </template>
   </NuxtLayout>
 </template>
+
+<style scoped>
+.term-panel {
+  width: min(1080px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  margin: 24px auto;
+  overflow: auto;
+}
+</style>
