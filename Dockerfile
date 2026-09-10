@@ -11,6 +11,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 FROM node:26-alpine AS runtime
+RUN apk add --no-cache curl
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=dependencies /app/node_modules ./node_modules
