@@ -73,6 +73,14 @@ const save = () =>
         </template>
         <template v-else>顶层群组</template>
       </NText>
+      <NFlex v-if="selection.group" align="center" :size="12">
+        <NTag size="small" :type="selection.settings ? 'success' : 'default'">
+          {{ selection.settings ? "已纳入门户" : "未纳入门户" }}
+        </NTag>
+        <NText v-if="!selection.settings" depth="3">
+          保存配置后，此群组将出现在有管理权限的用户的日常群组列表中
+        </NText>
+      </NFlex>
       <NForm :disabled="pending" @submit.prevent="save">
         <NFormItem label="路径名" required>
           <NInput
@@ -97,7 +105,13 @@ const save = () =>
           </NCheckbox>
           <NFlex align="center">
             <NButton attr-type="submit" :loading="pending" type="primary">
-              {{ selection.group ? "保存" : "创建群组" }}
+              {{
+                !selection.group
+                  ? "创建群组"
+                  : selection.settings
+                    ? "保存"
+                    : "保存并纳入门户"
+              }}
             </NButton>
             <LinkButton
               v-if="selection.group"

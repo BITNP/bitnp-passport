@@ -13,11 +13,14 @@ useHead({ title: "群组" });
 const [{ data: groups, error, refresh, status }, { data: session }] =
   await Promise.all([useFetch("/api/groups"), usePortalSession()]);
 
+const portalGroups = computed(() =>
+  groups.value?.filter((group) => group.configured),
+);
 const search = ref("");
 const filteredGroups = computed(() => {
   const query = search.value.trim().toLocaleLowerCase();
 
-  return groups.value?.filter((group) =>
+  return portalGroups.value?.filter((group) =>
     [group.label, group.note].some((value) =>
       value.toLocaleLowerCase().includes(query),
     ),
@@ -68,17 +71,17 @@ useFetchError(error, refresh);
       <template #title><h1>我管理的群组</h1></template>
       <template #extra>
         <LinkButton v-if="session?.administrator" to="/admin">
-          配置群组
+          全部群组与配置
         </LinkButton>
       </template>
     </NPageHeader>
-    <NCard v-if="groups" :content-style="{ padding: 0 }">
+    <NCard v-if="portalGroups" :content-style="{ padding: 0 }">
       <div class="group-toolbar">
-        <NText depth="3">{{ groups.length }} 个群组</NText>
+        <NText depth="3">{{ portalGroups.length }} 个群组</NText>
         <GroupAutocomplete
           v-model:value="search"
           class="group-search"
-          :groups
+          :groups="portalGroups"
           placeholder="搜索群组名称或备注"
         />
       </div>
@@ -94,7 +97,11 @@ useFetchError(error, refresh);
         <template #empty>
           <NEmpty
             :description="
-              groups.length > 0 ? '没有匹配的群组' : '暂无可管理的群组'
+              portalGroups.length > 0
+                ? '没有匹配的群组'
+                : session?.administrator
+                  ? '尚未纳入群组，请前往“全部群组与配置”保存群组配置'
+                  : '暂无可管理的群组'
             "
           />
         </template>

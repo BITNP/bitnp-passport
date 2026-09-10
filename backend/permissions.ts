@@ -126,6 +126,7 @@ export async function managedGroups(actor: Actor) {
     .filter((group) => administrator || groupIds.includes(group.id))
     .map((group) => ({
       groupId: group.id,
+      configured: group.configured,
       label: group.label,
       path: group.path,
       note: group.note,

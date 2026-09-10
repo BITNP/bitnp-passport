@@ -39,7 +39,7 @@ function matchesGroup(pattern: string, id: string) {
 </script>
 
 <template>
-  <NCard size="small" title="群组">
+  <NCard size="small" title="全部群组">
     <template #header-extra>
       <NButton :disabled size="small" @click="emit('create')">新建群组</NButton>
     </template>
