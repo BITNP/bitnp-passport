@@ -50,6 +50,43 @@ export async function userRoles(id: string) {
   );
 }
 
+export async function isAdministrator(id: string) {
+  if (client.realmName !== "master") {
+    return false;
+  }
+
+  try {
+    return (await userRoles(id)).some((role) => role.name === "admin");
+  } catch (error) {
+    if (error instanceof ApplicationError && error.statusCode === 404) {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
+export async function administrators() {
+  if (client.realmName !== "master") {
+    return [];
+  }
+
+  const users = await request(() =>
+    allPages((first, max) =>
+      client.users.find({ first, max, briefRepresentation: false }),
+    ),
+  );
+  const administrators = await Promise.all(
+    users.map(async (user) =>
+      !user.serviceAccountClientId && (await isAdministrator(user.id!))
+        ? userSummary(user)
+        : null,
+    ),
+  );
+
+  return administrators.filter((user) => user !== null);
+}
+
 export async function user(id: string) {
   const user = await request(() => client.users.findOne({ id }));
 
@@ -246,11 +283,31 @@ export async function members(id: string) {
   return users.map(userSummary);
 }
 
-export const addMember = (userId: string, groupId: string) =>
-  request(() => client.users.addToGroup({ id: userId, groupId }));
+async function requireEditableMembers(groupId: string) {
+  if (client.realmName !== "master") {
+    return;
+  }
 
-export const removeMember = (userId: string, groupId: string) =>
-  request(() => client.users.delFromGroup({ id: userId, groupId }));
+  const roles = await request(() =>
+    client.groups.listCompositeRealmRoleMappings({ id: groupId }),
+  );
+  if (roles.some((role) => role.name === "admin")) {
+    throw new ApplicationError(
+      409,
+      "Keycloak 超管群组的成员需在 Keycloak 管理",
+    );
+  }
+}
+
+export async function addMember(userId: string, groupId: string) {
+  await requireEditableMembers(groupId);
+  await request(() => client.users.addToGroup({ id: userId, groupId }));
+}
+
+export async function removeMember(userId: string, groupId: string) {
+  await requireEditableMembers(groupId);
+  await request(() => client.users.delFromGroup({ id: userId, groupId }));
+}
 
 export async function createGroup(name: string, parentId?: string) {
   const { id } = await request(() =>

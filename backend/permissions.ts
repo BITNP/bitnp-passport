@@ -14,7 +14,7 @@ export async function isAdministrator(actor: Actor) {
     where: eq(portalAdmins.subject, actor.subject),
   });
 
-  return administrator !== undefined;
+  return administrator !== undefined || keycloak.isAdministrator(actor.subject);
 }
 
 export async function requireAdministrator(actor: Actor) {

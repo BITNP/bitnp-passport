@@ -12,25 +12,50 @@ import { requireAdministrator } from "./permissions.ts";
 export async function administrators(actor: Actor) {
   await requireAdministrator(actor);
 
-  const rows = await db
-    .select({ id: portalAdmins.subject })
-    .from(portalAdmins)
-    .orderBy(portalAdmins.createdAt);
-
-  return Promise.all(
+  const [rows, inherited] = await Promise.all([
+    db
+      .select({ id: portalAdmins.subject })
+      .from(portalAdmins)
+      .orderBy(portalAdmins.createdAt),
+    keycloak.administrators(),
+  ]);
+  const inheritedById = new Map(inherited.map((user) => [user.id, user]));
+  const result = await Promise.all(
     rows.map(async ({ id }) => {
+      const inheritedUser = inheritedById.get(id);
+      if (inheritedUser) {
+        inheritedById.delete(id);
+
+        return { ...inheritedUser, source: "keycloak" as const };
+      }
+
       try {
-        return await keycloak.user(id);
+        return { ...(await keycloak.user(id)), source: "passport" as const };
       } catch (error) {
         // Keep grants visible after a 404 so they can still be revoked
         if (!(error instanceof ApplicationError) || error.statusCode !== 404) {
           throw error;
         }
 
-        return { id, username: null };
+        return { id, username: null, source: "passport" as const };
       }
     }),
   );
+
+  for (const user of inheritedById.values()) {
+    result.push({ ...user, source: "keycloak" });
+  }
+
+  return result;
+}
+
+async function requireEditableAdministrator(subject: string) {
+  if (await keycloak.isAdministrator(subject)) {
+    throw new ApplicationError(
+      409,
+      "此人的管理员权限来自 Keycloak，请在 Keycloak 管理",
+    );
+  }
 }
 
 export async function grantAdministrator(actor: Actor, identifier: string) {
@@ -45,6 +70,7 @@ export async function grantAdministrator(actor: Actor, identifier: string) {
     actor,
     { operation: "admin.grant", target: { type: "user", id: user.id } },
     async () => {
+      await requireEditableAdministrator(user.id);
       await db
         .insert(portalAdmins)
         .values({ subject: user.id, grantedBy: actor.subject })
@@ -61,10 +87,9 @@ export async function revokeAdministrator(actor: Actor, subject: string) {
   return audited(
     actor,
     { operation: "admin.revoke", target: { type: "user", id: subject } },
-    // 同时撤销最后两位管理员时，两次请求可能各自看到另一位仍在，导致全部被撤销
-    // 用 serializable 事务将删除与剩余管理员检查作为整体
-    () =>
-      db.transaction(
+    async () => {
+      await requireEditableAdministrator(subject);
+      await db.transaction(
         async (tx) => {
           await tx
             .delete(portalAdmins)
@@ -73,11 +98,15 @@ export async function revokeAdministrator(actor: Actor, subject: string) {
           const remaining = await tx.query.portalAdmins.findFirst({
             columns: { subject: true },
           });
-          if (!remaining) {
+          if (
+            !remaining &&
+            !(await keycloak.administrators()).some((user) => user.enabled)
+          ) {
             throw new ApplicationError(409, "必须保留至少一位系统管理员");
           }
         },
         { isolationLevel: "serializable" },
-      ),
+      );
+    },
   );
 }

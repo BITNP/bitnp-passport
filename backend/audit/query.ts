@@ -35,7 +35,7 @@ interface Reference {
 }
 
 const systemActors = new Map([
-  ["bootstrap", "初始化脚本"],
+  ["admin-grant", "管理员授权脚本"],
   ["legacy-import", "旧版配置导入"],
 ]);
 const targetGroups = alias(managedGroups, "target_group");

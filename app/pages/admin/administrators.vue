@@ -69,7 +69,15 @@ useFetchError(loadError, refresh);
     <NCard v-if="administrators" title="当前管理员">
       <UserTable :loading="loadStatus === 'pending'" :users="administrators">
         <template #actions="{ user }">
+          <NTag
+            v-if="user.source === 'keycloak'"
+            :bordered="false"
+            size="small"
+          >
+            Keycloak
+          </NTag>
           <ConfirmAction
+            v-else
             :disabled="pending"
             :message="
               session?.user.subject === user.id

@@ -1,22 +1,16 @@
 import { randomUUID } from "node:crypto";
 
-import { and, desc, eq, exists, or, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { fromDrizzle } from "pg-boss";
 
 import type { AuditRecord } from "#database/schema";
-import {
-  auditEvents,
-  jobItems,
-  jobs,
-  managedGroups,
-  portalAdmins,
-} from "#database/schema";
+import { auditEvents, jobItems, jobs, managedGroups } from "#database/schema";
 import type { Actor } from "#shared/types";
 
 import { db } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
 import * as keycloak from "./keycloak.ts";
-import { requireGroupManager } from "./permissions.ts";
+import { isAdministrator, requireGroupManager } from "./permissions.ts";
 import { operationQueue, queue } from "./queue.ts";
 
 export async function createMembershipJob(
@@ -69,20 +63,14 @@ export async function createMembershipJob(
   return { id };
 }
 
-const readableBy = (actor: Actor) =>
-  or(
-    eq(jobs.actorSubject, actor.subject),
-    exists(
-      db
-        .select({ subject: portalAdmins.subject })
-        .from(portalAdmins)
-        .where(eq(portalAdmins.subject, actor.subject)),
-    ),
-  );
+const readableBy = async (actor: Actor) =>
+  (await isAdministrator(actor))
+    ? undefined
+    : eq(jobs.actorSubject, actor.subject);
 
 export async function listJobs(actor: Actor, first: number, groupId?: string) {
   const visible = and(
-    readableBy(actor),
+    await readableBy(actor),
     groupId ? eq(jobs.groupId, groupId) : undefined,
   );
   const [rows, total] = await Promise.all([
@@ -136,7 +124,7 @@ export async function listJobs(actor: Actor, first: number, groupId?: string) {
 
 export async function jobDetail(actor: Actor, id: string) {
   const job = await db.query.jobs.findFirst({
-    where: and(eq(jobs.id, id), readableBy(actor)),
+    where: and(eq(jobs.id, id), await readableBy(actor)),
   });
   if (!job) {
     throw new ApplicationError(404, "任务不存在或你没有查看权限");
@@ -162,7 +150,7 @@ export async function retryJob(actor: Actor, id: string) {
     const [job] = await tx
       .select()
       .from(jobs)
-      .where(and(eq(jobs.id, id), readableBy(actor)))
+      .where(and(eq(jobs.id, id), await readableBy(actor)))
       .for("update");
     if (!job) {
       throw new ApplicationError(404, "任务不存在或你没有查看权限");
@@ -211,7 +199,7 @@ export async function cancelJob(actor: Actor, id: string) {
     const [job] = await tx
       .select()
       .from(jobs)
-      .where(and(eq(jobs.id, id), readableBy(actor)))
+      .where(and(eq(jobs.id, id), await readableBy(actor)))
       .for("update");
     if (!job) {
       throw new ApplicationError(404, "任务不存在或你没有查看权限");

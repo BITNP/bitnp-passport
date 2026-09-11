@@ -77,7 +77,7 @@ openssl rand -base64 32
 3. 在 Service account roles 中，授予 `master-realm` 客户端的 `manage-users`、`view-realm` 和 `view-clients` 角色
 4. 将客户端密钥填入 `KEYCLOAK_SERVICE_CLIENT_SECRET`
 
-如果现有实例启用了细粒度管理权限，还需允许服务账户查询用户与群组、创建群组和管理成员。服务账户用于通行证访问 Keycloak，通行证管理员另行初始化。
+如果现有实例启用了细粒度管理权限，还需允许服务账户查询用户与群组、创建群组和管理成员。服务账户用于通行证访问 Keycloak；管理员权限规则见下文。
 
 ### 账户与注销配置
 
@@ -116,12 +116,14 @@ docker compose run --rm web node scripts/migrate.ts
 
 该命令创建或升级通行证数据表，并初始化后台任务队列。每次发布执行一次。
 
-### 3. 初始化首位管理员
+### 3. 管理员权限
 
-在 Keycloak 管理控制台找到要授权的用户，复制其用户 ID，并替换下面的占位符。需要填写用户 ID 而不是用户名
+Keycloak `master` realm 中拥有有效 `admin` 角色的用户自动成为通行证管理员。也可以在管理后台手动授予其他用户管理员权限。
+
+也可通过命令行授权：
 
 ```sh
-docker compose run --rm web node scripts/bootstrap.ts <Keycloak用户ID>
+docker compose run --rm web node scripts/grant.ts <Keycloak用户ID>
 ```
 
 ### 4. 启动服务与配置代理
@@ -148,7 +150,7 @@ pnpm config:import --client '旧通行证客户端ID' --apply
 docker compose run --rm web node scripts/import-legacy.ts --client '旧通行证客户端ID' --apply
 ```
 
-内置配置包含 7 条年度模板和 3 条固定路径，年度模板会匹配所有符合路径规则的届别。已有记录保持不变。省略 `--apply` 只打印清单；如需其他配置，可传入文件路径：
+内置配置包含 7 条年度模板和 2 条固定路径，年度模板会匹配所有符合路径规则的届别。已有记录保持不变。省略 `--apply` 只打印清单；如需其他配置，可传入文件路径：
 
 ```sh
 pnpm config:import ./custom-group-config.json --client '旧通行证客户端ID' --apply
@@ -163,7 +165,6 @@ pnpm install --frozen-lockfile
 cp dev/development.env .env
 pnpm dev:up
 pnpm db:migrate
-pnpm admin:bootstrap 10000000-0000-4000-8000-000000000001
 pnpm dev
 ```
 
@@ -183,11 +184,11 @@ pnpm worker
 
 预置账户均位于 `master` realm，密码均为 `dev-password`：
 
-| 用户名    | 用途                                                |
-| --------- | --------------------------------------------------- |
-| `admin`   | Keycloak 管理员；执行初始化命令后也是通行证系统管理员 |
-| `manager` | 已加入 `techdept`，可在通行证中授予群组管理权限       |
-| `member`  | 普通用户，可用于加入邀请和批量成员操作              |
+| 用户名    | 用途                                            |
+| --------- | ----------------------------------------------- |
+| `admin`   | Keycloak 超级管理员，自动拥有通行证管理员权限   |
+| `manager` | 已加入 `techdept`，可在通行证中授予群组管理权限 |
+| `member`  | 普通用户，可用于加入邀请和批量成员操作          |
 
 ### 日常开发
 

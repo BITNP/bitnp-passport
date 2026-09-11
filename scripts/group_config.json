@@ -27,10 +27,6 @@
     "name": "电脑诊所",
     "internal_note": "现任电脑诊所部员或管理层"
   },
-  "/bitnp/iam-master": {
-    "name": "IAM 超管",
-    "internal_note": "技术保障中心网协通行证系统管理员"
-  },
   "/bitnp/clinic-service": {
     "name": "诊所系统用户",
     "internal_note": "电脑诊所会内用户（值班部员、管理）"

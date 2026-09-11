@@ -14,7 +14,7 @@
     "#shared/*": "./shared/*.ts"
   },
   "scripts": {
-    "admin:bootstrap": "node --env-file-if-exists=.env scripts/bootstrap.ts",
+    "admin:grant": "node --env-file-if-exists=.env scripts/grant.ts",
     "build": "nuxt build",
     "config:import": "node --env-file-if-exists=.env scripts/import-legacy.ts",
     "db:generate": "drizzle-kit generate",
