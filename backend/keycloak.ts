@@ -71,20 +71,47 @@ export async function administrators() {
     return [];
   }
 
-  const users = await request(() =>
-    allPages((first, max) =>
-      client.users.find({ first, max, briefRepresentation: false }),
-    ),
+  const role = { name: "admin", briefRepresentation: true };
+  const [users, assigned, groups] = await request(() =>
+    Promise.all([
+      allPages((first, max) =>
+        client.users.find({ first, max, briefRepresentation: true }),
+      ),
+      allPages((first, max) =>
+        client.roles.findUsersWithRole({ ...role, first, max }),
+      ),
+      allPages((first, max) => findGroupsWithRole({ ...role, first, max })),
+    ]),
   );
-  const administrators = await Promise.all(
-    users.map(async (user) =>
-      !user.serviceAccountClientId && (await isAdministrator(user.id!))
-        ? userSummary(user)
-        : null,
-    ),
-  );
+  const userIds = new Set(assigned.map((user) => user.id!));
+  const visited = new Set<string>();
 
-  return administrators.filter((user) => user !== null);
+  async function collectMembers(id: string): Promise<void> {
+    if (visited.has(id)) {
+      return;
+    }
+    visited.add(id);
+    const [groupMembers, children] = await request(() =>
+      Promise.all([
+        members(id),
+        allPages((first, max) =>
+          client.groups.listSubGroups({
+            parentId: id,
+            first,
+            max,
+            briefRepresentation: true,
+          }),
+        ),
+      ]),
+    );
+    for (const user of groupMembers) {
+      userIds.add(user.id);
+    }
+    await Promise.all(children.map((group) => collectMembers(group.id!)));
+  }
+  await Promise.all(groups.map((group) => collectMembers(group.id!)));
+
+  return users.filter((user) => userIds.has(user.id!)).map(userSummary);
 }
 
 export async function user(id: string) {
