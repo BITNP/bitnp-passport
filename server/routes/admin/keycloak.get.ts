@@ -5,7 +5,9 @@ import { requireAdministrator } from "#backend/permissions";
 
 const input = z.object({
   user: z.string().min(1).optional(),
-  page: z.enum(["settings", "groups", "sessions"]).default("settings"),
+  page: z
+    .enum(["settings", "groups", "sessions", "role-mapping"])
+    .default("settings"),
 });
 
 export default defineEventHandler(async (event) => {

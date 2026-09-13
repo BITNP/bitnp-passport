@@ -32,7 +32,7 @@ export const consoleUrl = new URL(
 
 export function userConsoleUrl(
   id: string,
-  page: "settings" | "groups" | "sessions" = "settings",
+  page: "settings" | "groups" | "sessions" | "role-mapping" = "settings",
 ) {
   const url = new URL(consoleUrl);
   url.hash = `/${encodeURIComponent(client.realmName)}/users/${encodeURIComponent(id)}/${page}`;

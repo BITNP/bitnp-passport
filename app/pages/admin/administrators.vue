@@ -69,13 +69,17 @@ useFetchError(loadError, refresh);
     <NCard v-if="administrators" title="当前管理员">
       <UserTable :loading="loadStatus === 'pending'" :users="administrators">
         <template #actions="{ user }">
-          <NTag
+          <NButton
             v-if="user.source === 'keycloak'"
-            :bordered="false"
+            :href="`/admin/keycloak?user=${encodeURIComponent(user.id)}&page=role-mapping`"
+            rel="noopener noreferrer"
             size="small"
+            tag="a"
+            target="_blank"
+            title="在 Keycloak 中管理此用户的角色"
           >
             Keycloak
-          </NTag>
+          </NButton>
           <ConfirmAction
             v-else
             :disabled="pending"
