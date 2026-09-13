@@ -10,16 +10,20 @@ import { ApplicationError } from "./errors.ts";
 import * as keycloak from "./keycloak.ts";
 import { requireAdministrator, requireGroupManager } from "./permissions.ts";
 
-export const groupConfiguration = z.object({
+export const groupConfiguration = z.strictObject({
   groupId: z.string().min(1),
   name: z
     .string()
     .trim()
     .min(1)
     .regex(/^[^/\p{Cc}]+$/u),
-  label: z.string().trim().min(1),
-  note: z.string().trim(),
-  allowInvites: z.boolean(),
+  settings: z
+    .object({
+      label: z.string().trim().min(1),
+      note: z.string().trim(),
+      allowInvites: z.boolean(),
+    })
+    .optional(),
 });
 
 export async function listGroups(actor: Actor) {
@@ -104,19 +108,18 @@ export async function configureGroup(
 ) {
   await requireAdministrator(actor);
 
-  const { groupId, ...configuration } = input;
-  const { name, ...settings } = configuration;
+  const { groupId, name, settings } = input;
 
   return audited(
     actor,
     {
       operation: "group.configure",
       groupId,
-      detail: { after: configuration },
+      detail: { after: { name, ...settings } },
     },
     (recordBefore) =>
       db.transaction(async (tx) => {
-        // 首次配置还没有元数据行可锁，也要按群组串行保存，才能记录正确的前值
+        // 未纳入的群组没有元数据行，仍需与显式纳入操作按群组串行处理。
         await tx.execute(
           sql`select pg_advisory_xact_lock(hashtextextended(${groupId}, 0))`,
         );
@@ -125,6 +128,13 @@ export async function configureGroup(
           .from(managedGroups)
           .where(eq(managedGroups.groupId, groupId))
           .for("update");
+        if (settings && !previous?.enrolled) {
+          throw new ApplicationError(
+            409,
+            "请先将群组纳入通行证，再保存通行证配置",
+          );
+        }
+
         const current = await keycloak.group(groupId);
         recordBefore({ name: current.name, ...previous });
 
@@ -132,15 +142,66 @@ export async function configureGroup(
           await keycloak.renameGroup(groupId, name);
         }
 
-        await tx
-          .insert(managedGroups)
-          .values({ groupId, ...settings, createdBy: actor.subject })
-          .onConflictDoUpdate({
-            target: managedGroups.groupId,
-            set: settings,
-          });
+        if (settings) {
+          await tx
+            .update(managedGroups)
+            .set(settings)
+            .where(eq(managedGroups.groupId, groupId));
 
-        if (!settings.allowInvites) {
+          if (!settings.allowInvites) {
+            await tx
+              .update(invitations)
+              .set({ revokedAt: new Date() })
+              .where(
+                and(
+                  eq(invitations.groupId, groupId),
+                  isNull(invitations.revokedAt),
+                ),
+              );
+          }
+        }
+
+        return { groupId };
+      }),
+  );
+}
+
+export async function setGroupEnrollment(
+  actor: Actor,
+  { groupId, enrolled }: { groupId: string; enrolled: boolean },
+) {
+  await requireAdministrator(actor);
+
+  return audited(
+    actor,
+    { operation: enrolled ? "group.enroll" : "group.unenroll", groupId },
+    () =>
+      db.transaction(async (tx) => {
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtextextended(${groupId}, 0))`,
+        );
+
+        if (enrolled) {
+          const group = await keycloak.group(groupId);
+          await tx
+            .insert(managedGroups)
+            .values({ groupId, label: group.name, createdBy: actor.subject })
+            .onConflictDoUpdate({
+              target: managedGroups.groupId,
+              set: { enrolled: true },
+              setWhere: eq(managedGroups.enrolled, false),
+            });
+        } else {
+          // 先锁定群组并关闭邀请，再撤销链接，与邀请创建保持互斥。
+          await tx
+            .update(managedGroups)
+            .set({ enrolled: false, allowInvites: false })
+            .where(
+              and(
+                eq(managedGroups.groupId, groupId),
+                eq(managedGroups.enrolled, true),
+              ),
+            );
           await tx
             .update(invitations)
             .set({ revokedAt: new Date() })
@@ -159,26 +220,16 @@ export async function configureGroup(
 
 export async function createGroup(
   actor: Actor,
-  input: Omit<z.infer<typeof groupConfiguration>, "groupId"> & {
-    parentId?: string;
-  },
+  input: { name: string; parentId?: string },
 ) {
   await requireAdministrator(actor);
-
-  const { name, parentId, ...settings } = input;
 
   return audited(
     actor,
     { operation: "group.create", detail: input },
-    async () => {
-      const groupId = await keycloak.createGroup(name, parentId);
-
-      await db
-        .insert(managedGroups)
-        .values({ groupId, ...settings, createdBy: actor.subject });
-
-      return { groupId };
-    },
+    async () => ({
+      groupId: await keycloak.createGroup(input.name, input.parentId),
+    }),
   );
 }
 

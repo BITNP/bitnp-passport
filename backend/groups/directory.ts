@@ -45,7 +45,7 @@ export async function groupDirectory() {
       const settings = configurations.get(group.id);
       directory.set(group.id, {
         ...group,
-        configured: settings !== undefined,
+        configured: settings?.enrolled ?? false,
         isTermRoot: termRoots.has(group.id),
         createdAt: settings?.createdAt ?? null,
         termYear: termYears.get(group.id) ?? null,

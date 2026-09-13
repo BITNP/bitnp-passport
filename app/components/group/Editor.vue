@@ -20,6 +20,14 @@ const { selection, mutation, refresh } = defineProps<{
 const { submit, pending } = mutation;
 const message = useMessage();
 const form = ref({ name: "", label: "", note: "", allowInvites: false });
+const enrolled = computed(() => selection.settings?.enrolled ?? false);
+const formChanged = computed(
+  () =>
+    form.value.name !== (selection.group?.name ?? "") ||
+    form.value.label !== (selection.settings?.label ?? "") ||
+    form.value.note !== (selection.settings?.note ?? "") ||
+    form.value.allowInvites !== (selection.settings?.allowInvites ?? false),
+);
 
 watch(
   () => selection,
@@ -37,20 +45,34 @@ watch(
 const save = () =>
   submit(async () => {
     const { group, parent } = selection;
-    const result = await $fetch(
-      group ? "/api/admin/groups" : "/api/admin/groups/create",
-      {
-        method: "POST",
-        body: {
-          ...form.value,
-          groupId: group?.groupId,
-          parentId: parent?.groupId,
-          label: form.value.label.trim() || form.value.name,
-        },
-      },
-    );
+    const { name, label, note, allowInvites } = form.value;
+    const result = group
+      ? await $fetch("/api/admin/groups", {
+          method: "POST",
+          body: {
+            groupId: group.groupId,
+            name,
+            settings: enrolled.value
+              ? { label: label.trim() || name, note, allowInvites }
+              : undefined,
+          },
+        })
+      : await $fetch("/api/admin/groups/create", {
+          method: "POST",
+          body: { name, parentId: parent?.groupId },
+        });
     await refresh(result.groupId);
-    message.success("群组已保存");
+    message.success(group ? "群组已保存" : "群组已创建");
+  });
+
+const setEnrollment = (groupId: string, enrolled: boolean) =>
+  submit(async () => {
+    const result = await $fetch("/api/admin/groups/enrollment", {
+      method: "PUT",
+      body: { groupId, enrolled },
+    });
+    await refresh(result.groupId);
+    message.success(enrolled ? "群组已纳入通行证" : "群组已取消纳入通行证");
   });
 </script>
 
@@ -73,12 +95,41 @@ const save = () =>
         </template>
         <template v-else>顶层群组</template>
       </NText>
-      <NFlex v-if="selection.group" align="center" :size="12">
-        <NTag size="small" :type="selection.settings ? 'success' : 'default'">
-          {{ selection.settings ? "已纳入通行证" : "未纳入通行证" }}
+      <NFlex
+        v-if="selection.group"
+        :key="selection.group.groupId"
+        align="center"
+        :size="12"
+      >
+        <NTag size="small" :type="enrolled ? 'success' : 'default'">
+          {{ enrolled ? "已纳入通行证" : "未纳入通行证" }}
         </NTag>
-        <NText v-if="!selection.settings" depth="3">
-          保存配置后，此群组将出现在有管理权限的用户的日常群组列表中
+        <NPopconfirm
+          :disabled="pending || formChanged"
+          :negative-text="enrolled ? '保留纳入' : '取消'"
+          :positive-button-props="{
+            type: enrolled ? 'error' : 'primary',
+            disabled: pending || formChanged,
+          }"
+          :positive-text="enrolled ? '取消纳入' : '纳入通行证'"
+          @positive-click="setEnrollment(selection.group.groupId, !enrolled)"
+        >
+          <template #trigger>
+            <NButton :disabled="pending || formChanged" size="small">
+              {{ enrolled ? "取消纳入" : "纳入通行证" }}
+            </NButton>
+          </template>
+          <span class="confirmation">
+            <template v-if="enrolled">
+              确认将「{{ selection.group.path }}」取消纳入通行证？
+            </template>
+            <template v-else>
+              确认将「{{ selection.group.path }}」纳入通行证？
+            </template>
+          </span>
+        </NPopconfirm>
+        <NText v-if="formChanged" depth="3">
+          有未保存的更改，请先保存后再{{ enrolled ? "取消纳入" : "纳入" }}
         </NText>
       </NFlex>
       <NForm :disabled="pending" @submit.prevent="save">
@@ -89,29 +140,25 @@ const save = () =>
             placeholder="例如：techdept"
           />
         </NFormItem>
-        <NFormItem label="显示名称">
-          <NInput v-model:value="form.label" placeholder="留空使用路径名称" />
-        </NFormItem>
-        <NFormItem label="管理备注">
-          <NInput
-            v-model:value="form.note"
-            :autosize="{ minRows: 3, maxRows: 6 }"
-            type="textarea"
-          />
-        </NFormItem>
+        <template v-if="enrolled">
+          <NFormItem label="显示名称">
+            <NInput v-model:value="form.label" placeholder="留空使用路径名称" />
+          </NFormItem>
+          <NFormItem label="管理备注">
+            <NInput
+              v-model:value="form.note"
+              :autosize="{ minRows: 3, maxRows: 6 }"
+              type="textarea"
+            />
+          </NFormItem>
+        </template>
         <NFlex :size="20" vertical>
-          <NCheckbox v-model:checked="form.allowInvites">
+          <NCheckbox v-if="enrolled" v-model:checked="form.allowInvites">
             允许群组管理员创建邀请链接
           </NCheckbox>
           <NFlex align="center">
             <NButton attr-type="submit" :loading="pending" type="primary">
-              {{
-                !selection.group
-                  ? "创建群组"
-                  : selection.settings
-                    ? "保存"
-                    : "保存并纳入通行证"
-              }}
+              {{ selection.group ? "保存" : "创建群组" }}
             </NButton>
             <LinkButton
               v-if="selection.group"
@@ -129,5 +176,10 @@ const save = () =>
 <style scoped>
 .group-path {
   overflow-wrap: anywhere;
+}
+
+.confirmation {
+  display: inline-block;
+  max-width: 280px;
 }
 </style>

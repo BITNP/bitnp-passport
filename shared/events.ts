@@ -4,6 +4,12 @@ export const events = {
   "site.update": { label: "修改站点设置", context: [], targets: [] },
   "group.configure": { label: "配置群组", context: ["groupId"], targets: [] },
   "group.create": { label: "创建群组", context: [], targets: [] },
+  "group.enroll": { label: "纳入通行证", context: ["groupId"], targets: [] },
+  "group.unenroll": {
+    label: "取消纳入通行证",
+    context: ["groupId"],
+    targets: [],
+  },
   "member.add": { label: "添加成员", context: ["groupId"], targets: ["user"] },
   "member.remove": {
     label: "移除成员",
@@ -96,12 +102,9 @@ interface TermAuditConfiguration {
 
 interface AuditConfigurations {
   "site.update": { supportUrl: string; services: SiteService[] };
-  "group.configure": {
-    name: string;
-    label: string;
-    note: string;
-    allowInvites: boolean;
-  };
+  "group.configure":
+    | { name: string }
+    | { name: string; label: string; note: string; allowInvites: boolean };
   "invitation.update": { note: string };
   "department.create": { code: string; departmentName: string };
   "term.create": TermAuditConfiguration;

@@ -1,0 +1,2 @@
+ALTER TABLE "managed_groups" ADD COLUMN "enrolled" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE "managed_groups" ADD CONSTRAINT "managed_group_invites_require_enrollment" CHECK (("managed_groups"."enrolled" = true or "managed_groups"."allow_invites" = false));

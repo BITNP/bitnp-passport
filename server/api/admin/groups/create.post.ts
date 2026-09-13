@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { createGroup, groupConfiguration } from "#backend/groups";
 
-const input = groupConfiguration.omit({ groupId: true }).extend({
+const input = groupConfiguration.pick({ name: true }).extend({
   parentId: z.string().min(1).optional(),
 });
 

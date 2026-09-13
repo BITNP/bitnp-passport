@@ -113,16 +113,29 @@ export const logoutTokens = pgTable(
   ],
 );
 
-export const managedGroups = pgTable("managed_groups", {
-  groupId: text("group_id").primaryKey(),
-  label: text("label").notNull(),
-  note: text("note").notNull().default(""),
-  allowInvites: boolean("allow_invites").notNull().default(false),
-  createdBy: text("created_by").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const managedGroups = pgTable(
+  "managed_groups",
+  {
+    groupId: text("group_id").primaryKey(),
+    label: text("label").notNull(),
+    note: text("note").notNull().default(""),
+    enrolled: boolean("enrolled").notNull().default(true),
+    allowInvites: boolean("allow_invites").notNull().default(false),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      "managed_group_invites_require_enrollment",
+      or(
+        eq(table.enrolled, true),
+        eq(table.allowInvites, false),
+      )!.inlineParams(),
+    ),
+  ],
+);
 
 export const groupDelegations = pgTable(
   "group_delegations",

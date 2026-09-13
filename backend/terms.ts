@@ -133,15 +133,6 @@ export async function saveTerm(
           recordBefore(null);
         }
 
-        await tx
-          .insert(managedGroups)
-          .values({
-            groupId: input.rootGroupId,
-            label: input.label,
-            createdBy: actor.subject,
-          })
-          .onConflictDoNothing();
-
         if (id) {
           await tx.update(terms).set(settings).where(eq(terms.id, id));
           await tx.delete(termGroups).where(eq(termGroups.termId, id));

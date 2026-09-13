@@ -146,9 +146,12 @@ const create = () =>
             </tr>
           </tbody>
         </NTable>
+        <NText depth="3">
+          新建的年度父群组和部门群组将纳入通行证，并沿用来源群组的备注和邀请设置。
+        </NText>
         <NFlex>
           <NButton :loading="pending" type="primary" @click="create">
-            确认创建
+            创建并纳入通行证
           </NButton>
         </NFlex>
       </NFlex>

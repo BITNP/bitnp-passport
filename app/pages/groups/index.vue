@@ -100,7 +100,7 @@ useFetchError(error, refresh);
               portalGroups.length > 0
                 ? '没有匹配的群组'
                 : session?.administrator
-                  ? '尚未纳入群组，请前往“全部群组与配置”保存群组配置'
+                  ? '尚未纳入群组，请前往“全部群组与配置”，选择群组并点击“纳入通行证”'
                   : '暂无可管理的群组'
             "
           />

@@ -15,6 +15,13 @@
       "when": 1789049591652,
       "tag": "0001_departments",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789291469226,
+      "tag": "0002_group_enrollment",
+      "breakpoints": true
     }
   ]
 }
