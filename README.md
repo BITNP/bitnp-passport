@@ -36,9 +36,7 @@ cp .env.example .env
 | `ACTIVE_MEMBER_ROLE`             | 标记网协现任的 realm role，默认 `bitnp-active`                                |
 | `LOG_LEVEL`                      | 日志级别，通常使用 `info`，排查问题时可改为 `debug`                           |
 
-> [!NOTE]
->
-> 未来如果 Forgejo Docker Registry 弄好了，可以考虑上传镜像到 Registry，现在感觉没啥必要
+生产部署建议使用 Forgejo Container Registry 中的固定版本镜像，例如 `git.bitnp.net/bitnp/bitnp-passport:v1.0.0`。
 
 可用以下命令生成会话密钥，将结果填入 `SESSION_ENCRYPTION_KEY`：
 
@@ -135,6 +133,17 @@ docker compose logs --tail=100 web worker
 ```
 
 Compose 将网站绑定到宿主机的 `127.0.0.1:3000`。配置宿主机上的反向代理，将 `APP_URL` 对应域名的全部请求转发到 `http://127.0.0.1:3000`，并提供 HTTPS。
+
+## 发布版本
+
+```sh
+git remote add forgejo https://git.bitnp.net/BITNP/bitnp-passport.git
+docker login git.bitnp.net
+```
+
+```sh
+scripts/publish-release.sh v1.0.0
+```
 
 ## 导入旧版群组配置
 

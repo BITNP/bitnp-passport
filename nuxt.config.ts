@@ -19,7 +19,9 @@ export default defineNuxtConfig({
   },
   css: ["~/assets/css/main.css"],
   nitro: {
-    imports: { dirs: ["server/session.ts", "server/oidc.ts"] },
+    imports: {
+      dirs: ["server/session.ts", "server/oidc.ts", "server/authentication.ts"],
+    },
   },
   hooks: {
     "nitro:config"(config) {

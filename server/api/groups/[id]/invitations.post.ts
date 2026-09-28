@@ -1,16 +1,9 @@
-import { z } from "zod";
-
 import { createInvitation } from "#backend/invitations";
-
-const input = z.object({
-  days: z.number().int().min(1).max(30),
-  note: z.string().trim(),
-});
+import { createInvitationInput } from "#shared/invitations";
 
 export default defineEventHandler(async (event) => {
   const actor = await requireSession(event);
+  const input = await readValidatedBody(event, createInvitationInput.parse);
 
-  const body = await readValidatedBody(event, input.parse);
-
-  return createInvitation(actor, getRouterParam(event, "id")!, body);
+  return createInvitation(actor, getRouterParam(event, "id")!, input);
 });

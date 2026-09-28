@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import type {
+  CreateInvitationInput,
+  UpdateInvitationInput,
+} from "#shared/invitations";
 import { formatDateTime } from "#shared/utils";
 
 const { groupId, allowInvites } = defineProps<{
@@ -12,10 +16,13 @@ const endpoint = computed(
 const { data: invitations, error, refresh, status } = await useFetch(endpoint);
 const { submit, pending } = useMutation();
 const message = useMessage();
-const days = ref(7);
-const note = ref("");
+const form = ref<CreateInvitationInput>({
+  days: 7,
+  note: "",
+  allowRegistration: false,
+});
 const renewalDays = ref<number | null>(7);
-const noteEditor = ref<{ id: string; note: string }>();
+const editor = ref<UpdateInvitationInput>();
 const usageId = ref<string>();
 const usageInvitation = computed(() =>
   invitations.value?.find((invitation) => invitation.id === usageId.value),
@@ -30,21 +37,21 @@ const createInvitation = () =>
   submit(async () => {
     await $fetch(endpoint.value, {
       method: "POST",
-      body: { days: days.value, note: note.value },
+      body: form.value,
     });
-    note.value = "";
+    form.value = { days: form.value.days, note: "", allowRegistration: false };
     message.success("邀请已创建");
     await refresh();
   });
 
-const saveNote = () =>
+const updateInvitation = () =>
   submit(async () => {
     await $fetch(endpoint.value, {
       method: "PUT",
-      body: noteEditor.value!,
+      body: editor.value!,
     });
-    noteEditor.value = undefined;
-    message.success("备注已保存");
+    editor.value = undefined;
+    message.success("邀请设置已保存");
     await refresh();
   });
 
@@ -78,20 +85,37 @@ useFetchError(error, refresh);
   <NCard title="邀请链接">
     <NFlex :size="20" vertical>
       <NForm v-if="allowInvites" @submit.prevent="createInvitation">
-        <NFlex align="end" :size="12">
-          <NFormItem label="备注（可选）" :show-feedback="false">
-            <NInput v-model:value="note" clearable placeholder="填写备注" />
-          </NFormItem>
-          <NFormItem label="有效期" :show-feedback="false">
-            <NSelect
-              v-model:value="days"
-              class="duration-select"
-              :options="durations"
-            />
-          </NFormItem>
-          <NButton attr-type="submit" :loading="pending" type="primary">
-            创建邀请
-          </NButton>
+        <NFlex :size="16" vertical>
+          <NFlex align="end" :size="12">
+            <NFormItem label="备注（可选）" :show-feedback="false">
+              <NInput
+                v-model:value="form.note"
+                clearable
+                placeholder="填写备注"
+              />
+            </NFormItem>
+            <NFormItem label="有效期" :show-feedback="false">
+              <NSelect
+                v-model:value="form.days"
+                class="duration-select"
+                :options="durations"
+              />
+            </NFormItem>
+          </NFlex>
+          <NCheckbox
+            v-model:checked="form.allowRegistration"
+            :disabled="pending"
+          >
+            允许新用户注册
+          </NCheckbox>
+          <NText depth="3">
+            开启后，受邀者可自行注册账号，完成注册后自动加入群组。
+          </NText>
+          <NFlex>
+            <NButton attr-type="submit" :loading="pending" type="primary">
+              创建邀请
+            </NButton>
+          </NFlex>
         </NFlex>
       </NForm>
       <NText v-else depth="3">此群组未开放邀请</NText>
@@ -108,11 +132,28 @@ useFetchError(error, refresh);
                   size="small"
                   text
                   @click="
-                    noteEditor = { id: invitation.id, note: invitation.note }
+                    editor = {
+                      id: invitation.id,
+                      note: invitation.note,
+                      allowRegistration: invitation.allowRegistration,
+                    }
                   "
                 >
-                  {{ invitation.note ? "编辑备注" : "添加备注" }}
+                  编辑设置
                 </NButton>
+              </NFlex>
+              <NFlex>
+                <NTag
+                  :bordered="false"
+                  size="small"
+                  :type="invitation.allowRegistration ? 'info' : 'default'"
+                >
+                  {{
+                    invitation.allowRegistration
+                      ? "可注册新账号"
+                      : "使用已有账号"
+                  }}
+                </NTag>
               </NFlex>
               <NInputGroup>
                 <NInput
@@ -194,21 +235,28 @@ useFetchError(error, refresh);
     </NFlex>
     <NModal
       preset="dialog"
-      :show="Boolean(noteEditor)"
+      :show="Boolean(editor)"
       :show-icon="false"
-      title="编辑备注"
-      @update:show="noteEditor = undefined"
+      title="编辑邀请"
+      @update:show="editor = undefined"
     >
-      <NInput
-        v-if="noteEditor"
-        v-model:value="noteEditor.note"
-        :autosize="{ minRows: 2, maxRows: 5 }"
-        placeholder="填写备注"
-        type="textarea"
-      />
+      <NFlex v-if="editor" :size="16" vertical>
+        <NInput
+          v-model:value="editor.note"
+          :autosize="{ minRows: 2, maxRows: 5 }"
+          placeholder="填写备注"
+          type="textarea"
+        />
+        <NCheckbox
+          v-model:checked="editor.allowRegistration"
+          :disabled="pending"
+        >
+          允许新用户注册
+        </NCheckbox>
+      </NFlex>
       <template #action>
-        <NButton @click="noteEditor = undefined">取消</NButton>
-        <NButton :loading="pending" type="primary" @click="saveNote">
+        <NButton @click="editor = undefined">取消</NButton>
+        <NButton :loading="pending" type="primary" @click="updateInvitation">
           保存
         </NButton>
       </template>

@@ -22,6 +22,13 @@
       "when": 1789291469226,
       "tag": "0002_group_enrollment",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790603524936,
+      "tag": "0003_invitation_registration",
+      "breakpoints": true
     }
   ]
 }

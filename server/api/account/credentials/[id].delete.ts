@@ -7,5 +7,11 @@ export default defineEventHandler(async (event) => {
     getRouterParam(event, "id")!,
   );
 
-  return { url: await beginAccountAction(event, session, action) };
+  const url = await beginAuthentication(event, {
+    type: "account-action",
+    user: session,
+    action,
+  });
+
+  return { url: url.href };
 });

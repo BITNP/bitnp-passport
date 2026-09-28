@@ -11,7 +11,17 @@ const [{ data: invitation, error: loadError, refresh }, { data: session }] =
   ]);
 
 const { submit, pending } = useMutation();
-const returnTo = encodeURIComponent(`/i/${token}`);
+const authenticate = (mode: "login" | "register") =>
+  submit(async () => {
+    const result = await $fetch(
+      `/api/invitations/${encodeURIComponent(token)}/authorize`,
+      {
+        method: "POST",
+        body: { mode },
+      },
+    );
+    await navigateTo(result.url, { external: true });
+  });
 
 useHead({
   title: "群组邀请",
@@ -68,6 +78,12 @@ const switchAccount = () =>
           }}
         </NDescriptionsItem>
       </NDescriptions>
+      <NAlert
+        v-if="session && !invitation.joined && route.query.join === 'failed'"
+        type="warning"
+      >
+        已登录，但暂未加入群组。请点击下方按钮重试。
+      </NAlert>
       <NFlex :size="12" vertical>
         <template v-if="session">
           <LinkButton
@@ -95,16 +111,29 @@ const switchAccount = () =>
         </template>
         <template v-else>
           <NButton
+            v-if="invitation.allowRegistration"
             block
-            :href="`/auth/login?returnTo=${returnTo}`"
+            :disabled="pending"
+            :loading="pending"
             size="large"
-            tag="a"
             type="primary"
+            @click="authenticate('register')"
           >
-            登录后加入
+            注册并加入
           </NButton>
-          <NButton :href="`/auth/register?returnTo=${returnTo}`" tag="a" text>
-            注册账户
+          <NButton
+            block
+            :disabled="pending"
+            :loading="pending"
+            size="large"
+            :type="invitation.allowRegistration ? 'default' : 'primary'"
+            @click="authenticate('login')"
+          >
+            {{
+              invitation.allowRegistration
+                ? "已有账号，登录并加入"
+                : "登录并加入"
+            }}
           </NButton>
         </template>
       </NFlex>

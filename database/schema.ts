@@ -159,6 +159,7 @@ export const invitations = pgTable(
   {
     id: uuid("id").primaryKey(),
     token: text("token").notNull().unique(),
+    allowRegistration: boolean("allow_registration").notNull().default(false),
     note: text("note").notNull().default(""),
     groupId: text("group_id")
       .notNull()

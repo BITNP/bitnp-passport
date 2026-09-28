@@ -1,0 +1,1 @@
+ALTER TABLE "invitations" ADD COLUMN "allow_registration" boolean DEFAULT false NOT NULL;

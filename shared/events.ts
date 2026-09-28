@@ -1,3 +1,4 @@
+import type { UpdateInvitationInput } from "./invitations.ts";
 import type { SiteService } from "./types.ts";
 
 export const events = {
@@ -32,7 +33,7 @@ export const events = {
     targets: ["invitation"],
   },
   "invitation.update": {
-    label: "修改邀请备注",
+    label: "修改邀请设置",
     context: ["groupId"],
     targets: ["invitation"],
   },
@@ -105,7 +106,7 @@ interface AuditConfigurations {
   "group.configure":
     | { name: string }
     | { name: string; label: string; note: string; allowInvites: boolean };
-  "invitation.update": { note: string };
+  "invitation.update": Omit<UpdateInvitationInput, "id">;
   "department.create": { code: string; departmentName: string };
   "term.create": TermAuditConfiguration;
   "term.update": TermAuditConfiguration;

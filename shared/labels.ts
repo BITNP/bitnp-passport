@@ -39,6 +39,7 @@ export const auditFieldLabels: Record<AuditConfigurationEntry[0], string> = {
   label: "显示名称",
   note: "管理备注",
   allowInvites: "允许创建邀请",
+  allowRegistration: "允许通过邀请注册",
   supportUrl: "工单地址",
   services: "服务入口",
   year: "年份",

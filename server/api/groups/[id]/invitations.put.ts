@@ -1,15 +1,9 @@
-import { z } from "zod";
-
-import { updateInvitationNote } from "#backend/invitations";
-
-const input = z.object({
-  id: z.uuid(),
-  note: z.string().trim(),
-});
+import { updateInvitation } from "#backend/invitations";
+import { updateInvitationInput } from "#shared/invitations";
 
 export default defineEventHandler(async (event) => {
   const actor = await requireSession(event);
-  const { id, note } = await readValidatedBody(event, input.parse);
+  const input = await readValidatedBody(event, updateInvitationInput.parse);
 
-  return updateInvitationNote(actor, getRouterParam(event, "id")!, id, note);
+  return updateInvitation(actor, getRouterParam(event, "id")!, input);
 });

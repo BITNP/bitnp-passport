@@ -3,6 +3,10 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 
 import { invitations, managedGroups } from "#database/schema";
+import type {
+  CreateInvitationInput,
+  UpdateInvitationInput,
+} from "#shared/invitations";
 import type { Actor } from "#shared/types";
 
 import { audited } from "./audit.ts";
@@ -21,6 +25,7 @@ export async function listInvitations(actor: Actor, groupId: string) {
       id: invitations.id,
       token: invitations.token,
       note: invitations.note,
+      allowRegistration: invitations.allowRegistration,
       createdAt: invitations.createdAt,
       expiresAt: invitations.expiresAt,
       revokedAt: invitations.revokedAt,
@@ -38,7 +43,7 @@ export async function listInvitations(actor: Actor, groupId: string) {
 export async function createInvitation(
   actor: Actor,
   groupId: string,
-  { days, note }: { days: number; note: string },
+  { days, note, allowRegistration }: CreateInvitationInput,
 ) {
   await requireGroupManager(actor, groupId);
 
@@ -51,7 +56,7 @@ export async function createInvitation(
       operation: "invitation.create",
       groupId,
       target: { type: "invitation", id },
-      detail: { days, note },
+      detail: { days, note, allowRegistration },
     },
     () =>
       db.transaction(async (tx) => {
@@ -71,6 +76,7 @@ export async function createInvitation(
           id,
           token,
           note,
+          allowRegistration,
           groupId,
           createdBy: actor.subject,
           createdAt,
@@ -80,11 +86,10 @@ export async function createInvitation(
   );
 }
 
-export async function updateInvitationNote(
+export async function updateInvitation(
   actor: Actor,
   groupId: string,
-  id: string,
-  note: string,
+  { id, note, allowRegistration }: UpdateInvitationInput,
 ) {
   await requireGroupManager(actor, groupId);
 
@@ -94,12 +99,15 @@ export async function updateInvitationNote(
       operation: "invitation.update",
       groupId,
       target: { type: "invitation", id },
-      detail: { after: { note } },
+      detail: { after: { note, allowRegistration } },
     },
     (recordBefore) =>
       db.transaction(async (tx) => {
         const [invitation] = await tx
-          .select({ note: invitations.note })
+          .select({
+            note: invitations.note,
+            allowRegistration: invitations.allowRegistration,
+          })
           .from(invitations)
           .where(and(eq(invitations.id, id), eq(invitations.groupId, groupId)))
           .for("update");
@@ -110,7 +118,7 @@ export async function updateInvitationNote(
         recordBefore(invitation);
         await tx
           .update(invitations)
-          .set({ note })
+          .set({ note, allowRegistration })
           .where(eq(invitations.id, id));
       }),
   );
@@ -194,11 +202,12 @@ export async function revokeInvitation(
   );
 }
 
-export async function invitationInfo(token: string, actor: Actor | null) {
+async function readActiveInvitation(token: string) {
   const [invitation] = await db
     .select({
       groupId: invitations.groupId,
       label: managedGroups.label,
+      allowRegistration: invitations.allowRegistration,
       expiresAt: invitations.expiresAt,
     })
     .from(invitations)
@@ -216,6 +225,24 @@ export async function invitationInfo(token: string, actor: Actor | null) {
     throw new ApplicationError(404, "邀请链接无效");
   }
 
+  return invitation;
+}
+
+export async function authorizeInvitation(
+  token: string,
+  mode: "login" | "register",
+) {
+  const invitation = await readActiveInvitation(token);
+  if (mode === "register" && !invitation.allowRegistration) {
+    throw new ApplicationError(
+      403,
+      "此邀请未开启新账号注册入口，请使用已有账号登录",
+    );
+  }
+}
+
+export async function invitationInfo(token: string, actor: Actor | null) {
+  const invitation = await readActiveInvitation(token);
   let joined = false;
 
   if (actor) {
@@ -225,6 +252,7 @@ export async function invitationInfo(token: string, actor: Actor | null) {
 
   return {
     label: invitation.label,
+    allowRegistration: invitation.allowRegistration,
     expiresAt: invitation.expiresAt,
     joined,
   };
@@ -270,7 +298,7 @@ export async function joinInvitation(actor: Actor, token: string) {
 
         const groups = await keycloak.groupsForUser(actor.subject);
         if (groups.some((group) => group.id === invitation.groupId)) {
-          throw new ApplicationError(409, "你已加入此群组");
+          return;
         }
 
         await keycloak.addMember(actor.subject, invitation.groupId);

@@ -10,5 +10,11 @@ export default defineEventHandler(async (event) => {
 
   await account.requireAction(session.accessToken, action);
 
-  return { url: await beginAccountAction(event, session, action) };
+  const url = await beginAuthentication(event, {
+    type: "account-action",
+    user: session,
+    action,
+  });
+
+  return { url: url.href };
 });
