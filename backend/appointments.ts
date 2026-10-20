@@ -63,7 +63,7 @@ export async function previewAssignment(
   ) {
     const holders = await effectiveRoleHolders(systemAdministratorRole);
 
-    if (!holders.some((user) => user.id !== subject && user.enabled)) {
+    if (!holders.some(({ user }) => user.id !== subject && user.enabled)) {
       throw new ApplicationError(409, "必须保留至少一位可用的系统管理员");
     }
   }

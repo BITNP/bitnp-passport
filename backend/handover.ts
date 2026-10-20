@@ -117,10 +117,10 @@ export async function previewHandover(actor: Actor, input: HandoverInput) {
 
   const administrators = (
     await effectiveRoleHolders(systemAdministratorRole)
-  ).filter((user) => user.enabled);
+  ).filter(({ user }) => user.enabled);
   const subjects = new Set([
     ...planned.map((change) => change.subject),
-    ...administrators.map((user) => user.id!),
+    ...administrators.map(({ user }) => user.id!),
   ]);
   const previews = await previewRoleChanges(
     [...subjects].map((subject) => ({

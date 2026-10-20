@@ -1,6 +1,6 @@
 import * as keycloak from "../keycloak.ts";
-import type { GroupRepresentation } from "./shared.ts";
-import { client, request } from "./shared.ts";
+import type { GroupRepresentation, UserRepresentation } from "./shared.ts";
+import { allPages, client, request } from "./shared.ts";
 
 export type Role = Awaited<
   ReturnType<typeof client.users.listRealmRoleMappings>
@@ -10,6 +10,12 @@ export interface RoleChange {
   groupId: string | null;
   role: string;
   assigned: boolean;
+}
+
+interface RoleSource {
+  group: Pick<Required<GroupRepresentation>, "id" | "name" | "path"> | null;
+  role: string;
+  roles: string[];
 }
 
 export class RoleGraph {
@@ -98,11 +104,7 @@ export async function userRoleAssignments(id: string, graph = new RoleGraph()) {
       ),
     })),
   );
-  const sources: {
-    group: Required<GroupRepresentation> | null;
-    role: string;
-    roles: string[];
-  }[] = [];
+  const sources: RoleSource[] = [];
   const effective = new Map<string, Role>();
 
   for (const { group, mappings } of origins) {
@@ -182,16 +184,128 @@ export async function projectRoleSources(
 }
 
 export async function effectiveRoleHolders(name: string) {
-  const users = await keycloak.allUsers();
-  const holders: typeof users = [];
+  const [users, realmRoles, clients] = await Promise.all([
+    keycloak.allUsers(),
+    request(() => client.roles.find()),
+    request(() =>
+      allPages((first, max) => client.clients.find({ first, max })),
+    ),
+  ]);
+  const clientRoles = await request(() =>
+    Promise.all(clients.map(({ id }) => client.clients.listRoles({ id: id! }))),
+  );
+  const clientNames = new Map(
+    clients.map(({ id, clientId }) => [id, clientId]),
+  );
+  const holders = new Map<
+    string,
+    { user: UserRepresentation; sources: RoleSource[] }
+  >(users.map((user) => [user.id!, { user, sources: [] }]));
+  const graph = new RoleGraph();
 
-  for (const user of users) {
-    const roles = await effectiveUserRoles(user.id!);
+  function assign(ids: Iterable<string>, source: RoleSource) {
+    for (const id of ids) {
+      const holder = holders.get(id);
 
-    if (roles.some((role) => role.name === name)) {
-      holders.push(user);
+      if (holder) {
+        holder.sources.push(source);
+      }
     }
   }
 
-  return holders;
+  async function collectMembers(id: string, members: Set<string>) {
+    const [users, children] = await Promise.all([
+      keycloak.members(id),
+      request(() =>
+        allPages((first, max) =>
+          client.groups.listSubGroups({
+            parentId: id,
+            first,
+            max,
+            briefRepresentation: true,
+          }),
+        ),
+      ),
+    ]);
+
+    for (const user of users) {
+      members.add(user.id);
+    }
+
+    for (const child of children) {
+      await collectMembers(child.id!, members);
+    }
+  }
+
+  for (const role of [...realmRoles, ...clientRoles.flat()]) {
+    const expanded = await graph.expand([role]);
+
+    if (!expanded.some((child) => !child.clientRole && child.name === name)) {
+      continue;
+    }
+
+    const sourceRole = role.clientRole
+      ? `${clientNames.get(role.containerId)}: ${role.name}`
+      : role.name!;
+    const groupsWithRole = (
+      role.clientRole ? client.clients : client.roles
+    ).makeRequest<
+      { id: string; name: string; first: number; max: number },
+      GroupRepresentation[]
+    >({
+      method: "GET",
+      path: role.clientRole
+        ? "/{id}/roles/{name}/groups"
+        : "/roles/{name}/groups",
+      urlParamKeys: ["id", "name"],
+    });
+    const [assignedUsers, assignedGroups] = await request(() =>
+      Promise.all([
+        allPages((first, max) =>
+          role.clientRole
+            ? client.clients.findUsersWithRole({
+                id: role.containerId!,
+                roleName: role.name!,
+                first,
+                max,
+                briefRepresentation: true,
+              })
+            : client.roles.findUsersWithRole({
+                name: role.name!,
+                first,
+                max,
+                briefRepresentation: true,
+              }),
+        ),
+        allPages((first, max) =>
+          groupsWithRole({
+            id: role.containerId!,
+            name: role.name!,
+            first,
+            max,
+          }),
+        ),
+      ]),
+    );
+    const roles = expanded
+      .filter((child) => !child.clientRole)
+      .map((child) => child.name!);
+
+    assign(
+      assignedUsers.map((user) => user.id!),
+      { group: null, role: sourceRole, roles },
+    );
+
+    for (const group of assignedGroups) {
+      const members = new Set<string>();
+      await collectMembers(group.id!, members);
+      assign(members, {
+        group: { id: group.id!, name: group.name!, path: group.path! },
+        role: sourceRole,
+        roles,
+      });
+    }
+  }
+
+  return [...holders.values()].filter((holder) => holder.sources.length > 0);
 }
