@@ -1,7 +1,10 @@
-import { listMembers } from "#backend/groups";
+import * as keycloak from "#backend/keycloak";
+import { requireGroupManager } from "#backend/permissions";
 
 export default defineEventHandler(async (event) => {
   const actor = await requireSession(event);
+  const groupId = getRouterParam(event, "id")!;
+  await requireGroupManager(actor, groupId);
 
-  return listMembers(actor, getRouterParam(event, "id")!);
+  return keycloak.members(groupId);
 });

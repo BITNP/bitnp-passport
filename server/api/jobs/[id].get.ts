@@ -1,4 +1,4 @@
-import { jobDetail } from "#backend/jobs";
+import { jobDetail } from "#backend/jobs/query";
 
 export default defineEventHandler(async (event) => {
   const actor = await requireSession(event);

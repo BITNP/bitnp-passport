@@ -1,135 +1,182 @@
 <script setup lang="ts">
 import type { InternalApi } from "nitropack/types";
 
-type Permissions = InternalApi["/api/account"]["get"]["permissions"];
-type PermissionGroup = Permissions["memberships"][number];
+import { UserPermissionSources } from "#components";
 
-const { permissions, viewerAdministrator } = defineProps<{
-  permissions: Permissions;
+defineProps<{
+  permissions: InternalApi["/api/account"]["get"]["permissions"];
   viewerAdministrator: boolean;
 }>();
-
-const membershipIds = computed(
-  () => new Set(permissions.memberships.map((group) => group.id)),
-);
-
-function groupLink(group: PermissionGroup) {
-  if (
-    viewerAdministrator ||
-    permissions.groups.some((target) => target.groupId === group.id)
-  ) {
-    return `/groups/${encodeURIComponent(group.id)}`;
-  }
-}
 </script>
 
 <template>
-  <NDescriptions :column="1" label-placement="left" size="small">
-    <NDescriptionsItem label="身份">
-      <NFlex align="center" :size="8">
-        <NTag
-          :bordered="false"
-          size="small"
-          :type="permissions.activeSources.length > 0 ? 'success' : 'warning'"
+  <NFlex class="permissions-panel" :size="14" vertical>
+    <NFlex align="center" :size="6">
+      <NPopover
+        v-if="permissions.activeSources.length > 0"
+        placement="bottom-start"
+        trigger="click"
+      >
+        <template #trigger>
+          <NButton
+            aria-label="网协现任，查看身份来源"
+            class="permission-chip"
+            round
+            secondary
+            size="tiny"
+            type="success"
+          >
+            网协现任
+          </NButton>
+        </template>
+        <UserPermissionSources
+          :sources="permissions.activeSources"
+          :viewer-administrator
+        />
+      </NPopover>
+      <NTag v-else :bordered="false" class="permission-chip" round size="small">
+        非网协现任
+      </NTag>
+      <NTag
+        v-if="!permissions.enabled"
+        :bordered="false"
+        class="permission-chip"
+        round
+        size="small"
+        type="warning"
+      >
+        账户已停用
+      </NTag>
+    </NFlex>
+    <section class="permission-section">
+      <NText class="permission-heading" depth="3" tag="h3">组织归属</NText>
+      <NFlex v-if="permissions.memberships.length > 0" :size="6" wrap>
+        <NPopover
+          v-for="group in permissions.memberships"
+          :key="group.id"
+          placement="bottom-start"
+          trigger="click"
         >
-          {{ permissions.activeSources.length > 0 ? "网协现任" : "非网协现任" }}
-        </NTag>
-        <NPopover v-if="permissions.activeSources.length > 0" trigger="click">
           <template #trigger>
-            <NButton size="tiny" text>来源</NButton>
-          </template>
-          <NFlex :size="12" vertical>
-            <div
-              v-for="source in permissions.activeSources"
-              :key="`${source.group?.id ?? 'user'}:${source.role}`"
+            <NButton
+              :aria-label="`${group.label}，查看群组详情`"
+              class="permission-chip"
+              round
+              size="tiny"
+              tertiary
             >
-              <template v-if="source.group">
-                <NuxtLink
-                  v-if="groupLink(source.group)"
-                  :to="groupLink(source.group)"
-                >
-                  {{ source.group.label }}
-                </NuxtLink>
-                <template v-else>{{ source.group.label }}</template>
-                <NText v-if="!membershipIds.has(source.group.id)" depth="3">
-                  （父群组继承）
-                </NText>
-                <NText depth="3" tag="div">{{ source.group.path }}</NText>
-              </template>
-              <template v-else>直接授予</template>
-              <NText depth="3" tag="div">角色：{{ source.role }}</NText>
-            </div>
+              {{ group.label }}
+            </NButton>
+          </template>
+          <NFlex class="group-details" :size="8" vertical>
+            <NText strong>{{ group.label }}</NText>
+            <NText class="mono" depth="3">{{ group.path }}</NText>
+            <NuxtLink
+              v-if="viewerAdministrator"
+              :to="`/groups/${encodeURIComponent(group.id)}`"
+            >
+              管理群组
+            </NuxtLink>
           </NFlex>
         </NPopover>
       </NFlex>
-    </NDescriptionsItem>
-    <NDescriptionsItem label="群组">
-      <NFlex v-if="permissions.memberships.length > 0" :size="8">
-        <NTag
-          v-for="group in permissions.memberships"
-          :key="group.id"
-          :bordered="false"
-          size="small"
-          type="info"
+      <NText v-else depth="3">暂无组织归属</NText>
+    </section>
+    <section
+      v-for="section in [
+        { title: '身份与任职', roles: permissions.positions },
+        { title: '功能权限', roles: permissions.permissions },
+      ]"
+      :key="section.title"
+      class="permission-section"
+    >
+      <NText class="permission-heading" depth="3" tag="h3">
+        {{ section.title }}
+      </NText>
+      <NFlex v-if="section.roles.length > 0" :size="6" wrap>
+        <NPopover
+          v-for="role in section.roles"
+          :key="role.name"
+          placement="bottom-start"
+          trigger="click"
         >
-          <NuxtLink v-if="groupLink(group)" :to="groupLink(group)">
-            {{ group.label }}
-          </NuxtLink>
-          <template v-else>{{ group.label }}</template>
+          <template #trigger>
+            <NButton
+              :aria-label="`${role.label}，查看权限来源`"
+              class="permission-chip"
+              round
+              size="tiny"
+              tertiary
+            >
+              {{ role.label }}
+            </NButton>
+          </template>
+          <UserPermissionSources
+            :sources="role.sources"
+            :viewer-administrator
+          />
+        </NPopover>
+      </NFlex>
+      <NText v-else depth="3">无</NText>
+    </section>
+    <section class="permission-section">
+      <NText class="permission-heading" depth="3" tag="h3">可管理部门</NText>
+      <NFlex v-if="permissions.managedDepartments.length > 0" :size="6" wrap>
+        <NTag
+          v-for="department in permissions.managedDepartments"
+          :key="department.code"
+          :bordered="false"
+          class="permission-chip"
+          round
+          size="small"
+        >
+          {{ department.label }}
         </NTag>
       </NFlex>
-      <NText v-else depth="3">暂无群组</NText>
-    </NDescriptionsItem>
-    <NDescriptionsItem label="管理">
-      <NFlex :size="8" vertical>
-        <NFlex v-if="permissions.administrator" align="center" :size="8">
-          <NTag :bordered="false" size="small" type="info">
-            <NuxtLink v-if="viewerAdministrator" to="/admin/administrators">
-              系统管理员
-            </NuxtLink>
-            <template v-else>系统管理员</template>
-          </NTag>
-          <NText depth="3">全部群组</NText>
-        </NFlex>
-        <NFlex
-          v-for="group in permissions.groups"
-          :key="group.groupId"
-          align="center"
-          :size="8"
-        >
-          <NuxtLink
-            :to="`/groups/${encodeURIComponent(group.groupId)}#delegations`"
-          >
-            {{ group.label }}
-          </NuxtLink>
-          <NPopover trigger="click">
-            <template #trigger>
-              <NButton size="tiny" text>来源</NButton>
-            </template>
-            <NFlex :size="12" vertical>
-              <div v-for="source in group.sources" :key="source?.id ?? 'user'">
-                <template v-if="source">
-                  <NuxtLink v-if="groupLink(source)" :to="groupLink(source)">
-                    {{ source.label }}
-                  </NuxtLink>
-                  <template v-else>{{ source.label }}</template>
-                  <NText v-if="!membershipIds.has(source.id)" depth="3">
-                    （父群组继承）
-                  </NText>
-                  <NText depth="3" tag="div">{{ source.path }}</NText>
-                </template>
-                <NText v-else>直接授予</NText>
-              </div>
-            </NFlex>
-          </NPopover>
-        </NFlex>
-        <NText
-          v-if="!permissions.administrator && permissions.groups.length === 0"
-          depth="3"
-        >
-          无
-        </NText>
-      </NFlex>
-    </NDescriptionsItem>
-  </NDescriptions>
+      <NText v-else depth="3">无管理权限</NText>
+    </section>
+  </NFlex>
 </template>
+
+<style scoped>
+.permissions-panel,
+.permission-section {
+  min-width: 0;
+}
+
+.permission-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.permission-heading {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.permission-chip {
+  box-sizing: border-box;
+  max-width: 100%;
+  height: auto;
+  min-height: 24px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.permission-chip :deep(.n-button__content),
+.permission-chip :deep(.n-tag__content) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.group-details {
+  max-width: min(320px, calc(100vw - 48px));
+  overflow-wrap: anywhere;
+}
+</style>

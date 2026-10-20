@@ -1,62 +1,68 @@
 import { randomUUID } from "node:crypto";
 
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { fromDrizzle } from "pg-boss";
 
 import type { AuditRecord } from "#database/schema";
-import { auditEvents, jobItems, jobs, managedGroups } from "#database/schema";
+import { auditEvents, jobItems, jobs } from "#database/schema";
+import type { AuditDetail } from "#shared/events";
+import type { JobData } from "#shared/jobs";
 import type { Actor } from "#shared/types";
 
 import { db } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
-import * as keycloak from "./keycloak.ts";
+import { jobPolicies } from "./jobs/policy.ts";
 import { isAdministrator, requireGroupManager } from "./permissions.ts";
 import { operationQueue, queue } from "./queue.ts";
 
-export async function createMembershipJob(
-  actor: Actor,
-  groupId: string,
-  subjects: string[],
-  operation: "add" | "remove",
-) {
-  await requireGroupManager(actor, groupId);
-  await keycloak.group(groupId);
+interface NewJob {
+  groupId: string;
+  data: JobData;
+  items: Pick<typeof jobItems.$inferInsert, "itemKey" | "operation">[];
+  detail: AuditDetail<"job.create">;
+}
 
+export async function createJob(actor: Actor, input: NewJob) {
   const boss = await queue();
   const id = randomUUID();
   const queueId = randomUUID();
-  const members = [...new Set(subjects)];
 
   await db.transaction(async (tx) => {
     await tx.insert(jobs).values({
       id,
       queueId,
       actorSubject: actor.subject,
-      groupId,
+      groupId: input.groupId,
+      data: input.data,
     });
 
-    await tx.insert(jobItems).values(
-      members.map((itemKey) => ({
-        jobId: id,
-        itemKey,
-        operation,
-      })),
-    );
+    if (input.items.length > 0) {
+      await tx
+        .insert(jobItems)
+        .values(input.items.map((item) => ({ jobId: id, ...item })));
+    }
 
     await boss.send(
       operationQueue,
       { jobId: id, queueId, actorSubject: actor.subject },
-      { id: queueId, group: { id: groupId }, db: fromDrizzle(tx, sql) },
+      {
+        id: queueId,
+        group: {
+          id: input.data.type === "handover" ? "bitnp-handover" : input.groupId,
+        },
+        ...(input.data.type === "handover" ? { retryLimit: 0 } : {}),
+        db: fromDrizzle(tx, sql),
+      },
     );
 
     await tx.insert(auditEvents).values({
       actorSubject: actor.subject,
       operation: "job.create",
       jobId: id,
-      groupId,
+      groupId: input.groupId,
       outcome: "succeeded",
       completedAt: new Date(),
-      detail: { operation, count: members.length },
+      detail: input.detail,
     } satisfies AuditRecord);
   });
 
@@ -68,81 +74,6 @@ const readableBy = async (actor: Actor) =>
     ? undefined
     : eq(jobs.actorSubject, actor.subject);
 
-export async function listJobs(actor: Actor, first: number, groupId?: string) {
-  const visible = and(
-    await readableBy(actor),
-    groupId ? eq(jobs.groupId, groupId) : undefined,
-  );
-  const [rows, total] = await Promise.all([
-    db
-      .select({
-        id: jobs.id,
-        status: jobs.status,
-        groupId: jobs.groupId,
-        groupLabel: managedGroups.label,
-        actorSubject: jobs.actorSubject,
-        createdAt: jobs.createdAt,
-        error: jobs.error,
-      })
-      .from(jobs)
-      .leftJoin(managedGroups, eq(jobs.groupId, managedGroups.groupId))
-      .where(visible)
-      .orderBy(desc(jobs.createdAt), desc(jobs.id))
-      .offset(first)
-      .limit(50),
-    db.$count(jobs, visible),
-  ]);
-
-  const missingGroupIds = new Set(
-    rows.filter((row) => row.groupLabel === null).map((row) => row.groupId),
-  );
-  const groupNames = await Promise.all(
-    [...missingGroupIds].map(async (id) => {
-      try {
-        return { id, label: (await keycloak.group(id)).name };
-      } catch (error) {
-        // 群组删除后仍保留历史任务
-        if (error instanceof ApplicationError && error.statusCode === 404) {
-          return { id, label: id };
-        }
-
-        throw error;
-      }
-    }),
-  );
-
-  return {
-    jobs: rows.map((row) => ({
-      ...row,
-      groupLabel:
-        row.groupLabel ??
-        groupNames.find((group) => group.id === row.groupId)!.label,
-    })),
-    total,
-  };
-}
-
-export async function jobDetail(actor: Actor, id: string) {
-  const job = await db.query.jobs.findFirst({
-    where: and(eq(jobs.id, id), await readableBy(actor)),
-  });
-  if (!job) {
-    throw new ApplicationError(404, "任务不存在或你没有查看权限");
-  }
-
-  const items = await db
-    .select()
-    .from(jobItems)
-    .where(eq(jobItems.jobId, id))
-    .orderBy(jobItems.operation, jobItems.itemKey);
-
-  return {
-    job,
-    items,
-    completed: items.filter((item) => item.status === "succeeded").length,
-  };
-}
-
 export async function retryJob(actor: Actor, id: string) {
   const queueId = randomUUID();
 
@@ -152,8 +83,13 @@ export async function retryJob(actor: Actor, id: string) {
       .from(jobs)
       .where(and(eq(jobs.id, id), await readableBy(actor)))
       .for("update");
+
     if (!job) {
       throw new ApplicationError(404, "任务不存在或你没有查看权限");
+    }
+
+    if (!jobPolicies[job.data.type].retryable) {
+      throw new ApplicationError(409, "请核对任务结果后重新安排。");
     }
 
     await requireGroupManager(actor, job.groupId);
@@ -163,6 +99,7 @@ export async function retryJob(actor: Actor, id: string) {
     }
 
     const boss = await queue();
+
     await tx
       .update(jobs)
       .set({ status: "queued", error: null, queueId, updatedAt: new Date() })
@@ -201,12 +138,13 @@ export async function cancelJob(actor: Actor, id: string) {
       .from(jobs)
       .where(and(eq(jobs.id, id), await readableBy(actor)))
       .for("update");
+
     if (!job) {
       throw new ApplicationError(404, "任务不存在或你没有查看权限");
     }
 
-    if (["cancelled", "succeeded"].includes(job.status)) {
-      throw new ApplicationError(409, "此任务已结束");
+    if (!jobPolicies[job.data.type].cancelStatuses.has(job.status)) {
+      throw new ApplicationError(409, "此任务当前无法取消");
     }
 
     await tx

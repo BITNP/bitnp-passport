@@ -6,7 +6,7 @@ const { groups } = defineProps<{
 const options = computed(() =>
   groups.map((group) => ({
     value: group.groupId,
-    label: group.path ? `${group.label} · ${group.path}` : group.label,
+    label: group.path ? `${group.label}（${group.path}）` : group.label,
   })),
 );
 </script>

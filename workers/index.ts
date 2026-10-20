@@ -7,7 +7,8 @@ import {
   operationQueue,
   queue,
 } from "#backend/queue";
-import { cleanupExpiredRecords, failTask, runTask } from "#backend/tasks";
+import { cleanupExpiredSessions } from "#backend/sessions";
+import { failTask, runTask } from "#backend/tasks";
 import type { TaskData } from "#shared/types";
 
 const log = logger.child({ component: "worker" });
@@ -76,7 +77,7 @@ try {
 
   await boss.work(cleanupQueue, async ([task]) => {
     try {
-      await cleanupExpiredRecords();
+      await cleanupExpiredSessions();
     } catch (err) {
       log.error(
         { err, queue: cleanupQueue, queueId: task!.id },

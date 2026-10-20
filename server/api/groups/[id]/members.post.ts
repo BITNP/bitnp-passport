@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { addMember } from "#backend/groups";
+import { addMember } from "#backend/memberships";
 
 const input = z.object({ identifier: z.string().trim().min(1) });
 

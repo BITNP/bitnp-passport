@@ -4,7 +4,7 @@ type GroupOption = (typeof options.value)[number];
 const emit = defineEmits<{ select: [groupId: string] }>();
 
 const { groups } = defineProps<{
-  groups: { groupId: string; label: string; path?: string; note?: string }[];
+  groups: { groupId: string; label: string; path: string; note?: string }[];
 }>();
 
 const value = defineModel<string>("value", { required: true });
@@ -21,7 +21,7 @@ const options = computed(() => {
     .map((group) => ({
       value: group.groupId,
       label: group.label,
-      description: group.path ? `${group.label} · ${group.path}` : group.label,
+      description: `${group.label}（${group.path}）`,
     }));
 });
 </script>

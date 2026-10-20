@@ -3,16 +3,14 @@ import type { DataTableColumns } from "naive-ui";
 import { NButton, NTag } from "naive-ui";
 import type { InternalApi } from "nitropack/types";
 
-import { AuditReference, NuxtLink } from "#components";
-import { events } from "#shared/events";
-import { auditOutcomeLabels } from "#shared/labels";
+import { EntityReference, NuxtLink } from "#components";
+import { auditOperationLabel, auditOutcomeLabels } from "#shared/labels";
 import { formatDateTime } from "#shared/utils";
 
 type AuditEvent = InternalApi["/api/audit"]["get"]["events"][number];
 
-const { records, groups } = defineProps<{
+const { records } = defineProps<{
   records?: AuditEvent[];
-  groups: { groupId: string; label: string }[];
   loading?: boolean;
 }>();
 
@@ -32,14 +30,14 @@ const columns: DataTableColumns<AuditEvent> = [
     title: "操作者",
     key: "actor",
     minWidth: 160,
-    render: (event) => h(AuditReference, { reference: event.actor }),
+    render: (event) => h(EntityReference, { reference: event.actor }),
   },
   {
     title: "操作",
     key: "operation",
     minWidth: 150,
     render: (event) => {
-      const label = events[event.operation].label;
+      const label = auditOperationLabel(event.operation);
       if (event.jobUrl) {
         return h(NuxtLink, { to: event.jobUrl }, () => label);
       }
@@ -51,13 +49,13 @@ const columns: DataTableColumns<AuditEvent> = [
     title: "目标",
     key: "target",
     minWidth: 160,
-    render: (event) => h(AuditReference, { reference: event.target }),
+    render: (event) => h(EntityReference, { reference: event.target }),
   },
   {
     title: "群组",
     key: "group",
     minWidth: 140,
-    render: (event) => h(AuditReference, { reference: event.group }),
+    render: (event) => h(EntityReference, { reference: event.group }),
   },
   {
     title: "结果",
@@ -115,6 +113,6 @@ const columns: DataTableColumns<AuditEvent> = [
     width="min(760px, 100vw)"
     @update:show="selectedId = undefined"
   >
-    <AuditDetail v-if="selected" :event="selected" :groups />
+    <AuditDetail v-if="selected" :event="selected" />
   </NDrawer>
 </template>

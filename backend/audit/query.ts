@@ -6,7 +6,6 @@ import {
   invitations,
   jobs,
   managedGroups,
-  terms,
 } from "#database/schema";
 import type { AuditOperation, AuditTarget } from "#shared/events";
 import type { Actor } from "#shared/types";
@@ -34,10 +33,6 @@ interface Reference {
   to: string | null;
 }
 
-const systemActors = new Map([
-  ["admin-grant", "管理员授权脚本"],
-  ["legacy-import", "旧版配置导入"],
-]);
 const targetGroups = alias(managedGroups, "target_group");
 
 // 先按目标类型取 ID，再转换为 UUID，避免转换用户或群组的文本 ID
@@ -56,13 +51,8 @@ function notFoundAsNull(error: unknown): null {
 
 async function actorCondition(identifier: string) {
   const user = await keycloak.resolveUser(identifier).catch(notFoundAsNull);
-  if (user) {
-    return eq(auditEvents.actorSubject, user.id);
-  }
 
-  return systemActors.has(identifier)
-    ? eq(auditEvents.actorSubject, identifier)
-    : sql`false`;
+  return user ? eq(auditEvents.actorSubject, user.id) : sql`false`;
 }
 
 async function userReference(
@@ -70,11 +60,6 @@ async function userReference(
   viewer: Actor,
   administrator: boolean,
 ): Promise<Reference> {
-  const systemLabel = systemActors.get(id);
-  if (systemLabel) {
-    return { id, label: systemLabel, to: null };
-  }
-
   const user = await keycloak.user(id).catch(notFoundAsNull);
   if (!user) {
     return { id, label: null, to: null };
@@ -134,7 +119,6 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
         jobOwner: jobs.actorSubject,
         groupLabel: managedGroups.label,
         targetGroupLabel: targetGroups.label,
-        termLabel: terms.label,
         invitationNote: invitations.note,
         invitationCreatedAt: invitations.createdAt,
         invitationGroupId: invitations.groupId,
@@ -143,7 +127,6 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
       .leftJoin(jobs, eq(auditEvents.jobId, jobs.id))
       .leftJoin(managedGroups, eq(auditEvents.groupId, managedGroups.groupId))
       .leftJoin(targetGroups, eq(targetGroups.groupId, targetId("group")))
-      .leftJoin(terms, eq(terms.id, sql`${targetId("term")}::uuid`))
       .leftJoin(
         invitations,
         eq(invitations.id, sql`${targetId("invitation")}::uuid`),
@@ -169,7 +152,7 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
       missingGroupIds.add(row.target.id);
     }
   }
-  const [users, groupNames] = await Promise.all([
+  const [resolvedUsers, resolvedGroups] = await Promise.all([
     Promise.all(
       [...userIds].map((id) => userReference(id, actor, administrator)),
     ),
@@ -182,8 +165,11 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
     ),
   ]);
 
+  const users = new Map(resolvedUsers.map((user) => [user.id, user]));
+  const groups = new Map(resolvedGroups.map((group) => [group.id, group]));
+
   function groupReference(id: string, label: string | null): Reference {
-    const name = label ?? groupNames.find((group) => group.id === id)!.name;
+    const name = label ?? groups.get(id)!.name;
 
     return {
       id,
@@ -202,22 +188,12 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
         const { id } = row.target;
         switch (row.target.type) {
           case "user": {
-            target = users.find((user) => user.id === id)!;
+            target = users.get(id)!;
 
             break;
           }
           case "group": {
             target = groupReference(id, row.targetGroupLabel);
-
-            break;
-          }
-          case "term": {
-            target = {
-              id,
-              label: row.termLabel,
-              to:
-                row.termLabel !== null && administrator ? "/admin/terms" : null,
-            };
 
             break;
           }
@@ -231,7 +207,7 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
                 canManage && row.invitationNote?.length
                   ? row.invitationNote
                   : row.invitationCreatedAt
-                    ? `邀请 · ${formatDateTime(row.invitationCreatedAt)}`
+                    ? `邀请（${formatDateTime(row.invitationCreatedAt)}）`
                     : null,
               to: canManage
                 ? `/groups/${encodeURIComponent(row.invitationGroupId!)}`
@@ -240,12 +216,15 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
 
             break;
           }
+          default: {
+            target = { id, label: id, to: null };
+          }
         }
       }
 
       return {
         ...row.event,
-        actor: users.find((user) => user.id === row.actorSubject)!,
+        actor: users.get(row.actorSubject)!,
         target,
         group: row.groupId ? groupReference(row.groupId, row.groupLabel) : null,
         jobUrl:

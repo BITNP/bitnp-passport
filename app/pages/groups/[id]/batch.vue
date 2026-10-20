@@ -25,7 +25,7 @@ useFetchError(groupsError, refreshGroups);
       <template #title><h1>批量成员操作</h1></template>
       <template v-if="group" #footer>
         <NuxtLink :to="`/groups/${encodeURIComponent(groupId)}`">
-          {{ group.settings.label }}
+          {{ group.settings ? group.settings.label : group.directory.name }}
         </NuxtLink>
       </template>
       <template #extra>

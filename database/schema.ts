@@ -1,37 +1,22 @@
-import { eq, gt, isNotNull, or, relations } from "drizzle-orm";
+import { eq, gt, or } from "drizzle-orm";
 import {
   bigint,
   boolean,
   check,
   index,
-  integer,
   jsonb,
   pgEnum,
   pgTable,
   primaryKey,
   text,
   timestamp,
-  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
-import type {
-  AuditDetail,
-  AuditEvent,
-  AuditOperation,
-  AuditTarget,
-} from "#shared/events";
-import type {
-  SiteService,
-  TermActivationPlan,
-  TermCreationPlan,
-} from "#shared/types";
+import type { AuditDetail, AuditEvent } from "#shared/events";
+import type { JobData, JobResult } from "#shared/jobs";
+import type { SiteService } from "#shared/types";
 
-export const termStatus = pgEnum("term_status", [
-  "draft",
-  "current",
-  "archived",
-]);
 export const jobStatus = pgEnum("job_status", [
   "queued",
   "running",
@@ -51,16 +36,6 @@ export const auditOutcome = pgEnum("audit_outcome", [
   "failed",
   "unknown",
 ]);
-
-export const delegateType = pgEnum("delegate_type", ["user", "group"]);
-
-export const portalAdmins = pgTable("portal_admins", {
-  subject: text("subject").primaryKey(),
-  grantedBy: text("granted_by").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
 
 export const siteSettings = pgTable(
   "site_settings",
@@ -137,23 +112,6 @@ export const managedGroups = pgTable(
   ],
 );
 
-export const groupDelegations = pgTable(
-  "group_delegations",
-  {
-    groupId: text("group_id").notNull(),
-    type: delegateType("type").notNull().default("user"),
-    subject: text("subject").notNull(),
-    grantedBy: text("granted_by").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.groupId, table.type, table.subject] }),
-    index("delegation_subject").on(table.type, table.subject),
-  ],
-);
-
 export const invitations = pgTable(
   "invitations",
   {
@@ -177,72 +135,6 @@ export const invitations = pgTable(
   ],
 );
 
-export const terms = pgTable(
-  "terms",
-  {
-    id: uuid("id").primaryKey(),
-    label: text("label").notNull().unique(),
-    year: integer("year").notNull(),
-    // 群组全部创建完成后写入根群组 ID
-    rootGroupId: text("root_group_id").unique(),
-    clinicCompatible: boolean("clinic_compatible").notNull(),
-    creation: jsonb("creation").$type<TermCreationPlan>(),
-    activation: jsonb("activation").$type<TermActivationPlan>(),
-    status: termStatus("status").notNull().default("draft"),
-    createdBy: text("created_by").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    check(
-      "term_root_required",
-      or(isNotNull(table.rootGroupId), isNotNull(table.creation))!,
-    ),
-    uniqueIndex("one_current_term")
-      .on(table.status)
-      .where(eq(table.status, "current").inlineParams()),
-  ],
-);
-
-export const departments = pgTable("departments", {
-  code: text("code").primaryKey(),
-  name: text("name").notNull(),
-  createdBy: text("created_by").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
-
-export const termGroups = pgTable(
-  "term_groups",
-  {
-    termId: uuid("term_id")
-      .notNull()
-      .references(() => terms.id),
-    groupId: text("group_id").notNull().unique(),
-    code: text("code")
-      .notNull()
-      .references(() => departments.code),
-    departmentName: text("department_name").notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.termId, table.groupId] }),
-    uniqueIndex("term_department_code").on(table.termId, table.code),
-  ],
-);
-
-export const termRelations = relations(terms, ({ many }) => ({
-  groups: many(termGroups),
-}));
-
-export const termGroupRelations = relations(termGroups, ({ one }) => ({
-  term: one(terms, {
-    fields: [termGroups.termId],
-    references: [terms.id],
-  }),
-}));
-
 export const jobs = pgTable(
   "jobs",
   {
@@ -250,6 +142,8 @@ export const jobs = pgTable(
     queueId: uuid("queue_id").notNull(),
     actorSubject: text("actor_subject").notNull(),
     groupId: text("group_id").notNull(),
+    data: jsonb("data").$type<JobData>().notNull(),
+    results: jsonb("results").$type<JobResult[]>().notNull().default([]),
     status: jobStatus("status").notNull().default("queued"),
     error: text("error"),
     startedAt: timestamp("started_at", { withTimezone: true }),
@@ -288,9 +182,9 @@ export const auditEvents = pgTable(
       .primaryKey()
       .generatedAlwaysAsIdentity(),
     actorSubject: text("actor_subject").notNull(),
-    operation: text("operation").$type<AuditOperation>().notNull(),
+    operation: text("operation").notNull(),
     groupId: text("group_id"),
-    target: jsonb("target").$type<AuditTarget>(),
+    target: jsonb("target").$type<{ type: string; id: string }>(),
     jobId: uuid("job_id").references(() => jobs.id),
     outcome: auditOutcome("outcome").notNull(),
     detail: jsonb("detail").$type<AuditDetail>().notNull().default({}),

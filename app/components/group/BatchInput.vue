@@ -72,7 +72,7 @@ const compare = () =>
         />
       </NFormItem>
       <NFormItem
-        label="完整用户名或邮箱（每行一个，最多 200 个）"
+        label="完整用户名或邮箱（每行一个）"
         :label-props="{ for: 'batch-users' }"
         required
       >

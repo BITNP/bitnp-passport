@@ -1,6 +1,7 @@
 import * as oidc from "openid-client";
 
 import { config } from "#backend/config";
+import { identityClient } from "#backend/oidc";
 
 export default defineEventHandler(async (event) => {
   const session = await requireSession(event);

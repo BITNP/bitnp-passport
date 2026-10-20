@@ -10,9 +10,16 @@ const [{ data: group, error, refresh, status }, { data: session }] =
     usePortalSession(),
   ]);
 
-useHead({
-  title: () => group.value?.settings.label ?? "群组",
+const groupLabel = computed(() => {
+  const current = group.value;
+  if (!current) {
+    return "群组";
+  }
+
+  return current.settings ? current.settings.label : current.directory.name;
 });
+
+useHead({ title: groupLabel });
 
 useFetchError(error, refresh);
 </script>
@@ -21,7 +28,7 @@ useFetchError(error, refresh);
   <NuxtLayout name="page">
     <NPageHeader @back="navigateTo('/groups')">
       <template #title>
-        <h1>{{ group?.settings.label || "群组" }}</h1>
+        <h1>{{ groupLabel }}</h1>
       </template>
       <template v-if="group" #extra>
         <NFlex :size="12">
@@ -39,13 +46,12 @@ useFetchError(error, refresh);
           </LinkButton>
         </NFlex>
       </template>
-      <template #footer>
+      <template v-if="group" #footer>
         <NFlex align="center" justify="space-between" :size="16">
-          <NText depth="3">{{ group?.directory.path }}</NText>
-          <NFlex v-if="group" :size="20">
+          <NText depth="3">{{ group.directory.path }}</NText>
+          <NFlex :size="20">
             <NuxtLink to="#members">成员</NuxtLink>
             <NuxtLink to="#invitations">邀请链接</NuxtLink>
-            <NuxtLink to="#delegations">管理授权</NuxtLink>
           </NFlex>
         </NFlex>
       </template>
@@ -57,23 +63,15 @@ useFetchError(error, refresh);
         :group-id
         :loading="status === 'pending'"
         :members="group.members"
-        :note="group.settings.note"
+        :note="group.settings ? group.settings.note : undefined"
         :refresh
         :session
       />
       <InvitationList
         id="invitations"
-        :allow-invites="group.settings.allowInvites"
+        :allow-invites="group.settings !== null && group.settings.allowInvites"
         class="group-section"
         :group-id
-      />
-      <GroupDelegations
-        id="delegations"
-        class="group-section"
-        :delegates="group.delegates"
-        :group-id
-        :refresh
-        :session
       />
     </template>
   </NuxtLayout>

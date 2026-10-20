@@ -5,7 +5,12 @@ import type { Actor, Profile, ProfileInput } from "#shared/types";
 
 import { config } from "./config.ts";
 import { ApplicationError } from "./errors.ts";
-import { permissionDetails } from "./permissions.ts";
+import { userIdentity } from "./identity.ts";
+import { revokeAccountSessions, updateSessionProfile } from "./sessions.ts";
+
+interface AccountSession extends Actor {
+  accessToken: string;
+}
 
 interface CredentialType {
   type: string;
@@ -75,19 +80,22 @@ export async function security(accessToken: string) {
   };
 }
 
-export async function overview(actor: Actor & { accessToken: string }) {
-  const [profile, permissions] = await Promise.all([
+export async function overview(actor: AccountSession) {
+  const [profile, identity] = await Promise.all([
     readProfile(actor.accessToken),
-    permissionDetails(actor.subject),
+    userIdentity(actor.subject),
   ]);
 
-  return { profile, permissions };
+  return { profile, permissions: identity.permissions };
 }
 
-export async function updateProfile(accessToken: string, input: ProfileInput) {
-  const profile = await readProfile(accessToken);
+export async function updateProfile(
+  actor: AccountSession,
+  input: ProfileInput,
+) {
+  const profile = await readProfile(actor.accessToken);
 
-  await request(accessToken, "", "POST", {
+  await request(actor.accessToken, "", "POST", {
     username: profile.username,
     attributes: profile.attributes,
     firstName: input.name,
@@ -95,7 +103,10 @@ export async function updateProfile(accessToken: string, input: ProfileInput) {
     email: input.email,
   });
 
-  return readProfile(accessToken);
+  const updated = await readProfile(actor.accessToken);
+  await updateSessionProfile(actor.subject, updated);
+
+  return updated;
 }
 
 export async function removeCredential(accessToken: string, id: string) {
@@ -124,18 +135,23 @@ export async function requireAction(accessToken: string, action: string) {
 export const devices = (accessToken: string) =>
   request<Device[]>(accessToken, "sessions/devices");
 
-export async function signOut(accessToken: string, id?: string) {
-  const active = await devices(accessToken);
+export async function signOut(actor: AccountSession, id?: string) {
+  const active = await devices(actor.accessToken);
   const removed = active.flatMap((device) =>
     device.sessions.filter((session) =>
       id ? session.id === id : !session.current,
     ),
   );
   await request(
-    accessToken,
+    actor.accessToken,
     id ? `sessions/${encodeURIComponent(id)}` : "sessions?current=false",
     "DELETE",
   );
 
-  return removed;
+  await revokeAccountSessions(
+    actor.subject,
+    removed.map((session) => session.id),
+  );
+
+  return { signedOut: removed.some((session) => session.current) };
 }

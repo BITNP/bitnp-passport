@@ -1,8 +1,11 @@
-import { listUsers } from "#backend/users";
+import * as keycloak from "#backend/keycloak";
+import { requireAdministrator } from "#backend/permissions";
 
 export default defineEventHandler(async (event) => {
   const actor = await requireSession(event);
+  await requireAdministrator(actor);
+
   const { search, first } = await getValidatedQuery(event, searchQuery.parse);
 
-  return listUsers(actor, search, first);
+  return keycloak.searchUsers(search, first);
 });

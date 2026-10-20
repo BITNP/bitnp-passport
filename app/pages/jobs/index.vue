@@ -34,7 +34,7 @@ const groupOptions = computed(() => {
   );
 
   for (const job of data.value?.jobs ?? []) {
-    labels.set(job.groupId, job.groupLabel);
+    labels.set(job.groupId, job.group.label);
   }
 
   return [
@@ -74,7 +74,6 @@ useFetchError(groupsError, refreshGroups);
         </NFlex>
         <JobTable
           v-if="data"
-          :groups="groups ?? undefined"
           :jobs="data.jobs"
           :loading="loadStatus === 'pending'"
         />

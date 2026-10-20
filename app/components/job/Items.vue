@@ -3,47 +3,24 @@ import type { DataTableColumns } from "naive-ui";
 import { NTag } from "naive-ui";
 import type { InternalApi } from "nitropack/types";
 
-import { NuxtLink } from "#components";
-import { itemStatusLabels, jobOperationLabels } from "#shared/labels";
+import { EntityReference } from "#components";
+import { itemStatusLabels, itemStatusTypes } from "#shared/labels";
 
 type Item = InternalApi["/api/jobs/:id"]["get"]["items"][number];
 
 defineProps<{ items: InternalApi["/api/jobs/:id"]["get"]["items"] }>();
-const { data: session } = await usePortalSession();
 
 const columns: DataTableColumns<Item> = [
   {
     title: "操作",
-    key: "operation",
-    width: 120,
-    render: (item) => jobOperationLabels[item.operation],
+    key: "label",
+    minWidth: 180,
   },
   {
-    title: "目标 ID",
-    key: "itemKey",
-    minWidth: 300,
-    render: (item) => {
-      if (session.value?.user.subject === item.itemKey) {
-        return h(
-          NuxtLink,
-          { to: "/account", class: "mono" },
-          () => item.itemKey,
-        );
-      }
-
-      if (session.value?.administrator) {
-        return h(
-          NuxtLink,
-          {
-            to: `/admin/users/${encodeURIComponent(item.itemKey)}`,
-            class: "mono",
-          },
-          () => item.itemKey,
-        );
-      }
-
-      return h("span", { class: "mono" }, item.itemKey);
-    },
+    title: "对象",
+    key: "target",
+    minWidth: 220,
+    render: (item) => h(EntityReference, { reference: item.target }),
   },
   {
     title: "状态",
@@ -55,12 +32,7 @@ const columns: DataTableColumns<Item> = [
         {
           size: "small",
           bordered: false,
-          type:
-            item.status === "succeeded"
-              ? "success"
-              : item.status === "failed"
-                ? "error"
-                : "default",
+          type: itemStatusTypes[item.status],
         },
         () => itemStatusLabels[item.status],
       ),
@@ -80,7 +52,7 @@ const columns: DataTableColumns<Item> = [
       :bordered="false"
       :columns
       :data="items"
-      :row-key="(item) => `${item.operation}:${item.itemKey}`"
+      :row-key="(item) => item.key"
       :scroll-x="720"
     />
   </NCard>

@@ -7,22 +7,25 @@ useHead({ title: "任务详情" });
 const route = useRoute();
 const id = computed(() => encodeURIComponent(String(route.params.id)));
 
-const [
-  { data, error: loadError, refresh, status },
-  { data: groups, error: groupsError, refresh: refreshGroups },
-] = await Promise.all([
-  useFetch(() => `/api/jobs/${id.value}`),
-  useFetch("/api/groups"),
-]);
-const group = computed(() =>
-  groups.value?.find((group) => group.groupId === data.value?.job.groupId),
-);
+const {
+  data,
+  error: loadError,
+  refresh,
+  status,
+} = await useFetch(() => `/api/jobs/${id.value}`);
 
 const { submit, pending } = useMutation(refresh);
 const active = computed(
   () =>
     data.value?.job.status === "queued" || data.value?.job.status === "running",
 );
+const progressStatus = {
+  queued: "default",
+  running: "default",
+  succeeded: "success",
+  failed: "error",
+  cancelled: "default",
+} as const;
 
 const poll = setInterval(() => {
   if (active.value && status.value !== "pending") {
@@ -38,7 +41,6 @@ const action = (name: "retry" | "cancel") =>
   });
 
 useFetchError(loadError, refresh);
-useFetchError(groupsError, refreshGroups);
 </script>
 
 <template>
@@ -52,14 +54,13 @@ useFetchError(groupsError, refreshGroups);
         )
       "
     >
-      <template #title><h1>批量成员变更</h1></template>
+      <template #title>
+        <h1>{{ data?.job.title ?? "任务详情" }}</h1>
+      </template>
       <template v-if="data" #extra>
         <NFlex>
-          <LinkButton
-            v-if="group"
-            :to="`/groups/${encodeURIComponent(group.groupId)}`"
-          >
-            {{ group.label }}
+          <LinkButton v-if="data.job.group.to" :to="data.job.group.to">
+            {{ data.job.group.label }}
           </LinkButton>
           <LinkButton
             :to="`/audit?groupId=${encodeURIComponent(data.job.groupId)}`"
@@ -81,43 +82,34 @@ useFetchError(groupsError, refreshGroups);
           </NButton>
         </template>
         <NFlex :size="20" vertical>
-          <NText>
-            已完成 {{ data.completed }} / {{ data.items.length }} 项
-          </NText>
+          <NText>已完成 {{ data.completed }} / {{ data.total }} 项</NText>
           <NProgress
-            :percentage="Math.round((data.completed / data.items.length) * 100)"
-            :processing="active"
-            :status="
-              data.job.status === 'failed'
-                ? 'error'
-                : data.job.status === 'succeeded'
-                  ? 'success'
-                  : 'default'
+            :percentage="
+              Math.round((data.completed / Math.max(data.total, 1)) * 100)
             "
+            :processing="active"
+            :status="progressStatus[data.job.status]"
             type="line"
           />
           <NAlert v-if="data.job.error" type="error">
             {{ data.job.error }}
           </NAlert>
-          <NFlex v-if="active || data.job.status === 'failed'">
+          <NAlert v-if="data.notice" type="warning">{{ data.notice }}</NAlert>
+          <NFlex v-if="data.actions.length > 0">
             <ConfirmAction
-              v-if="data.job.status === 'failed'"
-              confirm-label="重试任务"
+              v-for="item in data.actions"
+              :key="item.name"
+              :confirm-label="item.label"
               :disabled="pending"
-              message="确认以重试未完成的操作？"
-              @confirm="action('retry')"
+              :message="item.confirmation"
+              @confirm="action(item.name)"
             >
-              重试
-            </ConfirmAction>
-            <ConfirmAction
-              confirm-label="取消任务"
-              :disabled="pending"
-              message="取消尚未完成的操作？已完成的变更会保留"
-              @confirm="action('cancel')"
-            >
-              取消任务
+              {{ item.label }}
             </ConfirmAction>
           </NFlex>
+          <LinkButton v-if="data.followup" :to="data.followup.to">
+            {{ data.followup.label }}
+          </LinkButton>
         </NFlex>
       </NCard>
       <JobItems :items="data.items" />

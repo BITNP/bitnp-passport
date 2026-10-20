@@ -7,7 +7,7 @@
       :size="12"
     >
       <NText depth="3" tag="small">
-        北京理工大学网络开拓者协会 · 图标来自
+        北京理工大学网络开拓者协会。图标来自
         <a href="https://www.flaticon.com/authors/freepik">Freepik</a>
       </NText>
       <NFlex align="center" :size="20">

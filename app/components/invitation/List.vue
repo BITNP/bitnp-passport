@@ -108,9 +108,6 @@ useFetchError(error, refresh);
           >
             允许新用户注册
           </NCheckbox>
-          <NText depth="3">
-            开启后，受邀者可自行注册账号，完成注册后自动加入群组。
-          </NText>
           <NFlex>
             <NButton attr-type="submit" :loading="pending" type="primary">
               创建邀请

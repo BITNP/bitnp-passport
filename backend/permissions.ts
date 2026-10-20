@@ -1,21 +1,30 @@
-import { and, eq, inArray, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
-import { groupDelegations, portalAdmins } from "#database/schema";
+import { managedGroups as groupConfigurations } from "#database/schema";
+import type { Department } from "#shared/identity";
+import { departments, systemAdministratorRole } from "#shared/identity";
 import type { Actor } from "#shared/types";
 
 import { db } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
-import { groupDirectory } from "./groups/directory.ts";
+import { effectiveUserRoles } from "./keycloak/roles.ts";
 import * as keycloak from "./keycloak.ts";
+import type { OrganizationGroup } from "./organization.ts";
+import { organizationGroups, organizationState } from "./organization.ts";
 
-export async function isAdministrator(actor: Actor) {
-  const administrator = await db.query.portalAdmins.findFirst({
-    columns: { subject: true },
-    where: eq(portalAdmins.subject, actor.subject),
-  });
+async function accessRoles(subject: string) {
+  const [user, roles] = await Promise.all([
+    keycloak.user(subject),
+    effectiveUserRoles(subject),
+  ]);
 
-  return administrator !== undefined || keycloak.isAdministrator(actor.subject);
+  return user.enabled
+    ? new Set(roles.map((role) => role.name!))
+    : new Set<string>();
 }
+
+export const isAdministrator = async (actor: Actor) =>
+  (await accessRoles(actor.subject)).has(systemAdministratorRole);
 
 export async function requireAdministrator(actor: Actor) {
   if (!(await isAdministrator(actor))) {
@@ -23,122 +32,92 @@ export async function requireAdministrator(actor: Actor) {
   }
 }
 
-const delegationsFor = (subject: string, groupIds: string[]) =>
-  db
-    .select({
-      groupId: groupDelegations.groupId,
-      type: groupDelegations.type,
-      subject: groupDelegations.subject,
-    })
-    .from(groupDelegations)
-    .where(
-      or(
-        and(
-          eq(groupDelegations.type, "user"),
-          eq(groupDelegations.subject, subject),
-        ),
-        and(
-          eq(groupDelegations.type, "group"),
-          inArray(groupDelegations.subject, groupIds),
-        ),
-      ),
-    )
-    .orderBy(groupDelegations.createdAt);
+const managedDepartments = (roles: Set<string>) =>
+  (Object.keys(departments) as Department[]).filter((department) =>
+    roles.has(`permission-${department}-admin`),
+  );
 
-export async function groupAccess(actor: Actor) {
-  if (await isAdministrator(actor)) {
-    return { administrator: true, groupIds: [] };
+async function groupsForRoles(roles: Set<string>) {
+  const administrator = roles.has(systemAdministratorRole);
+  const departments = managedDepartments(roles);
+  if (!administrator && departments.length === 0) {
+    return [];
   }
 
-  const memberships = await keycloak.inheritedGroups(
-    await keycloak.groupsForUser(actor.subject),
-  );
-  const delegations = await delegationsFor(
-    actor.subject,
-    memberships.map((group) => group.id),
-  );
+  const [tree, configurations] = await Promise.all([
+    keycloak.groupTree(),
+    db
+      .select()
+      .from(groupConfigurations)
+      .where(eq(groupConfigurations.enrolled, true)),
+  ]);
+  const organization = organizationGroups(tree);
+  const rootId = administrator
+    ? undefined
+    : (await organizationState(organization)).activeRoots[0]!.id;
+  const groups: {
+    group: OrganizationGroup;
+    configuration: typeof groupConfigurations.$inferSelect;
+  }[] = [];
+
+  for (const configuration of configurations) {
+    const group = organization.get(configuration.groupId)!;
+    if (group.isRoot) {
+      continue;
+    }
+
+    if (
+      !administrator &&
+      (group.rootId !== rootId ||
+        group.department === null ||
+        !departments.includes(group.department))
+    ) {
+      continue;
+    }
+
+    groups.push({ group, configuration });
+  }
+
+  return groups;
+}
+
+export async function groupAccess(actor: Actor) {
+  const roles = await accessRoles(actor.subject);
+
+  if (roles.has(systemAdministratorRole)) {
+    return { administrator: true, groupIds: [] as string[] };
+  }
+
+  const groups = await groupsForRoles(roles);
 
   return {
     administrator: false,
-    groupIds: delegations.map((delegation) => delegation.groupId),
-  };
-}
-
-export async function permissionDetails(subject: string) {
-  const [administrator, memberships, directory] = await Promise.all([
-    isAdministrator({ subject }),
-    keycloak.groupsForUser(subject),
-    groupDirectory(),
-  ]);
-  const inherited = await keycloak.inheritedGroups(memberships);
-  const membershipDetails = new Map(
-    inherited.map((group) => [
-      group.id,
-      {
-        id: group.id,
-        label: directory.get(group.id)?.label ?? group.name,
-        path: group.path,
-      },
-    ]),
-  );
-  const [delegations, activeSources] = await Promise.all([
-    delegationsFor(subject, [...membershipDetails.keys()]),
-    keycloak.activeMemberSources(subject, inherited),
-  ]);
-
-  return {
-    administrator,
-    memberships: memberships.map((group) => membershipDetails.get(group.id)!),
-    groups: [...directory.values()].flatMap((group) => {
-      const sources = delegations
-        .filter((delegation) => delegation.groupId === group.id)
-        .map((delegation) =>
-          delegation.type === "user"
-            ? null
-            : membershipDetails.get(delegation.subject)!,
-        );
-
-      return sources.length > 0
-        ? [{ groupId: group.id, label: group.label, sources }]
-        : [];
-    }),
-    activeSources: activeSources.map((source) => ({
-      group:
-        source.groupId === null ? null : membershipDetails.get(source.groupId)!,
-      role: source.role,
-    })),
+    groupIds: groups.map(({ group }) => group.id),
   };
 }
 
 export async function requireGroupManager(actor: Actor, groupId: string) {
   const { administrator, groupIds } = await groupAccess(actor);
+
   if (!administrator && !groupIds.includes(groupId)) {
     throw new ApplicationError(403, "你没有管理此组的权限");
   }
 }
 
 export async function managedGroups(actor: Actor) {
-  const { administrator, groupIds } = await groupAccess(actor);
+  const groups = await groupsForRoles(await accessRoles(actor.subject));
 
-  const directory = await groupDirectory();
-
-  return [...directory.values()]
-    .filter((group) => administrator || groupIds.includes(group.id))
+  return groups
     .sort(
       (left, right) =>
-        (right.createdAt?.getTime() ?? 0) - (left.createdAt?.getTime() ?? 0) ||
-        // 旧群组同批导入时创建时间相同，按已关联任期将较新年份排在前面
-        (right.termYear ?? 0) - (left.termYear ?? 0) ||
-        left.label.localeCompare(right.label) ||
-        left.id.localeCompare(right.id),
+        (right.group.year ?? 0) - (left.group.year ?? 0) ||
+        left.configuration.label.localeCompare(right.configuration.label),
     )
-    .map((group) => ({
+    .map(({ group, configuration }) => ({
       groupId: group.id,
-      configured: group.configured,
-      isTermRoot: group.isTermRoot,
-      label: group.label,
+      label: configuration.label,
       path: group.path,
-      note: group.note,
-      allowInvites: group.allowInvites,
+      note: configuration.note,
+      allowInvites: configuration.allowInvites,
     }));
 }

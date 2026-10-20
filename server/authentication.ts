@@ -3,9 +3,11 @@ import * as oidc from "openid-client";
 
 import { config } from "#backend/config";
 import { ApplicationError } from "#backend/errors";
-import { authorizeInvitation, joinInvitation } from "#backend/invitations";
-
-import { identityClient } from "./oidc";
+import {
+  authorizeInvitation,
+  joinInvitation,
+} from "#backend/invitations/access";
+import { identityClient } from "#backend/oidc";
 
 type AuthenticationRequest =
   | { type: "login" | "register"; returnTo: unknown }

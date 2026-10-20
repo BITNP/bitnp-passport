@@ -7,8 +7,9 @@ const route = useRoute();
 const links = [
   ["/admin", "群组配置"],
   ["/admin/users", "用户目录"],
-  ["/admin/administrators", "管理员"],
-  ["/admin/terms", "任期配置"],
+  ["/admin/appointments", "任职管理"],
+  ["/admin/administrators", "系统管理权限"],
+  ["/admin/handover", "换届"],
   ["/admin/settings", "站点设置"],
 ] as const;
 const active = computed(() =>

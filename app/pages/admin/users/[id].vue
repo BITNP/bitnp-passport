@@ -45,6 +45,12 @@ useFetchError(error, refresh);
         :refresh
         :user="data.user"
       />
+      <UserAssignments
+        :key="data.user.id"
+        :direct-roles="data.directRoles"
+        :refresh
+        :user="data.user"
+      />
       <UserKeycloakDetails
         :attributes="data.user.attributes"
         :roles="data.roles"

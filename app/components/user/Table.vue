@@ -1,44 +1,44 @@
-<script setup lang="ts" generic="T extends UserListItem">
+<script setup lang="ts">
 import type { DataTableColumns } from "naive-ui";
 import { NFlex, NTag } from "naive-ui";
+import type { InternalApi } from "nitropack/types";
 import type { VNode } from "vue";
 import type { LocationQueryRaw } from "vue-router";
 
 import { NuxtLink } from "#components";
-import type { UserListItem } from "#shared/types";
 import { formatDateTime } from "#shared/utils";
 
+type User = InternalApi["/api/admin/users"]["get"]["users"][number];
+
 const { userQuery } = defineProps<{
-  users: T[];
+  users: User[];
   loading?: boolean;
   userQuery?: LocationQueryRaw;
 }>();
 
 const slots = defineSlots<{
-  actions: (props: { user: T }) => VNode[];
+  actions: (props: { user: User }) => VNode[];
 }>();
 
 const { data: session } = await usePortalSession();
 
-const columns: DataTableColumns<T> = [
+const columns: DataTableColumns<User> = [
   {
     title: "用户名",
     key: "username",
     minWidth: 160,
     render: (user) =>
       h(NFlex, { align: "center", size: 8 }, () => [
-        user.username === null
-          ? "未找到账户"
-          : h(
-              NuxtLink,
-              {
-                to: {
-                  path: `/admin/users/${encodeURIComponent(user.id)}`,
-                  query: userQuery,
-                },
-              },
-              () => user.username,
-            ),
+        h(
+          NuxtLink,
+          {
+            to: {
+              path: `/admin/users/${encodeURIComponent(user.id)}`,
+              query: userQuery,
+            },
+          },
+          () => user.username,
+        ),
         session.value?.user.subject === user.id
           ? h(NTag, { bordered: false, size: "small" }, () => "当前账户")
           : null,
@@ -61,12 +61,8 @@ const columns: DataTableColumns<T> = [
     title: "状态",
     key: "enabled",
     width: 110,
-    render: (user) => {
-      if (user.username === null) {
-        return " - ";
-      }
-
-      return h(
+    render: (user) =>
+      h(
         NTag,
         {
           size: "small",
@@ -74,8 +70,7 @@ const columns: DataTableColumns<T> = [
           type: user.enabled ? "success" : "default",
         },
         () => (user.enabled ? "已启用" : "已停用"),
-      );
-    },
+      ),
   },
   {
     title: "创建时间",
@@ -99,7 +94,7 @@ const columns: DataTableColumns<T> = [
     :columns
     :data="users"
     :loading
-    :row-key="(user: T) => user.id"
+    :row-key="(user: User) => user.id"
     :scroll-x="940"
   />
 </template>

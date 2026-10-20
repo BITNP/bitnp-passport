@@ -1,7 +1,9 @@
-import { userDetail } from "#backend/users";
+import { userIdentity } from "#backend/identity";
+import { requireAdministrator } from "#backend/permissions";
 
 export default defineEventHandler(async (event) => {
   const actor = await requireSession(event);
+  await requireAdministrator(actor);
 
-  return userDetail(actor, getRouterParam(event, "id")!);
+  return userIdentity(getRouterParam(event, "id")!);
 });

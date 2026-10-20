@@ -25,11 +25,11 @@ cp .env.example .env
 | 变量                             | 说明                                                                          |
 | -------------------------------- | ----------------------------------------------------------------------------- |
 | `BITNP_PASSPORT_IMAGE`           | 应用镜像名，本机构建可用 `bitnp-passport:local`                               |
-| `APP_URL`                        | 通行证公开地址，如 `https://accounts.bitnp.net`，使用域名根路径                 |
-| `DATABASE_URL`                   | 通行证 PostgreSQL 连接串                                                        |
+| `APP_URL`                        | 通行证公开地址，如 `https://accounts.bitnp.net`，使用域名根路径               |
+| `DATABASE_URL`                   | 通行证 PostgreSQL 连接串                                                      |
 | `OIDC_ISSUER_URL`                | Keycloak realm 地址，如 `https://sso.example.com/realms/master`，不带末尾斜杠 |
-| `OIDC_CLIENT_ID`                 | 通行证客户端 ID，默认示例为 `bitnp-passport`                                    |
-| `OIDC_CLIENT_SECRET`             | 通行证客户端密钥                                                                |
+| `OIDC_CLIENT_ID`                 | 通行证客户端 ID，默认示例为 `bitnp-passport`                                  |
+| `OIDC_CLIENT_SECRET`             | 通行证客户端密钥                                                              |
 | `KEYCLOAK_SERVICE_CLIENT_ID`     | 服务客户端 ID，默认示例为 `bitnp-passport-service`                            |
 | `KEYCLOAK_SERVICE_CLIENT_SECRET` | 服务客户端密钥                                                                |
 | `SESSION_ENCRYPTION_KEY`         | 32 字节随机密钥的 Base64 编码，用于保存登录会话                               |
@@ -72,7 +72,7 @@ openssl rand -base64 32
 
 1. 开启 Client authentication
 2. 开启 Service accounts，关闭 Standard flow、Implicit flow 和 Direct access grants
-3. 在 Service account roles 中，授予 `master-realm` 客户端的 `manage-users`、`view-realm` 和 `view-clients` 角色
+3. 在 Service account roles 中，授予 `master-realm` 客户端的 `manage-users`、`view-realm`、`view-clients` 和 `query-clients` 角色
 4. 将客户端密钥填入 `KEYCLOAK_SERVICE_CLIENT_SECRET`
 
 如果现有实例启用了细粒度管理权限，还需允许服务账户查询用户与群组、创建群组和管理成员。服务账户用于通行证访问 Keycloak；管理员权限规则见下文。
@@ -114,15 +114,9 @@ docker compose run --rm web node scripts/migrate.ts
 
 该命令创建或升级通行证数据表，并初始化后台任务队列。每次发布执行一次。
 
-### 3. 管理员权限
+### 3. 管理权限
 
-Keycloak `master` realm 中拥有有效 `admin` 角色的用户自动成为通行证管理员。也可以在管理后台手动授予其他用户管理员权限。
-
-也可通过命令行授权：
-
-```sh
-docker compose run --rm web node scripts/grant.ts <Keycloak用户ID>
-```
+通行证从 Keycloak 读取有效角色。系统管理使用 `permission-system-admin`，部门管理使用 `permission-<department>-admin`。具体请见内部 Keycloak 权限文档。
 
 ### 4. 启动服务与配置代理
 
@@ -145,25 +139,11 @@ docker login git.bitnp.net
 scripts/publish-release.sh v1.0.0
 ```
 
-## 导入旧版群组配置
+## 组织与换届
 
-项目内置 [旧通行证的固定配置](https://github.com/BITNP/keycloak-account-service/blob/master/group_config.json)，保存在 `scripts/group_config.json`，随镜像一起打包。使用新环境的数据库和 Keycloak 连接，指定已迁移的旧通行证客户端 ID，即可批量纳入已有群组并迁移管理授权：
+群组在 Keycloak 中存在后，可在后台“群组配置”中明确纳入或取消纳入。
 
-```sh
-pnpm config:import --client '旧通行证客户端ID' --apply
-```
-
-容器中执行：
-
-```sh
-docker compose run --rm web node scripts/import-legacy.ts --client '旧通行证客户端ID' --apply
-```
-
-内置配置包含 7 条年度模板和 2 条固定路径，年度模板会匹配所有符合路径规则的届别。已有记录保持不变。省略 `--apply` 只打印清单；如需其他配置，可传入文件路径：
-
-```sh
-pnpm config:import ./custom-group-config.json --client '旧通行证客户端ID' --apply
-```
+后台“任职管理”维护个人职务，“系统管理权限”展示有效系统权限及来源。换届页面从 Keycloak 读取当前组织，确认四个部门的成员身份映射、现任标记、个人任职和旧届邀请变化。历史组织关系及个人特殊授权保持独立。
 
 ## 本地开发
 
@@ -185,19 +165,22 @@ pnpm worker
 
 | 服务                | 地址                                       |
 | ------------------- | ------------------------------------------ |
-| 通行证                | `http://localhost:3000`                    |
+| 通行证              | `http://localhost:3000`                    |
 | Keycloak 管理控制台 | `http://localhost:8080/admin/`             |
 | PostgreSQL          | `localhost:5432`，用户名和密码均为 `bitnp` |
 
 ### 测试账户
 
-预置账户均位于 `master` realm，密码均为 `dev-password`：
+开发 Keycloak 使用与线上相同的 `position-*` / `permission-*` 模型，包含 64 个组织群组和 168 个测试账户。所有测试账户的密码均为 `dev-password`。
 
-| 用户名    | 用途                                            |
-| --------- | ----------------------------------------------- |
-| `admin`   | Keycloak 超级管理员，自动拥有通行证管理员权限   |
-| `manager` | 已加入 `techdept`，可在通行证中授予群组管理权限 |
-| `member`  | 普通用户，可用于加入邀请和批量成员操作          |
+| 用户名                  | Keycloak 身份与权限                |
+| ----------------------- | ---------------------------------- |
+| `admin`                 | 个人特批系统管理员                 |
+| `manager`               | 技术部部长，只有技术部管理权限     |
+| `member`                | 本届技术部普通成员                 |
+| `outsider`              | 无组织归属，用于测试邀请注册和加入 |
+| `vice-techdept-1`       | 分管技术部的副主席，无系统权限     |
+| `vice-techdept-special` | 相同职务，另有个人特批系统权限     |
 
 ### 日常开发
 

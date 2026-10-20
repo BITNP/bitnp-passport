@@ -1,10 +1,11 @@
-import { configureGroup, groupConfiguration } from "#backend/groups";
+import { configureGroup } from "#backend/groups";
+import { configureGroupInput } from "#shared/groups";
 
 export default defineEventHandler(async (event) => {
   const actor = await requireSession(event);
 
   return configureGroup(
     actor,
-    await readValidatedBody(event, groupConfiguration.parse),
+    await readValidatedBody(event, configureGroupInput.parse),
   );
 });

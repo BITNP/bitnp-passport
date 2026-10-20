@@ -1,4 +1,4 @@
-import { invitationInfo } from "#backend/invitations";
+import { invitationInfo } from "#backend/invitations/access";
 
 export default defineEventHandler(async (event) =>
   invitationInfo(

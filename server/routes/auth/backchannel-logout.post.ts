@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import { config } from "#backend/config";
 import { ApplicationError } from "#backend/errors";
+import { identityClient } from "#backend/oidc";
+import { revokeSessions } from "#backend/sessions";
 
 let jwks: ReturnType<typeof createRemoteJWKSet> | undefined;
 

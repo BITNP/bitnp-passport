@@ -1,13 +1,11 @@
-import { z } from "zod";
-
-import { groupConfiguration, setGroupEnrollment } from "#backend/groups";
-
-const input = groupConfiguration.pick({ groupId: true }).extend({
-  enrolled: z.boolean(),
-});
+import { setGroupEnrollment } from "#backend/groups";
+import { groupEnrollmentInput } from "#shared/groups";
 
 export default defineEventHandler(async (event) => {
   const actor = await requireSession(event);
 
-  return setGroupEnrollment(actor, await readValidatedBody(event, input.parse));
+  return setGroupEnrollment(
+    actor,
+    await readValidatedBody(event, groupEnrollmentInput.parse),
+  );
 });

@@ -1,13 +1,11 @@
-import { z } from "zod";
-
-import { createGroup, groupConfiguration } from "#backend/groups";
-
-const input = groupConfiguration.pick({ name: true }).extend({
-  parentId: z.string().min(1).optional(),
-});
+import { createGroup } from "#backend/groups";
+import { createGroupInput } from "#shared/groups";
 
 export default defineEventHandler(async (event) => {
   const actor = await requireSession(event);
 
-  return createGroup(actor, await readValidatedBody(event, input.parse));
+  return createGroup(
+    actor,
+    await readValidatedBody(event, createGroupInput.parse),
+  );
 });

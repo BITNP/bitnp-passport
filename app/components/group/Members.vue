@@ -9,7 +9,7 @@ type Member = InternalApi["/api/groups/:id"]["get"]["members"][number];
 const { groupId, members, note, loading, session, refresh } = defineProps<{
   groupId: string;
   members: Member[];
-  note: string;
+  note?: string;
   loading: boolean;
   session: InternalApi["/api/session"]["get"] | undefined;
   refresh: () => Promise<void>;

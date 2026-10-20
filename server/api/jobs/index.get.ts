@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { listJobs } from "#backend/jobs";
+import { listJobs } from "#backend/jobs/query";
 
 const input = paginationQuery.extend({
   groupId: z.string().min(1).optional(),

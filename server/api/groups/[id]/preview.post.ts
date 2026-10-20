@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-import { previewMembers } from "#backend/batch";
+import { previewMembers } from "#backend/memberships";
 
-const input = z.object({ text: z.string() });
+const input = z.object({ text: z.string().trim().min(1) });
 
 export default defineEventHandler(async (event) => {
   const actor = await requireSession(event);

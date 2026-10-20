@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { events } from "#shared/events";
+import { auditOperations } from "#shared/events";
 import { auditOutcomeLabels } from "#shared/labels";
 
 interface FilterForm {
@@ -69,10 +69,12 @@ function reset() {
   search();
 }
 
-const operationOptions = Object.entries(events).map(([value, { label }]) => ({
-  value,
-  label,
-}));
+const operationOptions = Object.entries(auditOperations).map(
+  ([value, { label }]) => ({
+    value,
+    label,
+  }),
+);
 const outcomeOptions = Object.entries(auditOutcomeLabels).map(
   ([value, label]) => ({ value, label }),
 );

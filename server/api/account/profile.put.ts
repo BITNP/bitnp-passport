@@ -9,12 +9,9 @@ const input = z.object({
 
 export default defineEventHandler(async (event) => {
   const session = await requireSession(event);
-  const profile = await account.updateProfile(
-    session.accessToken,
+
+  return account.updateProfile(
+    session,
     await readValidatedBody(event, input.parse),
   );
-
-  await updateSessionProfile(session.subject, profile);
-
-  return profile;
 });

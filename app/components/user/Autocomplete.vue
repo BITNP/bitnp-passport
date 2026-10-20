@@ -23,7 +23,7 @@ const options = computed(() => {
       user.email,
     ]
       .filter(Boolean)
-      .join(" · "),
+      .join("，"),
   }));
 });
 

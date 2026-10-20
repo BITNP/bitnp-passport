@@ -3,15 +3,14 @@ import type { DataTableColumns } from "naive-ui";
 import { NTag } from "naive-ui";
 import type { InternalApi } from "nitropack/types";
 
-import { NuxtLink } from "#components";
-import { jobStatusLabels } from "#shared/labels";
+import { EntityReference, NuxtLink } from "#components";
+import { jobStatusLabels, jobStatusTypes } from "#shared/labels";
 import { formatDateTime } from "#shared/utils";
 
 type Job = InternalApi["/api/jobs"]["get"]["jobs"][number];
 
-const { groups } = defineProps<{
+defineProps<{
   jobs: InternalApi["/api/jobs"]["get"]["jobs"];
-  groups?: InternalApi["/api/groups"]["get"];
   loading: boolean;
 }>();
 
@@ -20,25 +19,13 @@ const columns: DataTableColumns<Job> = [
     title: "任务",
     key: "id",
     minWidth: 180,
-    render: (job) =>
-      h(NuxtLink, { to: `/jobs/${job.id}` }, () => "批量成员变更"),
+    render: (job) => h(NuxtLink, { to: `/jobs/${job.id}` }, () => job.title),
   },
   {
     title: "群组",
-    key: "groupLabel",
+    key: "group",
     minWidth: 160,
-    render: (job) => {
-      const group = groups?.find((group) => group.groupId === job.groupId);
-      if (!group) {
-        return job.groupLabel;
-      }
-
-      return h(
-        NuxtLink,
-        { to: `/groups/${encodeURIComponent(group.groupId)}` },
-        () => group.label,
-      );
-    },
+    render: (job) => h(EntityReference, { reference: job.group }),
   },
   {
     title: "状态",
@@ -50,12 +37,7 @@ const columns: DataTableColumns<Job> = [
         {
           size: "small",
           bordered: false,
-          type:
-            job.status === "succeeded"
-              ? "success"
-              : job.status === "failed"
-                ? "error"
-                : "default",
+          type: jobStatusTypes[job.status],
         },
         () => jobStatusLabels[job.status],
       ),

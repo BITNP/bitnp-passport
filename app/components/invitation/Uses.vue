@@ -2,7 +2,7 @@
 import type { DataTableColumns } from "naive-ui";
 import type { InternalApi } from "nitropack/types";
 
-import { AuditReference } from "#components";
+import { EntityReference } from "#components";
 import { formatDateTime } from "#shared/utils";
 
 type Usage = InternalApi["/api/audit"]["get"]["events"][number];
@@ -28,7 +28,7 @@ const columns: DataTableColumns<Usage> = [
     title: "用户",
     key: "actor",
     render: (usage) =>
-      h(AuditReference, {
+      h(EntityReference, {
         reference: usage.actor,
         fallback: usage.actor.id,
       }),

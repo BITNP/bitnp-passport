@@ -18,11 +18,11 @@ const candidates = computed(() => {
     return [];
   }
 
-  const users = preview.rows.flatMap(({ user, member }) =>
-    user && (job.operation === "add" ? !member && user.enabled : member)
-      ? [user]
-      : [],
-  );
+  const users = preview.matched
+    .filter(({ user, member }) =>
+      job.operation === "add" ? !member && user.enabled : member,
+    )
+    .map(({ user }) => user);
   if (job.operation === "remove") {
     users.push(...preview.outside);
   }
@@ -68,20 +68,10 @@ const columns: DataTableColumns<(typeof candidates.value)[number]> = [
         @update:checked-row-keys="job.subjects = $event as string[]"
       />
       <NFlex align="center" justify="space-between">
-        <NText
-          depth="3"
-          :type="job.subjects.length > 200 ? 'error' : undefined"
-        >
-          已选 {{ job.subjects.length }} 人
-          <template v-if="job.subjects.length > 200">
-            （最多选择 200 人）
-          </template>
-        </NText>
+        <NText depth="3">已选 {{ job.subjects.length }} 人</NText>
         <ConfirmAction
           confirm-label="确认并创建任务"
-          :disabled="
-            pending || job.subjects.length === 0 || job.subjects.length > 200
-          "
+          :disabled="pending || job.subjects.length === 0"
           :message="`确认${job.operation === 'add' ? '添加' : '移除'}这 ${job.subjects.length} 位成员？`"
           @confirm="enqueue"
         >

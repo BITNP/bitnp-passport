@@ -19,28 +19,34 @@ const { selection, mutation, refresh } = defineProps<{
 }>();
 const { submit, pending } = mutation;
 const message = useMessage();
-const form = ref({ name: "", label: "", note: "", allowInvites: false });
-const enrolled = computed(() => selection.settings?.enrolled ?? false);
-const formChanged = computed(
-  () =>
-    form.value.name !== (selection.group?.name ?? "") ||
-    form.value.label !== (selection.settings?.label ?? "") ||
-    form.value.note !== (selection.settings?.note ?? "") ||
-    form.value.allowInvites !== (selection.settings?.allowInvites ?? false),
-);
+const initialForm = computed(() => {
+  const { group, settings } = selection;
+  const name = group ? group.name : "";
 
-watch(
-  () => selection,
-  ({ group, settings }) => {
-    form.value = {
-      name: group?.name ?? "",
-      label: settings?.label ?? "",
-      note: settings?.note ?? "",
-      allowInvites: settings?.allowInvites ?? false,
-    };
-  },
-  { immediate: true },
+  if (!settings) {
+    return { name, label: "", note: "", allowInvites: false };
+  }
+
+  return {
+    name,
+    label: settings.label,
+    note: settings.note,
+    allowInvites: settings.allowInvites,
+  };
+});
+const form = ref({ ...initialForm.value });
+const enrolled = computed(() =>
+  selection.settings ? selection.settings.enrolled : false,
 );
+const formChanged = computed(() => {
+  const current: Record<string, unknown> = form.value;
+
+  return Object.entries(initialForm.value).some(
+    ([field, value]) => current[field] !== value,
+  );
+});
+
+watch(initialForm, (value) => (form.value = { ...value }));
 
 const save = () =>
   submit(async () => {
@@ -77,7 +83,7 @@ const setEnrollment = (groupId: string, enrolled: boolean) =>
 </script>
 
 <template>
-  <NCard :title="selection.group?.label ?? '新建群组'">
+  <NCard :title="selection.group ? selection.group.label : '新建群组'">
     <template v-if="selection.group" #header-extra>
       <NButton
         :disabled="pending"
@@ -128,9 +134,7 @@ const setEnrollment = (groupId: string, enrolled: boolean) =>
             </template>
           </span>
         </NPopconfirm>
-        <NText v-if="formChanged" depth="3">
-          有未保存的更改，请先保存后再{{ enrolled ? "取消纳入" : "纳入" }}
-        </NText>
+        <NText v-if="formChanged" depth="3">请先保存更改。</NText>
       </NFlex>
       <NForm :disabled="pending" @submit.prevent="save">
         <NFormItem label="路径名" required>
@@ -154,7 +158,7 @@ const setEnrollment = (groupId: string, enrolled: boolean) =>
         </template>
         <NFlex :size="20" vertical>
           <NCheckbox v-if="enrolled" v-model:checked="form.allowInvites">
-            允许群组管理员创建邀请链接
+            允许创建邀请链接
           </NCheckbox>
           <NFlex align="center">
             <NButton attr-type="submit" :loading="pending" type="primary">

@@ -82,7 +82,7 @@ const switchAccount = () =>
         v-if="session && !invitation.joined && route.query.join === 'failed'"
         type="warning"
       >
-        已登录，但暂未加入群组。请点击下方按钮重试。
+        加入失败，请重试。
       </NAlert>
       <NFlex :size="12" vertical>
         <template v-if="session">

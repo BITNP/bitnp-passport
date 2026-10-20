@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { removeMember } from "#backend/groups";
+import { removeMember } from "#backend/memberships";
 
 const input = z.object({ subject: z.string().min(1) });
 

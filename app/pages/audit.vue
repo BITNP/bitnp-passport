@@ -83,7 +83,6 @@ useFetchError(groupsError, refreshGroups);
           @search="search"
         />
         <AuditTable
-          :groups="groupOptions"
           :loading="loadStatus === 'pending'"
           :records="data?.events"
         />

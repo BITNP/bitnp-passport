@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-import { createMembershipJob } from "#backend/jobs";
+import { createMembershipJob } from "#backend/memberships";
 
 const input = z.object({
-  subjects: z.array(z.string().min(1)).min(1).max(200),
+  subjects: z.array(z.string().min(1)).min(1),
   operation: z.enum(["add", "remove"]),
 });
 

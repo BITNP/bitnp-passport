@@ -20,11 +20,6 @@ const userSummary = (user: UserRepresentation) =>
     "createdTimestamp",
   ]);
 
-const findGroupsWithRole = client.roles.makeRequest<
-  { name: string; first: number; max: number; briefRepresentation: boolean },
-  GroupRepresentation[]
->({ method: "GET", path: "/roles/{name}/groups", urlParamKeys: ["name"] });
-
 export const consoleUrl = new URL(
   `../../admin/${encodeURIComponent(client.realmName)}/console/`,
   `${config.issuer}/`,
@@ -40,78 +35,19 @@ export function userConsoleUrl(
   return url.href;
 }
 
-export async function userRoles(id: string) {
-  const roles = await request(() =>
-    client.users.listCompositeRealmRoleMappings({ id }),
+export async function directRoleHolders(name: string) {
+  const users = await request(() =>
+    allPages((first, max) =>
+      client.roles.findUsersWithRole({
+        name,
+        first,
+        max,
+        briefRepresentation: true,
+      }),
+    ),
   );
 
-  return roles.map((role) =>
-    pick(role as Required<typeof role>, ["id", "name"]),
-  );
-}
-
-export async function isAdministrator(id: string) {
-  if (client.realmName !== "master") {
-    return false;
-  }
-
-  try {
-    return (await userRoles(id)).some((role) => role.name === "admin");
-  } catch (error) {
-    if (error instanceof ApplicationError && error.statusCode === 404) {
-      return false;
-    }
-
-    throw error;
-  }
-}
-
-export async function administrators() {
-  if (client.realmName !== "master") {
-    return [];
-  }
-
-  const role = { name: "admin", briefRepresentation: true };
-  const [users, assigned, groups] = await request(() =>
-    Promise.all([
-      allPages((first, max) =>
-        client.users.find({ first, max, briefRepresentation: true }),
-      ),
-      allPages((first, max) =>
-        client.roles.findUsersWithRole({ ...role, first, max }),
-      ),
-      allPages((first, max) => findGroupsWithRole({ ...role, first, max })),
-    ]),
-  );
-  const userIds = new Set(assigned.map((user) => user.id!));
-  const visited = new Set<string>();
-
-  async function collectMembers(id: string): Promise<void> {
-    if (visited.has(id)) {
-      return;
-    }
-    visited.add(id);
-    const [groupMembers, children] = await request(() =>
-      Promise.all([
-        members(id),
-        allPages((first, max) =>
-          client.groups.listSubGroups({
-            parentId: id,
-            first,
-            max,
-            briefRepresentation: true,
-          }),
-        ),
-      ]),
-    );
-    for (const user of groupMembers) {
-      userIds.add(user.id);
-    }
-    await Promise.all(children.map((group) => collectMembers(group.id!)));
-  }
-  await Promise.all(groups.map((group) => collectMembers(group.id!)));
-
-  return users.filter((user) => userIds.has(user.id!)).map(userSummary);
+  return users.map(userSummary);
 }
 
 export async function user(id: string) {
@@ -119,6 +55,13 @@ export async function user(id: string) {
 
   return user as Required<UserRepresentation>;
 }
+
+export const allUsers = (search?: string) =>
+  request(() =>
+    allPages((first, max) =>
+      client.users.find({ search, first, max, briefRepresentation: true }),
+    ),
+  );
 
 export async function searchUsers(search: string, first: number) {
   const [users, total] = await request(() =>
@@ -184,72 +127,6 @@ export async function inheritedGroups(
   return [...groups.values()];
 }
 
-export async function activeMemberSources(
-  id: string,
-  groups: Required<GroupRepresentation>[],
-) {
-  type Role = Awaited<
-    ReturnType<typeof client.roles.getCompositeRoles>
-  >[number];
-  const composites = new Map<string, Role[]>();
-  const sources: { groupId: string | null; role: string }[] = [];
-  const origins = await Promise.all(
-    [null, ...groups.map((group) => group.id)].map(async (groupId) => ({
-      groupId,
-      mappings: await request(() =>
-        groupId === null
-          ? client.users.listRoleMappings({ id })
-          : client.groups.listRoleMappings({ id: groupId }),
-      ),
-    })),
-  );
-
-  for (const { groupId, mappings } of origins) {
-    const assignedRoles = [
-      ...(mappings.realmMappings ?? []).map((role) => ({
-        role,
-        name: role.name!,
-      })),
-      ...Object.entries(mappings.clientMappings ?? {}).flatMap(
-        ([clientId, mapping]) =>
-          ((mapping.mappings ?? []) as Role[]).map((role) => ({
-            role,
-            name: `${clientId}: ${role.name}`,
-          })),
-      ),
-    ];
-
-    for (const assignment of assignedRoles) {
-      const pending = [assignment.role];
-      const visited = new Set<string>();
-
-      while (pending.length > 0) {
-        const role = pending.pop()!;
-        if (!role.clientRole && role.name === config.activeRole) {
-          sources.push({ groupId, role: assignment.name });
-
-          break;
-        }
-        if (visited.has(role.id!) || !role.composite) {
-          continue;
-        }
-        visited.add(role.id!);
-
-        let children = composites.get(role.id!);
-        if (!children) {
-          children = await request(() =>
-            client.roles.getCompositeRoles({ id: role.id! }),
-          );
-          composites.set(role.id!, children);
-        }
-        pending.push(...children);
-      }
-    }
-  }
-
-  return sources;
-}
-
 export async function group(id: string) {
   const group = await request(() => client.groups.findOne({ id }));
 
@@ -310,29 +187,11 @@ export async function members(id: string) {
   return users.map(userSummary);
 }
 
-async function requireEditableMembers(groupId: string) {
-  if (client.realmName !== "master") {
-    return;
-  }
-
-  const roles = await request(() =>
-    client.groups.listCompositeRealmRoleMappings({ id: groupId }),
-  );
-  if (roles.some((role) => role.name === "admin")) {
-    throw new ApplicationError(
-      409,
-      "Keycloak 超管群组的成员需在 Keycloak 管理",
-    );
-  }
-}
-
 export async function addMember(userId: string, groupId: string) {
-  await requireEditableMembers(groupId);
   await request(() => client.users.addToGroup({ id: userId, groupId }));
 }
 
 export async function removeMember(userId: string, groupId: string) {
-  await requireEditableMembers(groupId);
   await request(() => client.users.delFromGroup({ id: userId, groupId }));
 }
 
@@ -344,141 +203,4 @@ export async function createGroup(name: string, parentId?: string) {
   );
 
   return decodeURIComponent(id);
-}
-
-async function findGroup(name: string, parentId?: string) {
-  const siblings = await request(() =>
-    allPages((first, max) =>
-      parentId
-        ? client.groups.listSubGroups({
-            parentId,
-            first,
-            max,
-            briefRepresentation: false,
-          })
-        : client.groups.find({ first, max, briefRepresentation: false }),
-    ),
-  );
-
-  return siblings.find((group) => group.name === name);
-}
-
-export async function ensureTermGroup(
-  termId: string,
-  code: string,
-  name: string,
-  parentId?: string,
-) {
-  const existing = await findGroup(name, parentId);
-  if (existing) {
-    if (
-      existing.attributes?.["bitnp-pass-term"]?.[0] !== termId ||
-      existing.attributes?.["bitnp-pass-department"]?.[0] !== code
-    ) {
-      throw new ApplicationError(409, `目标群组已存在：${existing.path}`);
-    }
-
-    return existing.id!;
-  }
-
-  const group = {
-    name,
-    attributes: {
-      "bitnp-pass-term": [termId],
-      "bitnp-pass-department": [code],
-    },
-  };
-
-  const { id } = await request(() =>
-    parentId
-      ? client.groups.createChildGroup({ id: parentId }, group)
-      : client.groups.create(group),
-  );
-
-  return decodeURIComponent(id);
-}
-
-export async function activeRoleGroups() {
-  const [tree, role, groups] = await Promise.all([
-    groupTree(),
-    request(() => client.roles.findOneByName({ name: config.activeRole })),
-    request(() =>
-      allPages((first, max) =>
-        findGroupsWithRole({
-          name: config.activeRole,
-          first,
-          max,
-          briefRepresentation: true,
-        }),
-      ),
-    ),
-  ]);
-
-  return {
-    role: role!,
-    groups: groups.map((group) => ({
-      id: group.id!,
-      name: group.name!,
-      path: group.path!,
-    })),
-    tree,
-  };
-}
-
-export async function groupHasActiveRole(id: string) {
-  const roles = await request(() =>
-    client.groups.listCompositeRealmRoleMappings({ id }),
-  );
-
-  return roles.some((role) => role.name === config.activeRole);
-}
-
-export async function groupActiveRoleSource(id: string, roleId: string) {
-  const mappings = await request(() => client.groups.listRoleMappings({ id }));
-  const roles = [
-    ...(mappings.realmMappings ?? []),
-    ...Object.values(mappings.clientMappings ?? {}).flatMap(
-      (mapping) => mapping.mappings ?? [],
-    ),
-  ];
-  const direct = roles.some((role) => role.id === roleId);
-  // Effective mappings cannot show whether a composite would retain the role
-  // after its direct mapping is removed
-  const pending = roles.filter((role) => role.id !== roleId);
-  const visited = new Set<string>();
-  while (pending.length > 0) {
-    const role = pending.pop()!;
-    if (role.id === roleId) {
-      return { direct, composite: true };
-    }
-    if (visited.has(role.id) || !role.composite) {
-      continue;
-    }
-    visited.add(role.id);
-    pending.push(
-      ...(await request(() =>
-        client.roles.getCompositeRoles({ id: role.id! }),
-      )),
-    );
-  }
-
-  return { direct, composite: false };
-}
-
-export async function moveActiveRole(
-  fromGroupIds: string[],
-  toGroupId: string,
-) {
-  const role = await request(() =>
-    client.roles.findOneByName({ name: config.activeRole }),
-  );
-  const roles = [{ id: role!.id!, name: role!.name! }];
-
-  for (const id of fromGroupIds) {
-    await request(() => client.groups.delRealmRoleMappings({ id, roles }));
-  }
-
-  return request(() =>
-    client.groups.addRealmRoleMappings({ id: toGroupId, roles }),
-  );
 }

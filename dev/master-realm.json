@@ -14,14 +14,610 @@
     "realm": [
       {
         "name": "bitnp-active"
+      },
+      {
+        "name": "permission-clinic-access",
+        "description": "权限｜电脑诊所普通功能访问"
+      },
+      {
+        "name": "permission-clinic-admin",
+        "description": "权限｜电脑诊所管理权限",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-clinic-access"],
+          "client": {}
+        }
+      },
+      {
+        "name": "permission-digimedia-access",
+        "description": "权限｜数字媒体中心普通功能访问"
+      },
+      {
+        "name": "permission-digimedia-admin",
+        "description": "权限｜数字媒体中心管理权限",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-digimedia-access"],
+          "client": {}
+        }
+      },
+      {
+        "name": "permission-system-admin",
+        "description": "权限｜全系统运维管理权限",
+        "composite": true,
+        "composites": {
+          "realm": ["admin"],
+          "client": {
+            "rustfs-console": ["consoleAdmin"]
+          }
+        }
+      },
+      {
+        "name": "permission-techdept-access",
+        "description": "权限｜技术部普通功能访问"
+      },
+      {
+        "name": "permission-techdept-admin",
+        "description": "权限｜技术部管理权限",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-techdept-access"],
+          "client": {}
+        }
+      },
+      {
+        "name": "permission-techsvc-access",
+        "description": "权限｜技术保障中心内部资源访问"
+      },
+      {
+        "name": "permission-techsvc-admin",
+        "description": "权限｜技术保障中心管理权限（含全系统管理）",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-system-admin", "permission-techsvc-access"],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-association-chair",
+        "description": "职务｜协会主席",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "permission-clinic-admin",
+            "permission-digimedia-admin",
+            "permission-techdept-admin",
+            "permission-techsvc-admin"
+          ],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-association-vice-chair",
+        "description": "身份｜协会副主席"
+      },
+      {
+        "name": "position-association-vice-chair-clinic",
+        "description": "职务｜协会副主席，分管电脑诊所",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "permission-clinic-admin",
+            "position-association-vice-chair"
+          ],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-association-vice-chair-digimedia",
+        "description": "职务｜协会副主席，分管数字媒体中心",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "permission-digimedia-admin",
+            "position-association-vice-chair"
+          ],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-association-vice-chair-techdept",
+        "description": "职务｜协会副主席，分管技术部",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "permission-techdept-admin",
+            "position-association-vice-chair"
+          ],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-clinic-advisor",
+        "description": "职务｜电脑诊所顾问",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-clinic-admin"],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-clinic-deputy-head",
+        "description": "职务｜电脑诊所副部长/分管负责人",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-clinic-admin"],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-clinic-head",
+        "description": "职务｜电脑诊所部长",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-clinic-admin"],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-clinic-member",
+        "description": "身份｜电脑诊所成员",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-clinic-access"],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-digimedia-advisor",
+        "description": "职务｜数字媒体中心顾问",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-digimedia-admin"],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-digimedia-deputy-head",
+        "description": "职务｜数字媒体中心副部长/分管负责人",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-digimedia-admin"],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-digimedia-head",
+        "description": "职务｜数字媒体中心部长",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-digimedia-admin"],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-digimedia-member",
+        "description": "身份｜数字媒体中心成员",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-digimedia-access"],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-techdept-advisor",
+        "description": "职务｜技术部顾问",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-techdept-admin"],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-techdept-deputy-head",
+        "description": "职务｜技术部副部长/分管负责人",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-techdept-admin"],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-techdept-head",
+        "description": "职务｜技术部部长",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-techdept-admin"],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-techdept-member",
+        "description": "身份｜技术部成员",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-techdept-access"],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-techsvc-deputy-director",
+        "description": "职务｜技术保障中心副主任",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-techsvc-admin"],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-techsvc-director",
+        "description": "职务｜技术保障中心主任",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-techsvc-admin"],
+          "client": {}
+        }
+      },
+      {
+        "name": "position-techsvc-member",
+        "description": "身份｜技术保障中心成员",
+        "composite": true,
+        "composites": {
+          "realm": ["permission-techsvc-access"],
+          "client": {}
+        }
       }
-    ]
+    ],
+    "client": {
+      "rustfs-console": [
+        {
+          "name": "consoleAdmin",
+          "description": ""
+        }
+      ]
+    }
   },
   "groups": [
     {
-      "id": "20000000-0000-4000-8000-000000000001",
-      "name": "techdept",
-      "realmRoles": ["bitnp-active"]
+      "name": "bitnp",
+      "realmRoles": [],
+      "attributes": {
+        "activeAffiliationGroup": ["active-2019"]
+      },
+      "id": "00d91cf0-a40b-5c3f-969c-4cbc7737a52b",
+      "subGroups": [
+        {
+          "name": "active-2018",
+          "realmRoles": [],
+          "id": "fad9cacf-87db-58cd-a276-3482a4b2682b"
+        },
+        {
+          "name": "active-2019",
+          "realmRoles": [],
+          "id": "adc472f2-60c1-5732-987e-2095be0a5382",
+          "subGroups": [
+            {
+              "name": "2019-clinic",
+              "realmRoles": [],
+              "id": "5b07a7eb-46d2-5773-9ec1-506b2ed21f29"
+            },
+            {
+              "name": "2019-digimedia",
+              "realmRoles": [],
+              "id": "bb2a3e0e-9293-5b45-a066-ec6aa940ccba"
+            },
+            {
+              "name": "2019-management",
+              "realmRoles": [],
+              "id": "e5895d72-0e84-50bd-977b-7044af21b91b"
+            },
+            {
+              "name": "2019-master",
+              "realmRoles": [],
+              "id": "ddf07c65-e403-5425-8fa5-c90618076d81"
+            },
+            {
+              "name": "2019-orgdept",
+              "realmRoles": [],
+              "id": "7f6b9201-1afa-5624-83ea-37df912f1006"
+            },
+            {
+              "name": "2019-techdept",
+              "realmRoles": [],
+              "id": "a15bb262-2c58-5ed4-b14b-927893587ce9"
+            },
+            {
+              "name": "2019-techsvc",
+              "realmRoles": [],
+              "id": "6526d735-10c0-5432-a471-d0542abc0c37"
+            }
+          ]
+        },
+        {
+          "name": "active-2020",
+          "realmRoles": [],
+          "id": "c3792e06-665f-59b2-9d5f-32d18512edcb",
+          "subGroups": [
+            {
+              "name": "2020-clinic",
+              "realmRoles": [],
+              "id": "46622f3f-f220-5133-a887-b5749b588fe0"
+            },
+            {
+              "name": "2020-digimedia",
+              "realmRoles": [],
+              "id": "c0992cee-3d73-5ca5-b24b-9d75c68824b2"
+            },
+            {
+              "name": "2020-management",
+              "realmRoles": [],
+              "id": "17966740-2e85-5ba8-bf5a-b11c75b8e2eb"
+            },
+            {
+              "name": "2020-master",
+              "realmRoles": [],
+              "id": "9a370064-3782-5246-9c07-21bff633b69f"
+            },
+            {
+              "name": "2020-orgdept",
+              "realmRoles": [],
+              "id": "6f091661-759f-5330-a7ee-b775f3e7b05d"
+            },
+            {
+              "name": "2020-techdept",
+              "realmRoles": [],
+              "id": "c7f23523-522c-53e4-8f02-095965d6700a"
+            },
+            {
+              "name": "2020-techsvc",
+              "realmRoles": [],
+              "id": "b89a7d96-0e9e-52c4-851a-ed96433710e5"
+            }
+          ]
+        },
+        {
+          "name": "active-2021",
+          "realmRoles": [],
+          "id": "6735a69e-c0a3-5dd3-bea0-c969a6c19919",
+          "subGroups": [
+            {
+              "name": "2021-clinic",
+              "realmRoles": [],
+              "id": "70fa5d3b-c4d9-5eae-826d-a04323381d65"
+            },
+            {
+              "name": "2021-digimedia",
+              "realmRoles": [],
+              "id": "8a23b672-b731-560a-931a-9306013c56a1"
+            },
+            {
+              "name": "2021-management",
+              "realmRoles": [],
+              "id": "b2616c34-0ea3-5ee2-8d0c-99c336106927"
+            },
+            {
+              "name": "2021-master",
+              "realmRoles": [],
+              "id": "e7f0a808-a434-5e83-ad19-3e4718db6f35"
+            },
+            {
+              "name": "2021-orgdept",
+              "realmRoles": [],
+              "id": "948a7675-b51d-5af6-bb36-f6789e4477e3"
+            },
+            {
+              "name": "2021-techdept",
+              "realmRoles": [],
+              "id": "b5e7268b-dec3-52ea-8639-01801c717ada"
+            },
+            {
+              "name": "2021-techsvc",
+              "realmRoles": [],
+              "id": "12f337da-9fae-5148-9546-e53fc22065e5"
+            }
+          ]
+        },
+        {
+          "name": "active-2022",
+          "realmRoles": [],
+          "id": "3e568156-d65c-553d-9e8c-77df4437a326",
+          "subGroups": [
+            {
+              "name": "2022-clinic",
+              "realmRoles": [],
+              "id": "367afc13-eeb0-5772-8e78-32f4165b5e33"
+            },
+            {
+              "name": "2022-digimedia",
+              "realmRoles": [],
+              "id": "809ad9ba-20f2-52ca-9c66-3f8220a65420"
+            },
+            {
+              "name": "2022-management",
+              "realmRoles": [],
+              "id": "323657b1-62d7-5d96-8c9b-9d46e173403d"
+            },
+            {
+              "name": "2022-master",
+              "realmRoles": [],
+              "id": "1d1b33a1-a003-5394-9774-5432cc553b74"
+            },
+            {
+              "name": "2022-orgdept",
+              "realmRoles": [],
+              "id": "7bb2ace1-41c6-5ef4-881e-4a5cdd15a4a9"
+            },
+            {
+              "name": "2022-techdept",
+              "realmRoles": [],
+              "id": "1ed02755-449c-51cb-81aa-f9935aba5996"
+            },
+            {
+              "name": "2022-techsvc",
+              "realmRoles": [],
+              "id": "6a9ba3ec-7db1-52f8-be49-6d190745905f"
+            }
+          ]
+        },
+        {
+          "name": "active-2023",
+          "realmRoles": [],
+          "id": "311f2957-a2bf-507d-b9cd-c3f08210b5ac",
+          "subGroups": [
+            {
+              "name": "2023-clinic",
+              "realmRoles": [],
+              "id": "c19f7c02-2218-5cc6-a2f3-f952c0731cea"
+            },
+            {
+              "name": "2023-digimedia",
+              "realmRoles": [],
+              "id": "c6e13c17-3498-566d-9d06-8dcc5e3e633f"
+            },
+            {
+              "name": "2023-management",
+              "realmRoles": [],
+              "id": "93724bda-cdb2-5860-b4ea-7b226f77c4e8"
+            },
+            {
+              "name": "2023-master",
+              "realmRoles": [],
+              "id": "0729be63-e322-59d7-bc2b-425d569f23c8"
+            },
+            {
+              "name": "2023-orgdept",
+              "realmRoles": [],
+              "id": "020aeabc-8c15-51ad-9597-0822afc643c8"
+            },
+            {
+              "name": "2023-techdept",
+              "realmRoles": [],
+              "id": "c17b7030-db05-55b1-879f-32ef23efef38"
+            },
+            {
+              "name": "2023-techsvc",
+              "realmRoles": [],
+              "id": "55ee5802-cdfa-5ab7-b19e-27ac89eb90ca"
+            }
+          ]
+        },
+        {
+          "name": "active-2024",
+          "realmRoles": [],
+          "id": "192b109c-e575-5ce8-ac0e-5de995352d3d",
+          "subGroups": [
+            {
+              "name": "2024-clinic",
+              "realmRoles": [],
+              "id": "d463832e-c26b-5c98-a439-17e0a2b241ff"
+            },
+            {
+              "name": "2024-digimedia",
+              "realmRoles": [],
+              "id": "3565a67d-741f-569f-87df-69ac69b88346"
+            },
+            {
+              "name": "2024-management",
+              "realmRoles": [],
+              "id": "821cd3b6-e932-59b0-98d6-92077ad53812"
+            },
+            {
+              "name": "2024-master",
+              "realmRoles": [],
+              "id": "a03273c9-8c9f-5348-987a-a138d97ccf0a"
+            },
+            {
+              "name": "2024-orgdept",
+              "realmRoles": [],
+              "id": "dd5679bf-405b-514b-9e41-c28c3a5bdcc1"
+            },
+            {
+              "name": "2024-techdept",
+              "realmRoles": [],
+              "id": "d7655e7b-675a-5bd0-94ad-7fac63e4b9e9"
+            },
+            {
+              "name": "2024-techsvc",
+              "realmRoles": [],
+              "id": "2660041c-2134-5a41-a982-d0dab1bc1990"
+            }
+          ]
+        },
+        {
+          "name": "active-2025",
+          "realmRoles": [],
+          "id": "2ec0e0e4-41ae-5a83-bfa6-a8fb36b69f0c",
+          "subGroups": [
+            {
+              "name": "2025-clinic",
+              "realmRoles": [],
+              "id": "0ff40e39-a085-5db7-8399-094271a4c7ee"
+            },
+            {
+              "name": "2025-digimedia",
+              "realmRoles": [],
+              "id": "b66b336b-1f4d-5c94-a44b-86b0cdea7c79"
+            },
+            {
+              "name": "2025-management",
+              "realmRoles": [],
+              "id": "19b74b07-61f3-5ad9-8898-b02979d93eb5"
+            },
+            {
+              "name": "2025-master",
+              "realmRoles": [],
+              "id": "6756204b-a35d-5294-9c73-58dd64781c8c"
+            },
+            {
+              "name": "2025-techdept",
+              "realmRoles": [],
+              "id": "c175c157-db1f-5be8-8f55-440c0e344872"
+            },
+            {
+              "name": "2025-techsvc",
+              "realmRoles": [],
+              "id": "475815a8-4469-5f8e-85f4-1121d0dc2f83"
+            }
+          ]
+        },
+        {
+          "name": "active-2026",
+          "realmRoles": ["bitnp-active"],
+          "id": "abf0a25a-fbd9-50a3-bef4-047765d6c647",
+          "subGroups": [
+            {
+              "name": "2026-clinic",
+              "realmRoles": ["position-clinic-member"],
+              "id": "16b8630c-25e7-500e-ab45-6260965381a1"
+            },
+            {
+              "name": "2026-digimedia",
+              "realmRoles": ["position-digimedia-member"],
+              "id": "a69a3067-1f29-53f8-8511-983b55deab6c"
+            },
+            {
+              "name": "2026-management",
+              "realmRoles": [],
+              "id": "28801362-60e4-575f-be86-29ebd0e8c4b3"
+            },
+            {
+              "name": "2026-master",
+              "realmRoles": [],
+              "id": "b59cfa16-ddac-55fb-b702-ca5891d026ab"
+            },
+            {
+              "name": "2026-techdept",
+              "realmRoles": ["position-techdept-member"],
+              "id": "20000000-0000-4000-8000-000000000001"
+            },
+            {
+              "name": "2026-techsvc",
+              "realmRoles": ["position-techsvc-member"],
+              "id": "189d0299-f0ad-539e-9600-e5bf8fb3cbe9"
+            }
+          ]
+        }
+      ]
     }
   ],
   "clients": [
@@ -41,7 +637,7 @@
       "fullScopeAllowed": true,
       "redirectUris": ["http://localhost:3000/auth/callback"],
       "webOrigins": ["http://localhost:3000"],
-      "defaultClientScopes": ["profile", "email", "roles", "web-origins"],
+      "defaultClientScopes": ["profile", "roles", "email"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "http://localhost:3000##http://localhost:3000/i/*",
@@ -59,7 +655,8 @@
             "id.token.claim": "false"
           }
         }
-      ]
+      ],
+      "optionalClientScopes": []
     },
     {
       "clientId": "bitnp-passport-service",
@@ -73,8 +670,59 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true,
+      "fullScopeAllowed": false,
+      "defaultClientScopes": ["service_account", "roles"],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "rustfs-console",
+      "name": "本地 RustFS 权限测试",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "local-rustfs-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
       "fullScopeAllowed": true,
-      "defaultClientScopes": ["roles"]
+      "redirectUris": ["http://localhost:9001/oauth_callback"],
+      "webOrigins": ["http://localhost:9001"],
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "basic",
+        "bitnp-active",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ],
+      "protocolMappers": [
+        {
+          "name": "client roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "foo",
+            "id.token.claim": "true",
+            "lightweight.claim": "false",
+            "access.token.claim": "true",
+            "claim.name": "rustfs_policy",
+            "jsonType.label": "String",
+            "usermodel.clientRoleMapping.clientId": "rustfs-console"
+          }
+        }
+      ]
     }
   ],
   "users": [
@@ -84,10 +732,10 @@
       "enabled": true,
       "email": "admin@example.test",
       "emailVerified": true,
-      "firstName": "管理员",
-      "lastName": "测试",
-      "groups": ["/techdept"],
-      "realmRoles": ["admin"],
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techsvc"],
+      "realmRoles": ["default-roles-master", "permission-system-admin"],
       "clientRoles": {
         "account": ["manage-account", "view-profile"]
       },
@@ -105,9 +753,10 @@
       "enabled": true,
       "email": "manager@example.test",
       "emailVerified": true,
-      "firstName": "群组管理员",
-      "lastName": "测试",
-      "groups": ["/techdept"],
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techdept"],
+      "realmRoles": ["default-roles-master", "position-techdept-head"],
       "clientRoles": {
         "account": ["manage-account", "view-profile"]
       },
@@ -125,9 +774,3513 @@
       "enabled": true,
       "email": "member@example.test",
       "emailVerified": true,
-      "firstName": "普通用户",
-      "lastName": "测试",
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "7e7ba34f-e4db-5d96-80cf-26a92ce3bb45",
+      "username": "outsider",
+      "enabled": true,
+      "email": "outsider@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
       "groups": [],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "1971d2ad-113b-57c7-91ab-38a043b2ad7a",
+      "username": "legacy-admin",
+      "enabled": true,
+      "email": "legacy-admin@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": [],
+      "realmRoles": ["default-roles-master", "admin"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "8f961c79-6b8d-5a69-86b9-0e1add5c0d7d",
+      "username": "bitnp-1",
+      "enabled": true,
+      "email": "bitnp-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "fa9fafd5-dfc4-53bf-a6a8-dca51a264b1b",
+      "username": "bitnp-2",
+      "enabled": true,
+      "email": "bitnp-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "30cbc098-bee0-5a85-baf8-059929d4accb",
+      "username": "active-2018-1",
+      "enabled": true,
+      "email": "active-2018-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2018"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "fd879d92-1369-517e-be1f-18b4bcb28ed0",
+      "username": "active-2018-2",
+      "enabled": true,
+      "email": "active-2018-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2018"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "4457394e-7bec-5dcf-a510-2d05b00be779",
+      "username": "active-2019-1",
+      "enabled": true,
+      "email": "active-2019-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "ada74f8f-788b-50b6-bc40-9140542979e4",
+      "username": "active-2019-2",
+      "enabled": true,
+      "email": "active-2019-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "eca546d2-5e9d-52b9-9da6-06764942d03e",
+      "username": "2019-clinic-1",
+      "enabled": true,
+      "email": "2019-clinic-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019/2019-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "fb133252-afb0-51b9-88cc-66f0b4926cde",
+      "username": "2019-clinic-2",
+      "enabled": true,
+      "email": "2019-clinic-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019/2019-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "095a0ec4-22ca-509d-bd45-657290c2e205",
+      "username": "2019-digimedia-1",
+      "enabled": true,
+      "email": "2019-digimedia-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019/2019-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "d26afcc2-21e2-5bd9-b3e0-1553f05cf8d5",
+      "username": "2019-digimedia-2",
+      "enabled": true,
+      "email": "2019-digimedia-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019/2019-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "f275d96c-f216-5f61-9299-fef6b56b00e5",
+      "username": "2019-management-1",
+      "enabled": true,
+      "email": "2019-management-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019/2019-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "7b4b0757-83a8-5c65-9c30-bbda2cafb585",
+      "username": "2019-management-2",
+      "enabled": true,
+      "email": "2019-management-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019/2019-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "53fe7626-821e-5645-a981-c512eacce9fd",
+      "username": "2019-master-1",
+      "enabled": true,
+      "email": "2019-master-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019/2019-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "02a9a63d-5da9-57c3-9545-46d60f7f491f",
+      "username": "2019-master-2",
+      "enabled": true,
+      "email": "2019-master-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019/2019-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "4146167a-6364-5cdc-80c5-76dddd40e771",
+      "username": "2019-orgdept-1",
+      "enabled": true,
+      "email": "2019-orgdept-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019/2019-orgdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "9024d0a2-9686-52d1-a171-0e59a751ca69",
+      "username": "2019-orgdept-2",
+      "enabled": true,
+      "email": "2019-orgdept-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019/2019-orgdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "d0acace2-8841-539e-909c-82cfdb8c30bd",
+      "username": "2019-techdept-1",
+      "enabled": true,
+      "email": "2019-techdept-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019/2019-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "96654b84-80e5-5b99-ad57-d373ad6d01d2",
+      "username": "2019-techdept-2",
+      "enabled": true,
+      "email": "2019-techdept-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019/2019-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "7d5d36ff-7868-5120-ad88-72f596272a8d",
+      "username": "2019-techsvc-1",
+      "enabled": true,
+      "email": "2019-techsvc-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019/2019-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "3c39ed15-7b35-5cac-afa2-f4f198f061f8",
+      "username": "2019-techsvc-2",
+      "enabled": true,
+      "email": "2019-techsvc-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2019/2019-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "fcc92eef-2e3e-5e89-9383-8652b8244cf7",
+      "username": "active-2020-1",
+      "enabled": true,
+      "email": "active-2020-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "4f29a1d3-069c-5b4f-820a-5321a54bd94c",
+      "username": "active-2020-2",
+      "enabled": true,
+      "email": "active-2020-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "66a50d96-4dca-587b-9517-e2b8a8759fc9",
+      "username": "2020-clinic-1",
+      "enabled": true,
+      "email": "2020-clinic-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020/2020-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "ddec44f5-7cef-5f3e-b39c-5728f906dc6b",
+      "username": "2020-clinic-2",
+      "enabled": true,
+      "email": "2020-clinic-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020/2020-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "41f8df48-a2fd-5e38-b572-46b687aacec9",
+      "username": "2020-digimedia-1",
+      "enabled": true,
+      "email": "2020-digimedia-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020/2020-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "b2c23173-4187-57cf-9e0d-e420bc8e53ed",
+      "username": "2020-digimedia-2",
+      "enabled": true,
+      "email": "2020-digimedia-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020/2020-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "964743e6-bc16-562f-9f4c-8be3c783e84d",
+      "username": "2020-management-1",
+      "enabled": true,
+      "email": "2020-management-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020/2020-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "4b82546b-df57-50f6-9410-a80a09dbdef6",
+      "username": "2020-management-2",
+      "enabled": true,
+      "email": "2020-management-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020/2020-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "2178c329-0b7d-584e-a7eb-756c31d6b599",
+      "username": "2020-master-1",
+      "enabled": true,
+      "email": "2020-master-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020/2020-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "83efd762-7ee7-5ea3-b35f-a108b7b28ac4",
+      "username": "2020-master-2",
+      "enabled": true,
+      "email": "2020-master-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020/2020-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "29a68692-d122-5234-9fca-c75ad6f31de6",
+      "username": "2020-orgdept-1",
+      "enabled": true,
+      "email": "2020-orgdept-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020/2020-orgdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "64537fcc-0835-5354-83d5-8d8673bfd597",
+      "username": "2020-orgdept-2",
+      "enabled": true,
+      "email": "2020-orgdept-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020/2020-orgdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "f05c2810-54fd-5855-a6f1-97a5232a7dc3",
+      "username": "2020-techdept-1",
+      "enabled": true,
+      "email": "2020-techdept-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020/2020-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "0310895d-e1e7-557c-8ec4-ecbf1507bba7",
+      "username": "2020-techdept-2",
+      "enabled": true,
+      "email": "2020-techdept-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020/2020-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "5d805f0e-11d8-5ff3-a1bd-ede150997826",
+      "username": "2020-techsvc-1",
+      "enabled": true,
+      "email": "2020-techsvc-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020/2020-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "5f74bdcc-d1bb-576e-9237-3c3bee1726f3",
+      "username": "2020-techsvc-2",
+      "enabled": true,
+      "email": "2020-techsvc-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2020/2020-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "430c2175-ed51-5d68-b22a-db52818126b7",
+      "username": "active-2021-1",
+      "enabled": true,
+      "email": "active-2021-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "227b0a61-5492-5bec-aae9-6fd4bcf648b9",
+      "username": "active-2021-2",
+      "enabled": true,
+      "email": "active-2021-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "876f5559-0636-577e-ba8c-b575f3286327",
+      "username": "2021-clinic-1",
+      "enabled": true,
+      "email": "2021-clinic-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021/2021-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "bdac251d-12ca-5866-887a-40c6cc40d80d",
+      "username": "2021-clinic-2",
+      "enabled": true,
+      "email": "2021-clinic-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021/2021-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "5bc3ad69-afc4-5c77-8117-9e04a5ecc1fa",
+      "username": "2021-digimedia-1",
+      "enabled": true,
+      "email": "2021-digimedia-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021/2021-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "bdef8cb3-071d-5e49-91c9-cbe032dcd5c7",
+      "username": "2021-digimedia-2",
+      "enabled": true,
+      "email": "2021-digimedia-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021/2021-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "dc366025-46ca-5d24-b7b5-ed632edd6ae7",
+      "username": "2021-management-1",
+      "enabled": true,
+      "email": "2021-management-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021/2021-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "54947195-1782-5e95-a3c1-e447d2d812a8",
+      "username": "2021-management-2",
+      "enabled": true,
+      "email": "2021-management-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021/2021-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "ea0b9be0-893a-5b9b-8a6e-9c172c602082",
+      "username": "2021-master-1",
+      "enabled": true,
+      "email": "2021-master-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021/2021-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "e2450fdf-0df1-5b8f-a3e2-76a751e52de7",
+      "username": "2021-master-2",
+      "enabled": true,
+      "email": "2021-master-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021/2021-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "2ecafa99-02de-5ec9-b64f-4e03a2d8f814",
+      "username": "2021-orgdept-1",
+      "enabled": true,
+      "email": "2021-orgdept-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021/2021-orgdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "bd11deb8-8e0d-548f-9096-cfa81f8adc8b",
+      "username": "2021-orgdept-2",
+      "enabled": true,
+      "email": "2021-orgdept-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021/2021-orgdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "755c98ea-cedd-54d0-a396-165607599ee0",
+      "username": "2021-techdept-1",
+      "enabled": true,
+      "email": "2021-techdept-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021/2021-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "4c90da18-6ec6-5987-a72e-8a3d79df1aa1",
+      "username": "2021-techdept-2",
+      "enabled": true,
+      "email": "2021-techdept-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021/2021-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "fcb63277-4588-5d31-b4bd-17e65f4db2b5",
+      "username": "2021-techsvc-1",
+      "enabled": true,
+      "email": "2021-techsvc-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021/2021-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "89f3be71-4802-5729-b396-defbb7e61a03",
+      "username": "2021-techsvc-2",
+      "enabled": true,
+      "email": "2021-techsvc-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2021/2021-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "4a00dfb1-d49a-5ef4-abfe-1ce54f32592f",
+      "username": "active-2022-1",
+      "enabled": true,
+      "email": "active-2022-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "678e6e98-7e96-5430-ae17-bfd9a0e8ef4b",
+      "username": "active-2022-2",
+      "enabled": true,
+      "email": "active-2022-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "e544232f-31e5-57fa-b590-ad69644f54d1",
+      "username": "2022-clinic-1",
+      "enabled": true,
+      "email": "2022-clinic-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022/2022-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "f0845ad5-29d3-5c4a-9ad0-2f0dcf1df43a",
+      "username": "2022-clinic-2",
+      "enabled": true,
+      "email": "2022-clinic-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022/2022-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "aa835d26-4364-57f7-b3a3-8e2f1830cd5e",
+      "username": "2022-digimedia-1",
+      "enabled": true,
+      "email": "2022-digimedia-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022/2022-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "0ec43eda-5c8d-5489-8bd2-b7b8dbb2a03d",
+      "username": "2022-digimedia-2",
+      "enabled": true,
+      "email": "2022-digimedia-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022/2022-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "5d590d1a-abee-5624-a571-da77791068c4",
+      "username": "2022-management-1",
+      "enabled": true,
+      "email": "2022-management-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022/2022-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "7e3d9f0b-172c-538e-b706-af51c81bb503",
+      "username": "2022-management-2",
+      "enabled": true,
+      "email": "2022-management-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022/2022-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "122d3aba-4489-5a49-b2d2-2c0182ad3ff3",
+      "username": "2022-master-1",
+      "enabled": true,
+      "email": "2022-master-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022/2022-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "c833f857-f133-5545-ab72-99b2c07e6c72",
+      "username": "2022-master-2",
+      "enabled": true,
+      "email": "2022-master-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022/2022-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "8aea8e7a-7425-588a-80a0-423f8bb8650a",
+      "username": "2022-orgdept-1",
+      "enabled": true,
+      "email": "2022-orgdept-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022/2022-orgdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "768fad2b-ab12-5bda-a54c-09e2d95aac53",
+      "username": "2022-orgdept-2",
+      "enabled": true,
+      "email": "2022-orgdept-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022/2022-orgdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "0205ca56-c4ec-5a31-8e79-42f98a24102b",
+      "username": "2022-techdept-1",
+      "enabled": true,
+      "email": "2022-techdept-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022/2022-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "da1243ed-504b-51ac-8283-b1ef8fa37b2e",
+      "username": "2022-techdept-2",
+      "enabled": true,
+      "email": "2022-techdept-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022/2022-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "6534fc7d-660d-51e5-be6e-2547f3277454",
+      "username": "2022-techsvc-1",
+      "enabled": true,
+      "email": "2022-techsvc-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022/2022-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "34d7df60-0b13-504c-a9c1-eb87f03c7e52",
+      "username": "2022-techsvc-2",
+      "enabled": true,
+      "email": "2022-techsvc-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2022/2022-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "8c27cfb1-7114-5675-a2f5-2869c9b5a64f",
+      "username": "active-2023-1",
+      "enabled": true,
+      "email": "active-2023-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "a70ec895-f873-5cb4-9e2f-3f1ef585a9c5",
+      "username": "active-2023-2",
+      "enabled": true,
+      "email": "active-2023-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "8eee825f-da3d-5a10-bc84-72e43f1d0fca",
+      "username": "2023-clinic-1",
+      "enabled": true,
+      "email": "2023-clinic-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023/2023-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "c21dd2a9-7fe5-5429-9457-0c6479035218",
+      "username": "2023-clinic-2",
+      "enabled": true,
+      "email": "2023-clinic-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023/2023-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "35b1450d-dafd-55a5-be47-c9de9c046859",
+      "username": "2023-digimedia-1",
+      "enabled": true,
+      "email": "2023-digimedia-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023/2023-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "f345bbd8-e051-5f1b-a456-00d556db78f4",
+      "username": "2023-digimedia-2",
+      "enabled": true,
+      "email": "2023-digimedia-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023/2023-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "9d2d55a4-1aef-587e-9f4f-d36ef8734478",
+      "username": "2023-management-1",
+      "enabled": true,
+      "email": "2023-management-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023/2023-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "7b4dd452-11f2-55fb-b579-519f39e2a059",
+      "username": "2023-management-2",
+      "enabled": true,
+      "email": "2023-management-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023/2023-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "5f7e1961-ae56-55e8-9ddb-e94fa46926dd",
+      "username": "2023-master-1",
+      "enabled": true,
+      "email": "2023-master-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023/2023-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "0d2c4e3e-4d42-5151-8c17-7b9d6c4117cb",
+      "username": "2023-master-2",
+      "enabled": true,
+      "email": "2023-master-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023/2023-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "ffd91a0e-063f-5da3-bd86-16a30a44351b",
+      "username": "2023-orgdept-1",
+      "enabled": true,
+      "email": "2023-orgdept-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023/2023-orgdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "28309097-8774-5cdc-b703-2ed3c2a42916",
+      "username": "2023-orgdept-2",
+      "enabled": true,
+      "email": "2023-orgdept-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023/2023-orgdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "9548541f-91a7-53c4-aed6-d141b836cd65",
+      "username": "2023-techdept-1",
+      "enabled": true,
+      "email": "2023-techdept-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023/2023-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "ce20a825-3acb-5758-8ad6-74fee41bf4de",
+      "username": "2023-techdept-2",
+      "enabled": true,
+      "email": "2023-techdept-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023/2023-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "313f4cae-8f5f-5da8-a1d7-1dbde253e8ac",
+      "username": "2023-techsvc-1",
+      "enabled": true,
+      "email": "2023-techsvc-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023/2023-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "18e4a45e-d45c-5b67-9571-b1adb53f28b1",
+      "username": "2023-techsvc-2",
+      "enabled": true,
+      "email": "2023-techsvc-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2023/2023-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "8f437099-898a-5fb7-a55e-a37d23033cb9",
+      "username": "active-2024-1",
+      "enabled": true,
+      "email": "active-2024-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "29c3f324-5b0a-5d82-8fab-b41a98477339",
+      "username": "active-2024-2",
+      "enabled": true,
+      "email": "active-2024-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "058cb245-875e-5607-ae9f-364dc21faba1",
+      "username": "2024-clinic-1",
+      "enabled": true,
+      "email": "2024-clinic-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024/2024-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "38532488-79f5-5fa5-892e-4159420bc3cb",
+      "username": "2024-clinic-2",
+      "enabled": true,
+      "email": "2024-clinic-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024/2024-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "1f4192a0-0748-5182-96a8-c4a0b0aeebd4",
+      "username": "2024-digimedia-1",
+      "enabled": true,
+      "email": "2024-digimedia-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024/2024-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "dc95e515-6678-512d-8320-820698f7b9b8",
+      "username": "2024-digimedia-2",
+      "enabled": true,
+      "email": "2024-digimedia-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024/2024-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "ce68d17b-54ed-5453-b479-da23d6a3fea2",
+      "username": "2024-management-1",
+      "enabled": true,
+      "email": "2024-management-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024/2024-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "44a33f92-98b1-507a-b408-e3792e2e2d03",
+      "username": "2024-management-2",
+      "enabled": true,
+      "email": "2024-management-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024/2024-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "973ebdfb-7391-5821-82fb-01930caadc62",
+      "username": "2024-master-1",
+      "enabled": true,
+      "email": "2024-master-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024/2024-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "d02f4ca5-9b8e-5f42-ae65-f14beee8d5a4",
+      "username": "2024-master-2",
+      "enabled": true,
+      "email": "2024-master-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024/2024-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "a25d7e6d-23d6-513d-973a-d620e5f35341",
+      "username": "2024-orgdept-1",
+      "enabled": true,
+      "email": "2024-orgdept-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024/2024-orgdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "6b8c550f-b327-56af-8400-6e7614407243",
+      "username": "2024-orgdept-2",
+      "enabled": true,
+      "email": "2024-orgdept-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024/2024-orgdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "63e3d464-1c8d-5544-a999-4af776f8b3e2",
+      "username": "2024-techdept-1",
+      "enabled": true,
+      "email": "2024-techdept-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024/2024-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "eb26490f-5ccf-5890-a87e-2c07a7025224",
+      "username": "2024-techdept-2",
+      "enabled": true,
+      "email": "2024-techdept-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024/2024-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "e0496a11-27c5-5bc1-98fb-ad660a7a180b",
+      "username": "2024-techsvc-1",
+      "enabled": true,
+      "email": "2024-techsvc-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024/2024-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "a5a8090f-49c7-5f32-aa5f-491298a6690a",
+      "username": "2024-techsvc-2",
+      "enabled": true,
+      "email": "2024-techsvc-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2024/2024-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "eb06ca55-d6cd-593e-9330-42e812b47aa4",
+      "username": "active-2025-1",
+      "enabled": true,
+      "email": "active-2025-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2025"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "2d4b14f5-65ad-596b-ad72-0e778c422390",
+      "username": "active-2025-2",
+      "enabled": true,
+      "email": "active-2025-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2025"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "6ebe7f20-79f1-567f-a8d1-8138f7085bc4",
+      "username": "2025-clinic-1",
+      "enabled": true,
+      "email": "2025-clinic-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2025/2025-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "aca46fdd-4701-5900-ac98-b40356e33726",
+      "username": "2025-clinic-2",
+      "enabled": true,
+      "email": "2025-clinic-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2025/2025-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "1fc24758-6bb5-5f75-9d68-443c1b20b45b",
+      "username": "2025-digimedia-1",
+      "enabled": true,
+      "email": "2025-digimedia-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2025/2025-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "5ce77b49-8a26-586b-a486-4dad4594990d",
+      "username": "2025-digimedia-2",
+      "enabled": true,
+      "email": "2025-digimedia-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2025/2025-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "dfc065b9-e4aa-5122-aed3-7334025b3024",
+      "username": "2025-management-1",
+      "enabled": true,
+      "email": "2025-management-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2025/2025-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "b2709bcb-7157-5182-a28e-408bb4e607f5",
+      "username": "2025-management-2",
+      "enabled": true,
+      "email": "2025-management-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2025/2025-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "611d9216-e1ab-5248-877c-8c8ef96be3d8",
+      "username": "2025-master-1",
+      "enabled": true,
+      "email": "2025-master-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2025/2025-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "5569d464-c6a2-5113-b858-314c307a8343",
+      "username": "2025-master-2",
+      "enabled": true,
+      "email": "2025-master-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2025/2025-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "f5f513d6-119c-5327-ab43-444632b89c78",
+      "username": "2025-techdept-1",
+      "enabled": true,
+      "email": "2025-techdept-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2025/2025-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "41a33a1c-71b0-5ec9-8544-000adb011630",
+      "username": "2025-techdept-2",
+      "enabled": true,
+      "email": "2025-techdept-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2025/2025-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "1c69a164-d47b-5e99-bb1f-fa4d065cd3e5",
+      "username": "2025-techsvc-1",
+      "enabled": true,
+      "email": "2025-techsvc-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2025/2025-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "546d98e2-8656-5278-8d87-9d69346d2579",
+      "username": "2025-techsvc-2",
+      "enabled": true,
+      "email": "2025-techsvc-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2025/2025-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "729d6fc0-9dc5-5cd4-afb5-a2cf7fe6f88c",
+      "username": "active-2026-1",
+      "enabled": true,
+      "email": "active-2026-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "8637f9f2-b136-54c9-b1a5-aec101af2e9f",
+      "username": "active-2026-2",
+      "enabled": true,
+      "email": "active-2026-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "62a6ecfb-d980-5ebe-bce4-43a2ede4ce8e",
+      "username": "2026-clinic-1",
+      "enabled": true,
+      "email": "2026-clinic-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "683a5301-8964-579f-a323-d79f06edf5ec",
+      "username": "2026-clinic-2",
+      "enabled": true,
+      "email": "2026-clinic-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-clinic"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "ec5d27df-8b9e-531a-b290-bfac10b0f4d5",
+      "username": "2026-digimedia-1",
+      "enabled": true,
+      "email": "2026-digimedia-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "b6e610b2-2877-577c-8513-d5feb6f2deee",
+      "username": "2026-digimedia-2",
+      "enabled": true,
+      "email": "2026-digimedia-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-digimedia"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "f8603d32-8e66-577a-b7d5-89dc10a26e35",
+      "username": "2026-management-1",
+      "enabled": true,
+      "email": "2026-management-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "7976cf0b-ae0a-56c0-acd7-a1c231e7d8fc",
+      "username": "2026-management-2",
+      "enabled": true,
+      "email": "2026-management-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-management"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "fc98a7d5-6a05-532d-8d20-c96886dcd642",
+      "username": "2026-master-1",
+      "enabled": true,
+      "email": "2026-master-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "e1a64f68-0e5b-5693-8dbb-bf31e1ef5b77",
+      "username": "2026-master-2",
+      "enabled": true,
+      "email": "2026-master-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-master"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "5c653b5f-ad62-546b-a7d4-f97b163e79f3",
+      "username": "2026-techdept-1",
+      "enabled": true,
+      "email": "2026-techdept-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "04b394fa-b866-5c2b-8475-f40dca83f28a",
+      "username": "2026-techdept-2",
+      "enabled": true,
+      "email": "2026-techdept-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techdept"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "fa45531d-6ca5-56f8-b24d-39454e824a48",
+      "username": "2026-techsvc-1",
+      "enabled": true,
+      "email": "2026-techsvc-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "03015a59-4bb5-5066-ad03-7e90dcd5cbf2",
+      "username": "2026-techsvc-2",
+      "enabled": true,
+      "email": "2026-techsvc-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techsvc"],
+      "realmRoles": ["default-roles-master"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "ae5f3ac3-83f0-5d01-a0ba-b6d07f95338b",
+      "username": "chair-1",
+      "enabled": true,
+      "email": "chair-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-master"],
+      "realmRoles": ["default-roles-master", "position-association-chair"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "4153e42c-8201-57f5-8aa4-f255e618e26d",
+      "username": "chair-2",
+      "enabled": true,
+      "email": "chair-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-master"],
+      "realmRoles": ["default-roles-master", "position-association-chair"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "3ca4839b-36c4-5d35-8867-5ea1f42ab4b4",
+      "username": "vice-clinic-1",
+      "enabled": true,
+      "email": "vice-clinic-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-master"],
+      "realmRoles": [
+        "default-roles-master",
+        "position-association-vice-chair-clinic"
+      ],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "71e62b57-a2ed-5cf9-acee-0425b74fcc40",
+      "username": "vice-clinic-2",
+      "enabled": true,
+      "email": "vice-clinic-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-master"],
+      "realmRoles": [
+        "default-roles-master",
+        "position-association-vice-chair-clinic"
+      ],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "5600c9c7-7ea6-5775-a960-5459b21f0bc5",
+      "username": "vice-digimedia-1",
+      "enabled": true,
+      "email": "vice-digimedia-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-master"],
+      "realmRoles": [
+        "default-roles-master",
+        "position-association-vice-chair-digimedia"
+      ],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "7fa50265-988d-5e14-b384-1a1a76f5e943",
+      "username": "vice-digimedia-2",
+      "enabled": true,
+      "email": "vice-digimedia-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-master"],
+      "realmRoles": [
+        "default-roles-master",
+        "position-association-vice-chair-digimedia"
+      ],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "62cc405f-e5c7-5f64-8db0-fec208c3daf7",
+      "username": "vice-techdept-1",
+      "enabled": true,
+      "email": "vice-techdept-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-master"],
+      "realmRoles": [
+        "default-roles-master",
+        "position-association-vice-chair-techdept"
+      ],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "fead4a83-6e94-532c-898f-0cda74cdfa63",
+      "username": "vice-techdept-2",
+      "enabled": true,
+      "email": "vice-techdept-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-master"],
+      "realmRoles": [
+        "default-roles-master",
+        "position-association-vice-chair-techdept"
+      ],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "2efd2ade-bc18-5b00-aebd-006a532ae49b",
+      "username": "clinic-advisor-1",
+      "enabled": true,
+      "email": "clinic-advisor-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-clinic"],
+      "realmRoles": ["default-roles-master", "position-clinic-advisor"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "c61a4e8e-e4c8-57ba-ab47-310a87a09777",
+      "username": "clinic-advisor-2",
+      "enabled": true,
+      "email": "clinic-advisor-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-clinic"],
+      "realmRoles": ["default-roles-master", "position-clinic-advisor"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "05123c74-a0fc-523f-8c41-0088c821b163",
+      "username": "clinic-deputy-1",
+      "enabled": true,
+      "email": "clinic-deputy-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-clinic"],
+      "realmRoles": ["default-roles-master", "position-clinic-deputy-head"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "f715aff9-d213-5559-8255-725020d9da90",
+      "username": "clinic-deputy-2",
+      "enabled": true,
+      "email": "clinic-deputy-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-clinic"],
+      "realmRoles": ["default-roles-master", "position-clinic-deputy-head"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "eb816351-9c18-5828-8918-219306bbaf1f",
+      "username": "clinic-head-1",
+      "enabled": true,
+      "email": "clinic-head-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-clinic"],
+      "realmRoles": ["default-roles-master", "position-clinic-head"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "f35f108d-78c1-56aa-809a-dbe8170fd995",
+      "username": "clinic-head-2",
+      "enabled": true,
+      "email": "clinic-head-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-clinic"],
+      "realmRoles": ["default-roles-master", "position-clinic-head"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "22fc1cdf-2af0-5818-8118-c7bf2c8ecd77",
+      "username": "digimedia-advisor-1",
+      "enabled": true,
+      "email": "digimedia-advisor-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-digimedia"],
+      "realmRoles": ["default-roles-master", "position-digimedia-advisor"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "eb5cc4cd-ad89-5966-b668-99eb982e147d",
+      "username": "digimedia-advisor-2",
+      "enabled": true,
+      "email": "digimedia-advisor-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-digimedia"],
+      "realmRoles": ["default-roles-master", "position-digimedia-advisor"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "c10d0ac3-f70b-51b0-a1e0-65900db109d9",
+      "username": "digimedia-deputy-1",
+      "enabled": true,
+      "email": "digimedia-deputy-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-digimedia"],
+      "realmRoles": ["default-roles-master", "position-digimedia-deputy-head"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "02f01219-dc66-5ba9-bf38-0c7088e61141",
+      "username": "digimedia-deputy-2",
+      "enabled": true,
+      "email": "digimedia-deputy-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-digimedia"],
+      "realmRoles": ["default-roles-master", "position-digimedia-deputy-head"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "17f40027-e31d-54a0-b399-229b830d1681",
+      "username": "digimedia-head-1",
+      "enabled": true,
+      "email": "digimedia-head-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-digimedia"],
+      "realmRoles": ["default-roles-master", "position-digimedia-head"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "a7f2593f-a154-56ab-b519-af54cb91890a",
+      "username": "digimedia-head-2",
+      "enabled": true,
+      "email": "digimedia-head-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-digimedia"],
+      "realmRoles": ["default-roles-master", "position-digimedia-head"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "34252294-f4b5-5a4d-be54-eaddeb2aed7d",
+      "username": "techdept-advisor-1",
+      "enabled": true,
+      "email": "techdept-advisor-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techdept"],
+      "realmRoles": ["default-roles-master", "position-techdept-advisor"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "bea750c6-f1a1-59c4-906c-4bb126c69128",
+      "username": "techdept-advisor-2",
+      "enabled": true,
+      "email": "techdept-advisor-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techdept"],
+      "realmRoles": ["default-roles-master", "position-techdept-advisor"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "8b1e6e3e-9460-5348-8829-fe0cbd5e23a3",
+      "username": "techdept-deputy-1",
+      "enabled": true,
+      "email": "techdept-deputy-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techdept"],
+      "realmRoles": ["default-roles-master", "position-techdept-deputy-head"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "917a6b08-15eb-5a6b-9bc4-64cef83e5bdd",
+      "username": "techdept-deputy-2",
+      "enabled": true,
+      "email": "techdept-deputy-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techdept"],
+      "realmRoles": ["default-roles-master", "position-techdept-deputy-head"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "9d4ddb2d-575a-5ca7-b53b-2327c474319c",
+      "username": "techdept-head-1",
+      "enabled": true,
+      "email": "techdept-head-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techdept"],
+      "realmRoles": ["default-roles-master", "position-techdept-head"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "9dce0592-29bd-5c13-8178-45eb9da76a42",
+      "username": "techdept-head-2",
+      "enabled": true,
+      "email": "techdept-head-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techdept"],
+      "realmRoles": ["default-roles-master", "position-techdept-head"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "dfd67a6f-ade7-55c2-bb46-09155822fa75",
+      "username": "techsvc-deputy-1",
+      "enabled": true,
+      "email": "techsvc-deputy-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techsvc"],
+      "realmRoles": [
+        "default-roles-master",
+        "position-techsvc-deputy-director"
+      ],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "e22ff344-69d5-511f-88a2-003783e999a4",
+      "username": "techsvc-deputy-2",
+      "enabled": true,
+      "email": "techsvc-deputy-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techsvc"],
+      "realmRoles": [
+        "default-roles-master",
+        "position-techsvc-deputy-director"
+      ],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "992af9ef-2547-5575-8dd8-0496522cddfb",
+      "username": "techsvc-director-1",
+      "enabled": true,
+      "email": "techsvc-director-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techsvc"],
+      "realmRoles": ["default-roles-master", "position-techsvc-director"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "d6ae0709-a1ad-5c8a-b978-cd55f99d637e",
+      "username": "techsvc-director-2",
+      "enabled": true,
+      "email": "techsvc-director-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techsvc"],
+      "realmRoles": ["default-roles-master", "position-techsvc-director"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "1e12821e-4ed7-50d3-8e33-93cbd7db5d71",
+      "username": "system-special-1",
+      "enabled": true,
+      "email": "system-special-1@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techdept"],
+      "realmRoles": ["default-roles-master", "permission-system-admin"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "da3c6fae-b800-56a4-9de7-97b77e8e7f06",
+      "username": "system-special-2",
+      "enabled": true,
+      "email": "system-special-2@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techdept"],
+      "realmRoles": ["default-roles-master", "permission-system-admin"],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "572e7b87-1341-552b-b2ac-d2a42340136d",
+      "username": "vice-techdept-special",
+      "enabled": true,
+      "email": "vice-techdept-special@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-master"],
+      "realmRoles": [
+        "default-roles-master",
+        "position-association-vice-chair-techdept",
+        "permission-system-admin"
+      ],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "9f427832-ab17-572c-99a5-8bafa7a8c43d",
+      "username": "multi-position",
+      "enabled": true,
+      "email": "multi-position@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": [
+        "/bitnp/active-2026/2026-techdept",
+        "/bitnp/active-2026/2026-clinic"
+      ],
+      "realmRoles": [
+        "default-roles-master",
+        "position-techdept-deputy-head",
+        "position-clinic-advisor"
+      ],
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "5a4266b7-521d-51c7-b618-b70caeb2f497",
+      "username": "external-director",
+      "enabled": true,
+      "email": "external-director@example.test",
+      "emailVerified": true,
+      "firstName": "开发测试",
+      "lastName": "",
+      "groups": ["/bitnp/active-2026/2026-techdept"],
+      "realmRoles": [
+        "default-roles-master",
+        "position-techsvc-deputy-director"
+      ],
       "clientRoles": {
         "account": ["manage-account", "view-profile"]
       },
@@ -144,8 +4297,576 @@
       "enabled": true,
       "serviceAccountClientId": "bitnp-passport-service",
       "clientRoles": {
-        "master-realm": ["manage-users", "view-realm", "view-clients"]
+        "master-realm": [
+          "view-realm",
+          "manage-users",
+          "view-clients",
+          "query-clients"
+        ]
       }
+    }
+  ],
+  "editUsernameAllowed": true,
+  "clientScopeMappings": {
+    "master-realm": [
+      {
+        "client": "bitnp-passport-service",
+        "roles": ["view-realm", "manage-users", "view-clients", "query-clients"]
+      }
+    ]
+  },
+  "clientScopes": [
+    {
+      "name": "acr",
+      "description": "OpenID Connect scope for add acr (authentication context class reference) to the token",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "acr loa level",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-acr-mapper",
+          "config": {
+            "id.token.claim": "true",
+            "introspection.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "address",
+      "description": "OpenID Connect built-in scope: address",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "consent.screen.text": "${addressScopeConsentText}",
+        "display.on.consent.screen": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "address",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-address-mapper",
+          "config": {
+            "user.attribute.formatted": "formatted",
+            "user.attribute.country": "country",
+            "introspection.token.claim": "true",
+            "user.attribute.postal_code": "postal_code",
+            "userinfo.token.claim": "true",
+            "user.attribute.street": "street",
+            "id.token.claim": "true",
+            "user.attribute.region": "region",
+            "access.token.claim": "true",
+            "user.attribute.locality": "locality"
+          }
+        }
+      ]
+    },
+    {
+      "name": "basic",
+      "description": "OpenID Connect scope for add all basic claims to the token",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "auth_time",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usersessionmodel-note-mapper",
+          "config": {
+            "user.session.note": "AUTH_TIME",
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "auth_time",
+            "jsonType.label": "long"
+          }
+        },
+        {
+          "name": "sub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "bitnp-active",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": []
+    },
+    {
+      "name": "email",
+      "description": "OpenID Connect built-in scope: email",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "consent.screen.text": "${emailScopeConsentText}",
+        "display.on.consent.screen": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "email verified",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "emailVerified",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "email_verified",
+            "jsonType.label": "boolean"
+          }
+        },
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "email",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "email",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "name": "microprofile-jwt",
+      "description": "Microprofile - JWT built-in scope",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "foo",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "groups",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "upn",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "username",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "upn",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "name": "offline_access",
+      "description": "OpenID Connect built-in scope: offline_access",
+      "protocol": "openid-connect",
+      "attributes": {
+        "consent.screen.text": "${offlineAccessScopeConsentText}",
+        "display.on.consent.screen": "true"
+      },
+      "protocolMappers": []
+    },
+    {
+      "name": "phone",
+      "description": "OpenID Connect built-in scope: phone",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "consent.screen.text": "${phoneScopeConsentText}",
+        "display.on.consent.screen": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "phone number",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "phoneNumber",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "phone_number",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "phone number verified",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "phoneNumberVerified",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "phone_number_verified",
+            "jsonType.label": "boolean"
+          }
+        }
+      ]
+    },
+    {
+      "name": "profile",
+      "description": "OpenID Connect built-in scope: profile",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "consent.screen.text": "${profileScopeConsentText}",
+        "display.on.consent.screen": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "birthdate",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "birthdate",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "birthdate",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "middle name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "middleName",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "middle_name",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "family name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "lastName",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "family_name",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "gender",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "gender",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "gender",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "zoneinfo",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "zoneinfo",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "zoneinfo",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "updated at",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "updatedAt",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "updated_at",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "profile",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "profile",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "profile",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "full name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-full-name-mapper",
+          "config": {
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "given name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "firstName",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "given_name",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "website",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "website",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "website",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "locale",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "locale",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "locale",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "username",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "nickname",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "nickname",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "nickname",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "picture",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "user.attribute": "picture",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "picture",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "name": "roles",
+      "description": "OpenID Connect scope for add user roles to the access token",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "consent.screen.text": "${rolesScopeConsentText}",
+        "display.on.consent.screen": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience resolve",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-resolve-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "introspection.token.claim": "true",
+            "multivalued": "true",
+            "userinfo.token.claim": "false",
+            "user.attribute": "foo",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "client roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "config": {
+            "user.attribute": "foo",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "claim.name": "resource_access.${client_id}.roles",
+            "jsonType.label": "String",
+            "multivalued": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "service_account",
+      "description": "Specific scope for a client enabled for service accounts",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "Client ID",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usersessionmodel-note-mapper",
+          "config": {
+            "user.session.note": "client_id",
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "client_id",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "Client Host",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usersessionmodel-note-mapper",
+          "config": {
+            "user.session.note": "clientHost",
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "clientHost",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "Client IP Address",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usersessionmodel-note-mapper",
+          "config": {
+            "user.session.note": "clientAddress",
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "clientAddress",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "name": "web-origins",
+      "description": "OpenID Connect scope for add allowed web origins to the access token",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "consent.screen.text": "",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": []
+    }
+  ],
+  "scopeMappings": [
+    {
+      "clientScope": "offline_access",
+      "roles": ["offline_access"]
+    },
+    {
+      "clientScope": "bitnp-active",
+      "roles": ["bitnp-active"]
     }
   ]
 }
