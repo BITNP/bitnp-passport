@@ -1,8 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { managedGroups as groupConfigurations } from "#database/schema";
-import type { Department } from "#shared/identity";
-import { departments, systemAdministratorRole } from "#shared/identity";
+import { departmentCodes, systemAdministratorRole } from "#shared/identity";
 import type { Actor } from "#shared/types";
 
 import { db } from "./database.ts";
@@ -33,14 +32,14 @@ export async function requireAdministrator(actor: Actor) {
 }
 
 const managedDepartments = (roles: Set<string>) =>
-  (Object.keys(departments) as Department[]).filter((department) =>
+  departmentCodes.filter((department) =>
     roles.has(`permission-${department}-admin`),
   );
 
 async function groupsForRoles(roles: Set<string>) {
   const administrator = roles.has(systemAdministratorRole);
-  const departments = managedDepartments(roles);
-  if (!administrator && departments.length === 0) {
+  const managed = managedDepartments(roles);
+  if (!administrator && managed.length === 0) {
     return [];
   }
 
@@ -52,9 +51,18 @@ async function groupsForRoles(roles: Set<string>) {
       .where(eq(groupConfigurations.enrolled, true)),
   ]);
   const organization = organizationGroups(tree);
-  const rootId = administrator
-    ? undefined
-    : (await organizationState(organization)).activeRoots[0]!.id;
+  const activeRoot = administrator
+    ? null
+    : (await organizationState(organization)).activeRoot;
+
+  if (!administrator && activeRoot === null) {
+    throw new ApplicationError(
+      409,
+      "未识别到当前届组织；请联系系统管理员确认四个部门组都已配置成员角色映射",
+    );
+  }
+
+  const rootId = activeRoot?.id;
   const groups: {
     group: OrganizationGroup;
     configuration: typeof groupConfigurations.$inferSelect;
@@ -70,7 +78,7 @@ async function groupsForRoles(roles: Set<string>) {
       !administrator &&
       (group.rootId !== rootId ||
         group.department === null ||
-        !departments.includes(group.department))
+        !managed.includes(group.department))
     ) {
       continue;
     }

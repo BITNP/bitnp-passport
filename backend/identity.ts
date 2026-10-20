@@ -1,10 +1,10 @@
 import {
+  departmentCodes,
   departments,
   roleLabel,
   systemAdministratorRole,
 } from "#shared/identity";
 
-import { config } from "./config.ts";
 import { groupLabels } from "./groups/labels.ts";
 import { userRoleAssignments } from "./keycloak/roles.ts";
 import * as keycloak from "./keycloak.ts";
@@ -73,15 +73,14 @@ export async function userIdentity(subject: string) {
         .filter((name) => name.startsWith("permission-"))
         .sort()
         .map(describe),
-      activeSources: origins(config.activeRole),
       managedDepartments: user.enabled
-        ? Object.entries(departments)
+        ? departmentCodes
             .filter(
-              ([code]) =>
+              (code) =>
                 effective.includes(systemAdministratorRole) ||
                 effective.includes(`permission-${code}-admin`),
             )
-            .map(([code, label]) => ({ code, label }))
+            .map((code) => ({ code, label: departments[code] }))
         : [],
     },
   };

@@ -13,9 +13,6 @@
   "roles": {
     "realm": [
       {
-        "name": "bitnp-active"
-      },
-      {
         "name": "permission-clinic-access",
         "description": "权限｜电脑诊所普通功能访问"
       },
@@ -582,7 +579,7 @@
         },
         {
           "name": "active-2026",
-          "realmRoles": ["bitnp-active"],
+          "realmRoles": [],
           "id": "abf0a25a-fbd9-50a3-bef4-047765d6c647",
           "subGroups": [
             {
@@ -695,7 +692,6 @@
         "profile",
         "roles",
         "basic",
-        "bitnp-active",
         "email"
       ],
       "optionalClientScopes": [
@@ -4402,15 +4398,6 @@
       ]
     },
     {
-      "name": "bitnp-active",
-      "protocol": "openid-connect",
-      "attributes": {
-        "include.in.token.scope": "true",
-        "display.on.consent.screen": "false"
-      },
-      "protocolMappers": []
-    },
-    {
       "name": "email",
       "description": "OpenID Connect built-in scope: email",
       "protocol": "openid-connect",
@@ -4863,10 +4850,6 @@
     {
       "clientScope": "offline_access",
       "roles": ["offline_access"]
-    },
-    {
-      "clientScope": "bitnp-active",
-      "roles": ["bitnp-active"]
     }
   ]
 }

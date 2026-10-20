@@ -33,7 +33,6 @@ cp .env.example .env
 | `KEYCLOAK_SERVICE_CLIENT_ID`     | 服务客户端 ID，默认示例为 `bitnp-passport-service`                            |
 | `KEYCLOAK_SERVICE_CLIENT_SECRET` | 服务客户端密钥                                                                |
 | `SESSION_ENCRYPTION_KEY`         | 32 字节随机密钥的 Base64 编码，用于保存登录会话                               |
-| `ACTIVE_MEMBER_ROLE`             | 标记网协现任的 realm role，默认 `bitnp-active`                                |
 | `LOG_LEVEL`                      | 日志级别，通常使用 `info`，排查问题时可改为 `debug`                           |
 
 生产部署建议使用 Forgejo Container Registry 中的固定版本镜像，例如 `git.bitnp.net/bitnp/bitnp-passport:v1.0.0`。
@@ -91,10 +90,21 @@ openssl rand -base64 32
 - 允许自行注册时，在 realm 中开启 User registration
 - 关闭 Duplicate emails
 - 启用 Forgot password 并配置 SMTP，供用户通过邮件重置密码；按需配置 Verify email、密码策略和多因素认证
-- 将 `ACTIVE_MEMBER_ROLE` 指定的 realm role 分配给现任用户，或通过群组角色映射赋予；通行证据此显示“网协现任”
+- “网协现任”由 `position-*` 角色决定：普通成员通过部门组的 `position-<department>-member` 获得，职务通过个人 `position-*` 授予；`position-association-vice-chair` 仅作为复合角色父级，不单独计入
+- 当前届组织取 `/bitnp/active-YYYY` 下四个部门组都配置了 `position-<department>-member` 的最新一届；增删 `shared/identity.ts` 中的 `departments` 时需同步调整并迁移已有届的映射
 - 通行证本地会话保留两周，登录或令牌续期后延长；令牌是否有效仍由 Keycloak 的 SSO Session、Client Session 等设置控制
 
 帮助页的“重置密码”和账户安全页的“忘记密码？”均通过 `/auth/reset-password` 进入 Keycloak 的 `protocol/openid-connect/forgot-credentials` 重置流程，复用通行证的 OIDC 回调，完成后返回账户安全页。
+
+### 从旧版本升级（移除 `bitnp-active`）
+
+新版本不再读取 `bitnp-active` 或 `ACTIVE_MEMBER_ROLE`，当前届改由四个部门组的 `position-<department>-member` 映射判定。升级前请：
+
+1. 在 Keycloak 中确认当前 `/bitnp/active-YYYY` 下的 `<YYYY>-<department>` 四个组都直接映射了对应的 `position-<department>-member`。旧版本通过换届写入过这些映射；如果之前只在用户或 root 组上手工授予 `bitnp-active`，请先补齐。
+2. 部署后检查“组织与任职换届”页面是否显示当前届，以及非管理员部门管理者能否看到本部门群组。若提示“未识别到当前届组织”，回到第 1 步，或在该页面选择前届、新届完成一次换届。
+3. 确认没有其他客户端消费 `bitnp-active` 的 token/claim 后，删除该 realm role 和同名 client scope，并清理用户/组上的旧映射。
+
+`ACTIVE_MEMBER_ROLE` 可以从 `.env` 中删除；保留旧变量不会导致启动失败，但已不再生效。
 
 ## 首次上线
 
@@ -143,7 +153,7 @@ scripts/publish-release.sh v1.0.0
 
 群组在 Keycloak 中存在后，可在后台“群组配置”中明确纳入或取消纳入。
 
-后台“任职管理”维护个人职务，“系统管理权限”展示有效系统权限及来源。换届页面从 Keycloak 读取当前组织，确认四个部门的成员身份映射、现任标记、个人任职和旧届邀请变化。历史组织关系及个人特殊授权保持独立。
+后台“任职管理”维护个人职务，“系统管理权限”展示有效系统权限及来源。换届页面从 Keycloak 读取当前组织，确认四个部门的成员身份映射、个人任职和旧届邀请变化。历史组织关系及个人特殊授权保持独立。
 
 ## 本地开发
 

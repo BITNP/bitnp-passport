@@ -12,7 +12,6 @@ const settings = z.object({
   SESSION_ENCRYPTION_KEY: z
     .base64()
     .refine((value) => Buffer.from(value, "base64").length === 32),
-  ACTIVE_MEMBER_ROLE: z.string().min(1).default("bitnp-active"),
 });
 
 const value = settings.parse(process.env);
@@ -26,6 +25,5 @@ export const config = {
   serviceClientId: value.KEYCLOAK_SERVICE_CLIENT_ID,
   serviceClientSecret: value.KEYCLOAK_SERVICE_CLIENT_SECRET,
   encryptionKey: Buffer.from(value.SESSION_ENCRYPTION_KEY, "base64"),
-  activeRole: value.ACTIVE_MEMBER_ROLE,
   secureCookies: appUrl.protocol === "https:",
 };

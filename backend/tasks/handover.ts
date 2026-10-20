@@ -9,7 +9,6 @@ import type { TaskData } from "#shared/types";
 
 import { previewAssignment } from "../appointments.ts";
 import { audited } from "../audit.ts";
-import { config } from "../config.ts";
 import { db, withIdentityLock } from "../database.ts";
 import { ApplicationError, errorMessage } from "../errors.ts";
 import { previewHandover } from "../handover.ts";
@@ -101,17 +100,13 @@ export const runHandoverTask = (task: Job<TaskData>, input: HandoverInput) =>
             await perform(`接入新届${member.label}成员身份`, () =>
               setGroupRole(member.next.id, member.role, true),
             );
+          }
+
+          for (const member of preview.members) {
             await perform(`移除前届${member.label}成员身份`, () =>
               setGroupRole(member.previous.id, member.role, false),
             );
           }
-
-          await perform("接入新届现任标记", () =>
-            setGroupRole(preview.next.id, config.activeRole, true),
-          );
-          await perform("移除前届现任标记", () =>
-            setGroupRole(preview.previous.id, config.activeRole, false),
-          );
         },
       );
 

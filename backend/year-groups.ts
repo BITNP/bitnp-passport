@@ -1,5 +1,5 @@
 import { managedGroups } from "#database/schema";
-import { departments } from "#shared/identity";
+import { departmentCodes } from "#shared/identity";
 import type { Actor } from "#shared/types";
 
 import { audited } from "./audit.ts";
@@ -26,11 +26,7 @@ export const prepareYearGroups = async (actor: Actor, year: number) =>
 
         const groups = [{ id, name }];
 
-        for (const department of [
-          ...Object.keys(departments),
-          "master",
-          "management",
-        ]) {
+        for (const department of [...departmentCodes, "master", "management"]) {
           const name = `${year}-${department}`;
           const group = existing?.children.find((group) => group.name === name);
 
