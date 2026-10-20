@@ -96,16 +96,6 @@ openssl rand -base64 32
 
 帮助页的“重置密码”和账户安全页的“忘记密码？”均通过 `/auth/reset-password` 进入 Keycloak 的 `protocol/openid-connect/forgot-credentials` 重置流程，复用通行证的 OIDC 回调，完成后返回账户安全页。
 
-### 从旧版本升级（移除 `bitnp-active`）
-
-新版本不再读取 `bitnp-active` 或 `ACTIVE_MEMBER_ROLE`，当前届改由四个部门组的 `position-<department>-member` 映射判定。升级前请：
-
-1. 在 Keycloak 中确认当前 `/bitnp/active-YYYY` 下的 `<YYYY>-<department>` 四个组都直接映射了对应的 `position-<department>-member`。旧版本通过换届写入过这些映射；如果之前只在用户或 root 组上手工授予 `bitnp-active`，请先补齐。
-2. 部署后检查“组织与任职换届”页面是否显示当前届，以及非管理员部门管理者能否看到本部门群组。若提示“未识别到当前届组织”，回到第 1 步，或在该页面选择前届、新届完成一次换届。
-3. 确认没有其他客户端消费 `bitnp-active` 的 token/claim 后，删除该 realm role 和同名 client scope，并清理用户/组上的旧映射。
-
-`ACTIVE_MEMBER_ROLE` 可以从 `.env` 中删除；保留旧变量不会导致启动失败，但已不再生效。
-
 ## 首次上线
 
 ### 1. 构建镜像
