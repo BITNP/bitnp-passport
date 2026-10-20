@@ -15,7 +15,7 @@ import { appointmentHolders, previewRoleChanges } from "./appointments.ts";
 import { db, withIdentityLock } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
 import { createJob } from "./jobs.ts";
-import { effectiveRoleHolders } from "./keycloak/roles.ts";
+import { directGroupRoles, effectiveRoleHolders } from "./keycloak/roles.ts";
 import * as keycloak from "./keycloak.ts";
 import { organizationGroups, organizationState } from "./organization.ts";
 import { requireAdministrator } from "./permissions.ts";
@@ -54,14 +54,29 @@ export async function previewHandover(actor: Actor, input: HandoverInput) {
     throw new ApplicationError(422, "请选择前届和年份更晚的新届");
   }
 
-  // With no detected term there is nothing to cross-check; handover is also
-  // the recovery path for a realm that has not adopted member-role mappings yet.
-  if (
-    status.activeRoot &&
-    status.activeRoot.id !== previous.id &&
-    status.activeRoot.id !== next.id
-  ) {
-    throw new ApplicationError(409, "所选前届、新届与当前组织不一致");
+  for (const root of status.roots) {
+    if (root.id === previous.id || root.id === next.id) {
+      continue;
+    }
+
+    for (const department of departmentCodes) {
+      const group = root.children.find(
+        (child) => child.name === `${root.year}-${department}`,
+      );
+
+      if (!group) {
+        continue;
+      }
+
+      const roles = await directGroupRoles(group.id);
+
+      if (roles.some((role) => role.name === memberRole(department))) {
+        throw new ApplicationError(
+          409,
+          `${root.path} 仍有成员身份映射，请先完成该届的换届`,
+        );
+      }
+    }
   }
 
   const members = [];
