@@ -3,18 +3,19 @@ import { and, inArray, isNull, sql } from "drizzle-orm";
 import { invitations, jobs } from "#database/schema";
 import type { HandoverInput } from "#shared/handover";
 import {
+  departmentCodes,
   departments,
+  memberRole,
   roleLabel,
   systemAdministratorRole,
 } from "#shared/identity";
 import type { Actor } from "#shared/types";
 
 import { appointmentHolders, previewRoleChanges } from "./appointments.ts";
-import { config } from "./config.ts";
 import { db, withIdentityLock } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
 import { createJob } from "./jobs.ts";
-import { effectiveRoleHolders } from "./keycloak/roles.ts";
+import { directGroupRoles, effectiveRoleHolders } from "./keycloak/roles.ts";
 import * as keycloak from "./keycloak.ts";
 import { organizationGroups, organizationState } from "./organization.ts";
 import { requireAdministrator } from "./permissions.ts";
@@ -22,7 +23,7 @@ import { requireAdministrator } from "./permissions.ts";
 export async function handoverStatus(actor: Actor) {
   await requireAdministrator(actor);
 
-  const [{ roots, activeRoots }, positions] = await Promise.all([
+  const [{ roots, activeRoot }, positions] = await Promise.all([
     keycloak
       .groupTree()
       .then((tree) => organizationState(organizationGroups(tree))),
@@ -30,8 +31,8 @@ export async function handoverStatus(actor: Actor) {
   ]);
 
   return {
-    roots: roots.sort((a, b) => b.year! - a.year!),
-    activeRoots,
+    roots,
+    activeRoot,
     appointments: positions,
   };
 }
@@ -53,28 +54,53 @@ export async function previewHandover(actor: Actor, input: HandoverInput) {
     throw new ApplicationError(422, "请选择前届和年份更晚的新届");
   }
 
-  if (
-    status.activeRoots.some(
-      (group) => group.id !== previous.id && group.id !== next.id,
-    )
-  ) {
-    throw new ApplicationError(409, "所选前届、新届与当前组织不一致");
+  for (const root of status.roots) {
+    if (root.id === previous.id || root.id === next.id) {
+      continue;
+    }
+
+    for (const department of departmentCodes) {
+      const group = root.children.find(
+        (child) => child.name === `${root.year}-${department}`,
+      );
+
+      if (!group) {
+        continue;
+      }
+
+      const roles = await directGroupRoles(group.id);
+
+      if (roles.some((role) => role.name === memberRole(department))) {
+        throw new ApplicationError(
+          409,
+          `${root.path} 仍有成员身份映射，请先完成该届的换届`,
+        );
+      }
+    }
   }
 
   const members = [];
 
-  for (const [department, label] of Object.entries(departments)) {
+  for (const department of departmentCodes) {
+    const label = departments[department];
     const before = previous.children.find(
       (group) => group.name === `${previous.year}-${department}`,
-    )!;
+    );
     const after = next.children.find(
       (group) => group.name === `${next.year}-${department}`,
-    )!;
+    );
+
+    if (!before || !after) {
+      throw new ApplicationError(
+        422,
+        `所选组织缺少 ${previous.year}-${department} 或 ${next.year}-${department} 部门组`,
+      );
+    }
 
     members.push({
       department,
       label,
-      role: `position-${department}-member`,
+      role: memberRole(department),
       previous: before,
       next: after,
     });
@@ -106,14 +132,10 @@ export async function previewHandover(actor: Actor, input: HandoverInput) {
     );
   }
 
-  const groupChanges = [
-    { groupId: previous.id, role: config.activeRole, assigned: false },
-    { groupId: next.id, role: config.activeRole, assigned: true },
-    ...members.flatMap((member) => [
-      { groupId: member.previous.id, role: member.role, assigned: false },
-      { groupId: member.next.id, role: member.role, assigned: true },
-    ]),
-  ];
+  const groupChanges = members.flatMap((member) => [
+    { groupId: member.previous.id, role: member.role, assigned: false },
+    { groupId: member.next.id, role: member.role, assigned: true },
+  ]);
 
   const administrators = (
     await effectiveRoleHolders(systemAdministratorRole)
@@ -183,7 +205,7 @@ export const createHandoverJob = async (actor: Actor, input: HandoverInput) =>
       data: {
         type: "handover",
         input,
-        total: preview.changes.length + preview.members.length * 2 + 3,
+        total: preview.changes.length + preview.members.length * 2 + 1,
       },
       items: [],
       detail: {

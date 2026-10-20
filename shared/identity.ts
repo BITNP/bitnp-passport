@@ -6,7 +6,13 @@ export const departments = {
 } as const;
 
 export type Department = keyof typeof departments;
+export const departmentCodes = Object.keys(
+  departments,
+) as readonly Department[];
 export const systemAdministratorRole = "permission-system-admin";
+
+export const memberRole = (department: Department) =>
+  `position-${department}-member`;
 
 export const positionLabels = {
   "position-association-chair": "主席",
@@ -31,9 +37,15 @@ export const positionLabels = {
   "position-techsvc-deputy-director": "技术保障中心副主任",
 } as const;
 
+/**
+ * The generic vice-chair role is only the composite parent of the
+ * portfolio-specific vice-chair roles, not a separately managed appointment.
+ */
+export const isCurrentPositionRole = (name: string) =>
+  name.startsWith("position-") && name !== "position-association-vice-chair";
+
 export const appointmentRoles = Object.keys(positionLabels).filter(
-  (role) =>
-    !role.endsWith("-member") && role !== "position-association-vice-chair",
+  (role) => !role.endsWith("-member") && isCurrentPositionRole(role),
 );
 
 export function roleLabel(name: string) {
@@ -45,7 +57,9 @@ export function roleLabel(name: string) {
     return "系统管理";
   }
 
-  for (const [department, label] of Object.entries(departments)) {
+  for (const department of departmentCodes) {
+    const label = departments[department];
+
     if (name === `permission-${department}-admin`) {
       return `${label}管理`;
     }

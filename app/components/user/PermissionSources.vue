@@ -4,7 +4,7 @@ import type { InternalApi } from "nitropack/types";
 import { systemAdministratorRole } from "#shared/identity";
 
 type Source =
-  InternalApi["/api/account"]["get"]["permissions"]["activeSources"][number];
+  InternalApi["/api/account"]["get"]["permissions"]["positions"][number]["sources"][number];
 
 defineProps<{
   sources: Source[];

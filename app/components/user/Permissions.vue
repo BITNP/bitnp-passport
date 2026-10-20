@@ -2,18 +2,50 @@
 import type { InternalApi } from "nitropack/types";
 
 import { UserPermissionSources } from "#components";
+import { isCurrentPositionRole } from "#shared/identity";
 
-defineProps<{
+const props = defineProps<{
   permissions: InternalApi["/api/account"]["get"]["permissions"];
   viewerAdministrator: boolean;
 }>();
+
+const currentPositions = computed(() =>
+  props.permissions.positions.filter((position) =>
+    isCurrentPositionRole(position.name),
+  ),
+);
+
+const positionSources = computed(() => {
+  const seen = new Set<string>();
+
+  // A composite role can be a source for more than one position; keep one row
+  // per group and role.
+  return currentPositions.value
+    .flatMap((position) => position.sources)
+    .filter((source) => {
+      const key = `${source.group?.id ?? "user"}:${source.role}`;
+
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+
+      return true;
+    });
+});
+
+const sections = computed(() => [
+  { title: "身份与任职", roles: currentPositions.value },
+  { title: "功能权限", roles: props.permissions.permissions },
+]);
 </script>
 
 <template>
   <NFlex class="permissions-panel" :size="14" vertical>
     <NFlex align="center" :size="6">
       <NPopover
-        v-if="permissions.activeSources.length > 0"
+        v-if="currentPositions.length > 0"
         placement="bottom-start"
         trigger="click"
       >
@@ -30,7 +62,7 @@ defineProps<{
           </NButton>
         </template>
         <UserPermissionSources
-          :sources="permissions.activeSources"
+          :sources="positionSources"
           :viewer-administrator
         />
       </NPopover>
@@ -83,10 +115,7 @@ defineProps<{
       <NText v-else depth="3">暂无组织归属</NText>
     </section>
     <section
-      v-for="section in [
-        { title: '身份与任职', roles: permissions.positions },
-        { title: '功能权限', roles: permissions.permissions },
-      ]"
+      v-for="section in sections"
       :key="section.title"
       class="permission-section"
     >

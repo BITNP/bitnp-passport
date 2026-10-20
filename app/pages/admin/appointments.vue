@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { departments } from "#shared/identity";
+import { departmentCodes, departments } from "#shared/identity";
 
 definePageMeta({ middleware: ["auth", "admin"] });
 
@@ -7,7 +7,7 @@ const { data, error, refresh } = await useFetch("/api/admin/appointments");
 
 const sections = [
   { key: "association", label: "主席团" },
-  ...Object.entries(departments).map(([key, label]) => ({ key, label })),
+  ...departmentCodes.map((key) => ({ key, label: departments[key] })),
 ];
 
 const groups = computed(() => {

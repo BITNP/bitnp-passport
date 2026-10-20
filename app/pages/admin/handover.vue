@@ -42,8 +42,7 @@ function synchronize() {
     return;
   }
 
-  previousRootId.value ??=
-    data.value.activeRoots.length === 1 ? data.value.activeRoots[0]!.id : null;
+  previousRootId.value ??= data.value.activeRoot?.id ?? null;
   roster.value = data.value.appointments.map((position) => ({
     role: position.role,
     current: position.users.map((user) => user.id),
@@ -113,9 +112,14 @@ useFetchError(error, refresh);
   <NuxtLayout name="admin" title="组织与任职换届">
     <NCard title="当前组织">
       <NFlex :size="16" vertical>
-        <NText v-for="root in data?.activeRoots" :key="root.id">
-          当前届：{{ root.path }}
+        <NText v-if="data?.activeRoot">
+          当前届：{{ data?.activeRoot?.path }}
         </NText>
+        <NAlert v-if="data && !data.activeRoot" type="warning">
+          未识别到当前届组织。请确认当前届四个部门组都已配置成员角色映射；
+          在补齐前，非管理员部门管理者将无法管理群组。也可在下方选择前届和新届，
+          通过换届建立当前届。
+        </NAlert>
         <NInputGroup>
           <NInputNumber v-model:value="year" :max="9999" :min="1000" />
           <NButton :loading="pending" @click="create">准备该届组织</NButton>
