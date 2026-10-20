@@ -6,7 +6,9 @@ export const departments = {
 } as const;
 
 export type Department = keyof typeof departments;
-export const departmentCodes = Object.keys(departments) as readonly Department[];
+export const departmentCodes = Object.keys(
+  departments,
+) as readonly Department[];
 export const systemAdministratorRole = "permission-system-admin";
 
 export const memberRole = (department: Department) =>
