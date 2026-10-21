@@ -5,6 +5,12 @@ const [{ data: account, error, refresh }, { data: session }] =
   await Promise.all([useFetch("/api/account"), usePortalSession()]);
 
 useFetchError(error, refresh);
+
+function applyAvatar(avatarUrl: string | null) {
+  if (account.value) {
+    account.value = { ...account.value, avatarUrl };
+  }
+}
 </script>
 
 <template>
@@ -18,10 +24,17 @@ useFetchError(error, refresh);
       :y-gap="20"
     >
       <NGi span="1 m:2">
-        <AccountProfileForm
-          :profile="account.profile"
-          @saved="account = { ...account, profile: $event }"
-        />
+        <NFlex :size="20" vertical>
+          <AccountAvatar
+            :avatar-url="account.avatarUrl"
+            :profile="account.profile"
+            @updated="applyAvatar"
+          />
+          <AccountProfileForm
+            :profile="account.profile"
+            @saved="account = { ...account, profile: $event }"
+          />
+        </NFlex>
       </NGi>
       <NGi>
         <NCard title="权限信息">

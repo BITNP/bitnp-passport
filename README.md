@@ -11,6 +11,7 @@
 - Docker 与 Docker Compose，或者 Podman
 - PostgreSQL
 - Keycloak 26 实例
+- S3 兼容对象存储与公有读头像桶
 
 ## 配置环境变量
 
@@ -22,18 +23,23 @@ cp .env.example .env
 
 编辑 `.env`，填写实际配置：
 
-| 变量                             | 说明                                                                          |
-| -------------------------------- | ----------------------------------------------------------------------------- |
-| `BITNP_PASSPORT_IMAGE`           | 应用镜像名，本机构建可用 `bitnp-passport:local`                               |
-| `APP_URL`                        | 通行证公开地址，如 `https://accounts.bitnp.net`，使用域名根路径               |
-| `DATABASE_URL`                   | 通行证 PostgreSQL 连接串                                                      |
-| `OIDC_ISSUER_URL`                | Keycloak realm 地址，如 `https://sso.example.com/realms/master`，不带末尾斜杠 |
-| `OIDC_CLIENT_ID`                 | 通行证客户端 ID，默认示例为 `bitnp-passport`                                  |
-| `OIDC_CLIENT_SECRET`             | 通行证客户端密钥                                                              |
-| `KEYCLOAK_SERVICE_CLIENT_ID`     | 服务客户端 ID，默认示例为 `bitnp-passport-service`                            |
-| `KEYCLOAK_SERVICE_CLIENT_SECRET` | 服务客户端密钥                                                                |
-| `SESSION_ENCRYPTION_KEY`         | 32 字节随机密钥的 Base64 编码，用于保存登录会话                               |
-| `LOG_LEVEL`                      | 日志级别，通常使用 `info`，排查问题时可改为 `debug`                           |
+| 变量                              | 说明                                                                          |
+| --------------------------------- | ----------------------------------------------------------------------------- |
+| `BITNP_PASSPORT_IMAGE`            | 应用镜像名，本机构建可用 `bitnp-passport:local`                               |
+| `APP_URL`                         | 通行证公开地址，如 `https://accounts.bitnp.net`，使用域名根路径               |
+| `DATABASE_URL`                    | 通行证 PostgreSQL 连接串                                                      |
+| `S3_ENDPOINT`                     | 公有读 S3 兼容端点，如 `https://s3.bitnp.net`，使用 path-style                |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | 对象存储凭据，需要 PutObject、DeleteObject                                    |
+| `S3_BUCKET`                       | 已存在的公有读头像桶                                                          |
+| `OIDC_ISSUER_URL`                 | Keycloak realm 地址，如 `https://sso.example.com/realms/master`，不带末尾斜杠 |
+| `OIDC_CLIENT_ID`                  | 通行证客户端 ID，默认示例为 `bitnp-passport`                                  |
+| `OIDC_CLIENT_SECRET`              | 通行证客户端密钥                                                              |
+| `KEYCLOAK_SERVICE_CLIENT_ID`      | 服务客户端 ID，默认示例为 `bitnp-passport-service`                            |
+| `KEYCLOAK_SERVICE_CLIENT_SECRET`  | 服务客户端密钥                                                                |
+| `SESSION_ENCRYPTION_KEY`          | 32 字节随机密钥的 Base64 编码，用于保存登录会话                               |
+| `LOG_LEVEL`                       | 日志级别，通常使用 `info`，排查问题时可改为 `debug`                           |
+
+头像桶需要已存在并允许匿名 GetObject；通行证使用 PutObject 写入，并在更换或移除头像时清理旧对象。`S3_ENDPOINT` 会直接拼成浏览器访问的头像 URL，必须是用户可访问的公有地址。未配置 `S3_*` 时头像上传不可用，已有头像的显示不受影响。
 
 生产部署建议使用 Forgejo Container Registry 中的固定版本镜像，例如 `git.bitnp.net/bitnp/bitnp-passport:v1.0.0`。
 
@@ -162,6 +168,8 @@ pnpm dev
 ```sh
 pnpm worker
 ```
+
+本地默认不配置 S3，头像上传会返回“头像存储未配置”。需要测试上传时，在 `dev/development.env` 中补充 `S3_ENDPOINT`、`S3_ACCESS_KEY`、`S3_SECRET_KEY` 和 `S3_BUCKET`，使用现有共享 RustFS，不要另起实例。
 
 | 服务                | 地址                                       |
 | ------------------- | ------------------------------------------ |

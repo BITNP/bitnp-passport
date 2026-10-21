@@ -8,7 +8,13 @@ export default defineEventHandler(async (event) => {
   }
 
   return {
-    user: pick(session, ["subject", "username", "displayName", "email"]),
+    user: pick(session, [
+      "subject",
+      "username",
+      "displayName",
+      "email",
+      "avatarUrl",
+    ]),
     administrator: await isAdministrator(session),
   };
 });

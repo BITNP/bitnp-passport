@@ -56,6 +56,25 @@ export async function requireSession(event: H3Event) {
   return session;
 }
 
+export async function refreshPortalSession(event: H3Event) {
+  const token = getCookie(event, cookieName);
+  if (!token) {
+    return;
+  }
+
+  const session = await sessions.refreshSession(token);
+  if (!session) {
+    deleteCookie(event, cookieName, cookieOptions);
+
+    return;
+  }
+
+  setCookie(event, cookieName, token, {
+    ...cookieOptions,
+    expires: session.expiresAt,
+  });
+}
+
 export async function deletePortalSession(event: H3Event) {
   await sessions.deleteSession(getCookie(event, cookieName)!);
   deleteCookie(event, cookieName, cookieOptions);

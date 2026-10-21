@@ -28,7 +28,7 @@ useFetchError(error, refresh);
         :y-gap="20"
       >
         <NGi span="1 m:3">
-          <UserProfile :user="data.user" />
+          <UserProfile :avatar-url="data.avatarUrl" :user="data.user" />
         </NGi>
         <NGi span="1 m:2">
           <NCard title="权限信息">

@@ -1,12 +1,19 @@
 import type { FetchOptions } from "ofetch";
-import { ofetch } from "ofetch";
+import { FetchError, ofetch } from "ofetch";
 
+import { avatarUrlFromAttributes } from "#shared/avatar";
 import type { Actor, Profile, ProfileInput } from "#shared/types";
 
+import { detectAvatarImage } from "./avatar.ts";
 import { config } from "./config.ts";
 import { ApplicationError } from "./errors.ts";
 import { userIdentity } from "./identity.ts";
 import { revokeAccountSessions, updateSessionProfile } from "./sessions.ts";
+import {
+  avatarStorageConfigured,
+  putAvatar,
+  removeAvatar as removeAvatarObject,
+} from "./storage.ts";
 
 interface AccountSession extends Actor {
   accessToken: string;
@@ -69,6 +76,53 @@ const request = <T = void>(
 const readProfile = (accessToken: string) =>
   request<Profile>(accessToken, "?userProfileMetadata=true");
 
+interface ProfileChanges {
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  picture?: string | null;
+}
+
+async function writeProfile(
+  accessToken: string,
+  profile: Profile,
+  changes: ProfileChanges,
+) {
+  const attributes = { ...(profile.attributes ?? {}) };
+  if (changes.picture === null) {
+    delete attributes.picture;
+  } else if (changes.picture) {
+    attributes.picture = [changes.picture];
+  }
+
+  try {
+    await request(accessToken, "", "POST", {
+      username: profile.username,
+      attributes,
+      firstName:
+        changes.firstName === undefined ? profile.firstName : changes.firstName,
+      lastName:
+        changes.lastName === undefined ? profile.lastName : changes.lastName,
+      email: changes.email === undefined ? profile.email : changes.email,
+    });
+  } catch (error) {
+    if (
+      changes.picture !== undefined &&
+      error instanceof FetchError &&
+      error.response?.status === 400
+    ) {
+      throw new ApplicationError(
+        422,
+        "Keycloak 用户资料未接受头像字段，请联系管理员",
+      );
+    }
+
+    throw error;
+  }
+
+  return readProfile(accessToken);
+}
+
 export async function security(accessToken: string) {
   const types = await request<CredentialType[]>(accessToken, "credentials");
 
@@ -86,7 +140,11 @@ export async function overview(actor: AccountSession) {
     userIdentity(actor.subject),
   ]);
 
-  return { profile, permissions: identity.permissions };
+  return {
+    profile,
+    avatarUrl: avatarUrlFromAttributes(profile.attributes),
+    permissions: identity.permissions,
+  };
 }
 
 export async function updateProfile(
@@ -94,19 +152,70 @@ export async function updateProfile(
   input: ProfileInput,
 ) {
   const profile = await readProfile(actor.accessToken);
-
-  await request(actor.accessToken, "", "POST", {
-    username: profile.username,
-    attributes: profile.attributes,
+  const updated = await writeProfile(actor.accessToken, profile, {
     firstName: input.name,
     lastName: null,
     email: input.email,
   });
 
-  const updated = await readProfile(actor.accessToken);
   await updateSessionProfile(actor.subject, updated);
 
   return updated;
+}
+
+export async function updateAvatar(actor: AccountSession, bytes: Buffer) {
+  if (!avatarStorageConfigured()) {
+    throw new ApplicationError(503, "头像存储未配置");
+  }
+
+  const profile = await readProfile(actor.accessToken);
+  const contentType = detectAvatarImage(bytes);
+  const previousAvatarUrl = avatarUrlFromAttributes(profile.attributes);
+  const avatarUrl = await putAvatar(actor.subject, bytes, contentType);
+
+  let updated: Profile;
+  try {
+    updated = await writeProfile(actor.accessToken, profile, {
+      picture: avatarUrl,
+    });
+  } catch (error) {
+    if (avatarUrl !== previousAvatarUrl) {
+      await removeAvatarObject(actor.subject, avatarUrl);
+    }
+
+    throw error;
+  }
+
+  if (avatarUrlFromAttributes(updated.attributes) !== avatarUrl) {
+    throw new ApplicationError(
+      422,
+      "Keycloak 用户资料未接受头像字段，请联系管理员",
+    );
+  }
+
+  if (previousAvatarUrl && previousAvatarUrl !== avatarUrl) {
+    await removeAvatarObject(actor.subject, previousAvatarUrl);
+  }
+
+  return { profile: updated, avatarUrl };
+}
+
+export async function removeAvatar(actor: AccountSession) {
+  const profile = await readProfile(actor.accessToken);
+  const previousAvatarUrl = avatarUrlFromAttributes(profile.attributes);
+  const updated = await writeProfile(actor.accessToken, profile, {
+    picture: null,
+  });
+
+  if (avatarUrlFromAttributes(updated.attributes)) {
+    throw new ApplicationError(422, "Keycloak 未能移除头像，请联系管理员");
+  }
+
+  if (previousAvatarUrl) {
+    await removeAvatarObject(actor.subject, previousAvatarUrl);
+  }
+
+  return { profile: updated, avatarUrl: null };
 }
 
 export async function removeCredential(accessToken: string, id: string) {

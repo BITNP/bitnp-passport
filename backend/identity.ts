@@ -1,3 +1,4 @@
+import { avatarUrlFromAttributes } from "#shared/avatar";
 import {
   departmentCodes,
   departments,
@@ -58,6 +59,7 @@ export async function userIdentity(subject: string) {
 
   return {
     user,
+    avatarUrl: avatarUrlFromAttributes(user.attributes),
     roles: assignments.effectiveRoles.map((role) => pick(role, ["id", "name"])),
     directRoles: assignments.directRoles.map((role) => role.name!),
     permissions: {
