@@ -116,6 +116,7 @@ function cropError() {
         <NFlex :size="8" wrap>
           <NButton
             :disabled="!uploadEnabled || pictureReadOnly || pending"
+            size="small"
             @click="fileInput?.click()"
           >
             {{ avatarUrl ? "更换头像" : "上传头像" }}
