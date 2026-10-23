@@ -6,93 +6,92 @@ import { config } from "./config.ts";
 import { ApplicationError } from "./errors.ts";
 import { logger } from "./logger.ts";
 
-const storage = config.storage && {
-  ...config.storage,
-  client: new AwsClient({
-    accessKeyId: config.storage.accessKey,
-    secretAccessKey: config.storage.secretKey,
+function createAvatarStorage({
+  endpoint,
+  bucket,
+  accessKey,
+  secretKey,
+}: NonNullable<typeof config.storage>) {
+  const baseUrl = new URL(endpoint);
+  baseUrl.pathname = `${baseUrl.pathname.replace(/\/+$/, "")}/${encodeURIComponent(bucket)}/`;
+  baseUrl.search = "";
+  baseUrl.hash = "";
+
+  const client = new AwsClient({
+    accessKeyId: accessKey,
+    secretAccessKey: secretKey,
     service: "s3",
     region: "us-east-1",
-    retries: 0,
-  }),
-};
-
-type Storage = NonNullable<typeof storage>;
-
-function objectUrl(storage: Storage, key: string) {
-  const url = new URL(storage.endpoint);
-  const path = url.pathname.replace(/\/+$/, "");
-  url.pathname = `${path}/${encodeURIComponent(storage.bucket)}/${key.split("/").map(encodeURIComponent).join("/")}`;
-  url.search = "";
-  url.hash = "";
-
-  return url;
-}
-
-async function request(storage: Storage, key: string, options: RequestInit) {
-  let response: Response;
-
-  try {
-    response = await storage.client.fetch(objectUrl(storage, key), {
-      ...options,
-      signal: AbortSignal.timeout(10_000),
-    });
-  } catch (cause) {
-    throw new ApplicationError(502, "头像存储服务不可用", { cause });
-  }
-
-  await response.body?.cancel();
-
-  if (
-    !response.ok &&
-    (options.method !== "DELETE" || response.status !== 404)
-  ) {
-    throw new ApplicationError(502, "头像存储服务不可用");
-  }
-}
-
-export async function putAvatar(
-  subject: string,
-  bytes: Buffer,
-  contentType: string,
-) {
-  if (!storage) {
-    throw new ApplicationError(503, "头像存储未配置");
-  }
-
-  const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
-  const key = `avatars/${encodeURIComponent(subject)}/${hash}`;
-
-  await request(storage, key, {
-    method: "PUT",
-    headers: {
-      "Content-Type": contentType,
-      "Cache-Control": "public, max-age=31536000, immutable",
-    },
-    body: new Uint8Array(bytes),
   });
 
-  return objectUrl(storage, key).href;
+  function objectUrl(key: string) {
+    const url = new URL(baseUrl);
+    url.pathname += key.split("/").map(encodeURIComponent).join("/");
+
+    return url;
+  }
+
+  async function request(url: URL, options: RequestInit) {
+    let response: Response;
+
+    try {
+      response = await fetch(await client.sign(url, options), {
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch (cause) {
+      throw new ApplicationError(502, "头像存储服务不可用", { cause });
+    }
+
+    await response.body?.cancel();
+
+    if (!response.ok) {
+      throw new ApplicationError(502, "头像存储服务不可用");
+    }
+  }
+
+  return {
+    async put(subject: string, bytes: Buffer, contentType: string) {
+      const hash = createHash("sha256")
+        .update(bytes)
+        .digest("hex")
+        .slice(0, 16);
+      const key = `avatars/${encodeURIComponent(subject)}/${hash}`;
+      const url = objectUrl(key);
+
+      await request(url, {
+        method: "PUT",
+        headers: {
+          "Content-Type": contentType,
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+        body: new Uint8Array(bytes),
+      });
+
+      return url.href;
+    },
+
+    async delete(subject: string, avatarUrl: string | null) {
+      if (!avatarUrl) {
+        return;
+      }
+
+      const url = new URL(avatarUrl);
+      const filename = url.pathname.slice(url.pathname.lastIndexOf("/") + 1);
+      const key = `avatars/${encodeURIComponent(subject)}/${filename}`;
+
+      if (url.href !== objectUrl(key).href) {
+        return;
+      }
+
+      try {
+        await request(url, { method: "DELETE" });
+      } catch (err) {
+        logger.warn({ err, avatarUrl }, "删除旧头像失败");
+      }
+    },
+  };
 }
 
-export async function deleteAvatar(subject: string, avatarUrl: string | null) {
-  if (!storage || !avatarUrl) {
-    return;
-  }
-
-  const directory = `avatars/${encodeURIComponent(subject)}/`;
-  const prefix = objectUrl(storage, directory).href;
-  const hash = avatarUrl.slice(prefix.length);
-
-  if (!avatarUrl.startsWith(prefix) || !/^[a-f0-9]{16}$/.test(hash)) {
-    return;
-  }
-
-  const key = `${directory}${hash}`;
-
-  try {
-    await request(storage, key, { method: "DELETE" });
-  } catch (err) {
-    logger.warn({ err, key }, "删除旧头像失败");
-  }
-}
+export const avatarStorage = config.storage
+  ? createAvatarStorage(config.storage)
+  : null;

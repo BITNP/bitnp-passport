@@ -16,7 +16,7 @@ import { userIdentity } from "./identity.ts";
 import { effectiveUserRoles } from "./keycloak/roles.ts";
 import * as keycloak from "./keycloak.ts";
 import { revokeAccountSessions, updateSessionProfile } from "./sessions.ts";
-import { deleteAvatar, putAvatar } from "./storage.ts";
+import { avatarStorage } from "./storage.ts";
 import { pick } from "./utils.ts";
 
 interface AccountSession extends Actor {
@@ -181,7 +181,7 @@ export async function overview(actor: AccountSession) {
 
   return {
     profile: accountProfile(actor.subject, profile),
-    avatarUploadEnabled: config.storage !== null,
+    avatarUploadEnabled: avatarStorage !== null,
     permissions: identity.permissions,
   };
 }
@@ -209,9 +209,17 @@ export async function updateAvatar(actor: AccountSession, bytes: Buffer) {
   const contentType = detectAvatarImage(bytes);
 
   return withProfileLock(actor.subject, async () => {
+    if (!avatarStorage) {
+      throw new ApplicationError(503, "头像存储未配置");
+    }
+
     const profile = await readProfile(actor.accessToken);
     const previousAvatarUrl = avatarUrlFromAttributes(profile.attributes);
-    const avatarUrl = await putAvatar(actor.subject, bytes, contentType);
+    const avatarUrl = await avatarStorage.put(
+      actor.subject,
+      bytes,
+      contentType,
+    );
     try {
       await writeProfile(actor.accessToken, {
         ...profile,
@@ -224,7 +232,7 @@ export async function updateAvatar(actor: AccountSession, bytes: Buffer) {
         error.response &&
         [400, 401, 403, 404, 422].includes(error.response.status)
       ) {
-        await deleteAvatar(actor.subject, avatarUrl);
+        await avatarStorage.delete(actor.subject, avatarUrl);
       }
 
       throw error;
@@ -233,13 +241,13 @@ export async function updateAvatar(actor: AccountSession, bytes: Buffer) {
     const updated = await readProfile(actor.accessToken);
 
     if (avatarUrlFromAttributes(updated.attributes) !== avatarUrl) {
-      await deleteAvatar(actor.subject, avatarUrl);
+      await avatarStorage.delete(actor.subject, avatarUrl);
 
       throw new ApplicationError(422, "Keycloak 未接受头像字段，请联系管理员");
     }
 
     if (previousAvatarUrl !== avatarUrl) {
-      await deleteAvatar(actor.subject, previousAvatarUrl);
+      await avatarStorage.delete(actor.subject, previousAvatarUrl);
     }
 
     return accountProfile(actor.subject, updated);
@@ -260,7 +268,7 @@ export const removeAvatar = (actor: AccountSession) =>
       throw new ApplicationError(422, "Keycloak 未能移除头像，请联系管理员");
     }
 
-    await deleteAvatar(actor.subject, previousAvatarUrl);
+    await avatarStorage?.delete(actor.subject, previousAvatarUrl);
 
     return accountProfile(actor.subject, updated);
   });
