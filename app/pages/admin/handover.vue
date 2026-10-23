@@ -2,6 +2,8 @@
 import type { InternalApi } from "nitropack/types";
 
 import { roleLabel } from "#shared/identity";
+import type { DirectoryUser } from "#shared/user";
+import { userLabel } from "#shared/user";
 
 definePageMeta({ middleware: ["auth", "admin"] });
 
@@ -17,7 +19,7 @@ const preview = ref<InternalApi["/api/admin/handover/preview"]["post"] | null>(
   null,
 );
 const candidate = reactive<Record<string, string | null>>({});
-const chosenUsers = reactive<Record<string, string>>({});
+const users = reactive(new Map<string, DirectoryUser>());
 
 const addCandidate = (role: string) =>
   submit(async () => {
@@ -27,7 +29,7 @@ const addCandidate = (role: string) =>
 
     const position = roster.value.find((position) => position.role === role)!;
     position.next = [...new Set([...position.next, user.id])];
-    chosenUsers[user.id] = user.username;
+    users.set(user.id, user);
     candidate[role] = null;
   });
 
@@ -40,6 +42,12 @@ const options = computed(
 function synchronize() {
   if (!data.value) {
     return;
+  }
+
+  for (const position of data.value.appointments) {
+    for (const user of position.users) {
+      users.set(user.id, user);
+    }
   }
 
   previousRootId.value ??= data.value.activeRoot?.id ?? null;
@@ -98,13 +106,6 @@ const create = () =>
     message.success("新届群组已就绪");
   });
 
-const userLabel = (id: string) =>
-  data.value?.appointments
-    .flatMap((position) => position.users)
-    .find((user) => user.id === id)?.username ??
-  chosenUsers[id] ??
-  id;
-
 useFetchError(error, refresh);
 </script>
 
@@ -153,13 +154,14 @@ useFetchError(error, refresh);
                   (item) => item.role === position.role,
                 )?.users ?? []"
                 :key="user.id"
+                class="user-choice"
                 :disabled="
                   !user.enabled || position.next.includes(user.id) || pending
                 "
                 size="small"
                 @click="position.next = [...position.next, user.id]"
               >
-                {{ user.username }}
+                {{ userLabel(user) }}
               </NButton>
             </NFlex>
             <NText depth="3">新届安排：</NText>
@@ -167,12 +169,13 @@ useFetchError(error, refresh);
               <NTag
                 v-for="subject in position.next"
                 :key="subject"
+                class="user-choice"
                 closable
                 @close="
                   position.next = position.next.filter((id) => id !== subject)
                 "
               >
-                {{ userLabel(subject) }}
+                {{ userLabel(users.get(subject)!) }}
               </NTag>
               <NText v-if="position.next.length === 0" depth="3">空缺</NText>
             </NFlex>
@@ -210,7 +213,7 @@ useFetchError(error, refresh);
             :key="`${change.subject}:${change.role}`"
           >
             {{ change.assigned ? "任命" : "离任" }}
-            {{ change.preview.user.username }}：{{ roleLabel(change.role) }}
+            {{ userLabel(change.preview.user) }}：{{ roleLabel(change.role) }}
             <NText depth="3" tag="div">
               变更后权限：{{
                 change.preview.after.map((role) => role.label).join("、") ||
@@ -227,3 +230,19 @@ useFetchError(error, refresh);
     </NCard>
   </NuxtLayout>
 </template>
+
+<style scoped>
+.user-choice {
+  height: auto;
+  min-height: 28px;
+  max-width: 100%;
+  padding: 4px 8px;
+}
+
+.user-choice :deep(.n-button__content),
+.user-choice :deep(.n-tag__content) {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+</style>

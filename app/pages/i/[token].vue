@@ -65,7 +65,7 @@ const switchAccount = () =>
       <NDescriptions :column="1" label-placement="left">
         <NDescriptionsItem v-if="session" label="当前账户">
           <UserIdentity
-            :description="session.user.username"
+            show-username
             :size="32"
             to="/account"
             :user="session.user"

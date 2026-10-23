@@ -20,19 +20,8 @@ const keycloakPages = {
         操作记录
       </NuxtLink>
     </template>
-    <UserIdentity
-      class="profile-header"
-      :description="user.username"
-      :size="64"
-      :user
-    />
+    <UserIdentity class="profile-header" show-username :size="64" :user />
     <NDescriptions :column="1" label-placement="left">
-      <NDescriptionsItem label="用户名">
-        {{ user.username }}
-      </NDescriptionsItem>
-      <NDescriptionsItem label="姓名">
-        {{ user.name || " - " }}
-      </NDescriptionsItem>
       <NDescriptionsItem label="邮箱">
         <NFlex align="center" :size="8">
           <template v-if="user.email">

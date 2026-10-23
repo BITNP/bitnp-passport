@@ -9,6 +9,7 @@ import {
 } from "#database/schema";
 import type { AuditOperation, AuditTarget } from "#shared/events";
 import type { Actor } from "#shared/types";
+import { userLabel } from "#shared/user";
 import { formatDateTime } from "#shared/utils";
 
 import { db } from "../database.ts";
@@ -67,7 +68,7 @@ async function userReference(
 
   return {
     id,
-    label: user.name ? `${user.name}（${user.username}）` : user.username,
+    label: userLabel(user),
     to:
       id === viewer.subject
         ? "/account"

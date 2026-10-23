@@ -6,8 +6,7 @@ import type { User } from "#shared/user";
 
 const { size = 24 } = defineProps<{
   user: User;
-  label?: string;
-  description?: string;
+  showUsername?: boolean;
   size?: number;
   to?: RouteLocationRaw | null;
 }>();
@@ -22,10 +21,14 @@ const { size = 24 } = defineProps<{
     <UserAvatar aria-hidden="true" class="identity-avatar" :size :user />
     <span class="identity-text">
       <NEllipsis class="identity-name">
-        {{ label ?? (user.name || user.username) }}
+        {{ user.name || user.username }}
       </NEllipsis>
-      <NText v-if="description" class="identity-description" depth="3">
-        {{ description }}
+      <NText
+        v-if="showUsername && user.name && user.name !== user.username"
+        class="identity-username"
+        depth="3"
+      >
+        <NEllipsis>{{ user.username }}</NEllipsis>
       </NText>
     </span>
   </component>
@@ -55,8 +58,8 @@ const { size = 24 } = defineProps<{
   max-width: 100%;
 }
 
-.identity-description {
-  font-size: 14px;
+.identity-username {
+  font-size: 12px;
   font-weight: 400;
 }
 </style>

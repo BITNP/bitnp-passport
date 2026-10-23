@@ -6,6 +6,7 @@ import type { HandoverInput } from "#shared/handover";
 import { roleLabel } from "#shared/identity";
 import type { JobResult } from "#shared/jobs";
 import type { TaskData } from "#shared/types";
+import { userLabel } from "#shared/user";
 
 import { previewAssignment } from "../appointments.ts";
 import { audited } from "../audit.ts";
@@ -82,7 +83,7 @@ export const runHandoverTask = (task: Job<TaskData>, input: HandoverInput) =>
               (change) => change.assigned === assigned,
             )) {
               await perform(
-                `${assigned ? "任命" : "撤销"} ${change.preview.user.username}：${roleLabel(change.role)}`,
+                `${assigned ? "任命" : "撤销"} ${userLabel(change.preview.user)}：${roleLabel(change.role)}`,
                 async () => {
                   await previewAssignment(change.subject, {
                     role: change.role,

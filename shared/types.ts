@@ -1,3 +1,5 @@
+import type { DirectoryUser } from "#shared/user";
+
 export interface Actor {
   subject: string;
 }
@@ -21,20 +23,13 @@ export interface TaskData {
   actorSubject: string;
 }
 
-interface PreviewUser {
-  id: string;
-  username: string;
-  email?: string | null;
-  enabled?: boolean;
-}
-
 export interface MembershipPreview {
   matched: {
     identifier: string;
-    user: PreviewUser;
+    user: DirectoryUser;
     member: boolean;
   }[];
   unmatched: string[];
-  outside: PreviewUser[];
+  outside: DirectoryUser[];
   memberCount: number;
 }

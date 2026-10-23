@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DataTableColumns } from "naive-ui";
 
+import { UserIdentity } from "#components";
 import type { MembershipPreview } from "#shared/types";
 
 const { groupId, preview } = defineProps<{
@@ -46,7 +47,12 @@ const enqueue = () =>
 
 const columns: DataTableColumns<(typeof candidates.value)[number]> = [
   { type: "selection" },
-  { title: "用户名", key: "username", minWidth: 160 },
+  {
+    title: "用户",
+    key: "user",
+    minWidth: 240,
+    render: (user) => h(UserIdentity, { user, showUsername: true }),
+  },
   { title: "邮箱", key: "email", minWidth: 240 },
 ];
 </script>
@@ -64,7 +70,7 @@ const columns: DataTableColumns<(typeof candidates.value)[number]> = [
         :columns
         :data="candidates"
         :row-key="(user) => user.id"
-        :scroll-x="450"
+        :scroll-x="520"
         @update:checked-row-keys="job.subjects = $event as string[]"
       />
       <NFlex align="center" justify="space-between">

@@ -49,13 +49,13 @@ useFetchError(error, refresh);
               <div class="appointment-row">
                 <NText depth="2">{{ position.label }}</NText>
                 <NFlex v-if="position.users.length > 0" :size="[16, 8]" wrap>
-                  <NuxtLink
+                  <UserIdentity
                     v-for="user in position.users"
                     :key="user.id"
+                    show-username
                     :to="`/admin/users/${encodeURIComponent(user.id)}`"
-                  >
-                    {{ user.username }}
-                  </NuxtLink>
+                    :user
+                  />
                 </NFlex>
                 <NText v-else depth="3">暂时空缺</NText>
               </div>

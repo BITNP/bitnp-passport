@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DataTableColumns } from "naive-ui";
 
+import { UserIdentity } from "#components";
 import type { MembershipPreview } from "#shared/types";
 
 const { preview } = defineProps<{ preview: MembershipPreview }>();
@@ -9,9 +10,9 @@ const columns: DataTableColumns<MembershipPreview["matched"][number]> = [
   { title: "输入", key: "identifier", minWidth: 200 },
   {
     title: "匹配账户",
-    key: "username",
-    minWidth: 160,
-    render: (row) => row.user.username,
+    key: "user",
+    minWidth: 220,
+    render: (row) => h(UserIdentity, { user: row.user, showUsername: true }),
   },
   {
     title: "当前状态",
@@ -44,14 +45,21 @@ const columns: DataTableColumns<MembershipPreview["matched"][number]> = [
         :columns
         :data="preview.matched"
         :row-key="(row) => row.identifier"
-        :scroll-x="560"
+        :scroll-x="620"
       />
       <NCollapse v-if="preview.outside.length > 0">
         <NCollapseItem
           name="outside"
           :title="`名单外成员（${preview.outside.length}）`"
         >
-          {{ preview.outside.map((user) => user.username).join("、") }}
+          <NFlex :size="[16, 8]" wrap>
+            <UserIdentity
+              v-for="user in preview.outside"
+              :key="user.id"
+              show-username
+              :user
+            />
+          </NFlex>
         </NCollapseItem>
       </NCollapse>
     </NFlex>

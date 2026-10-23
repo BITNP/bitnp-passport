@@ -6,9 +6,11 @@ import {
   roleLabel,
   systemAdministratorRole,
 } from "#shared/identity";
+import type { DirectoryUser } from "#shared/user";
+import { userLabel } from "#shared/user";
 
 const { user, directRoles, refresh } = defineProps<{
-  user: { id: string; username: string; enabled: boolean };
+  user: DirectoryUser;
   directRoles: string[];
   refresh: () => Promise<void>;
 }>();
@@ -112,7 +114,9 @@ const confirm = () =>
     >
       <NFlex v-if="preview" :size="16" vertical>
         <NText>
-          {{ preview.user.username }}：{{ preview.assigned ? "授予" : "撤销" }}
+          {{ userLabel(preview.user) }}：{{
+            preview.assigned ? "授予" : "撤销"
+          }}
           {{ roleLabel(preview.role) }}
         </NText>
         <NAlert v-if="preview.role === systemAdministratorRole" type="warning">

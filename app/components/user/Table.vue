@@ -22,14 +22,14 @@ const { data: session } = await usePortalSession();
 
 const columns: DataTableColumns<DirectoryUser> = [
   {
-    title: "用户名",
-    key: "username",
-    minWidth: 200,
+    title: "用户",
+    key: "user",
+    minWidth: 240,
     render: (user) =>
       h(NFlex, { align: "center", size: 8 }, () => [
         h(UserIdentity, {
           user,
-          label: user.username,
+          showUsername: true,
           to: {
             path: `/admin/users/${encodeURIComponent(user.id)}`,
             query: userQuery,
@@ -39,12 +39,6 @@ const columns: DataTableColumns<DirectoryUser> = [
           ? h(NTag, { bordered: false, size: "small" }, () => "当前账户")
           : null,
       ]),
-  },
-  {
-    title: "姓名",
-    key: "name",
-    minWidth: 120,
-    render: (user) => user.name || " - ",
   },
   {
     title: "邮箱",
@@ -91,6 +85,6 @@ const columns: DataTableColumns<DirectoryUser> = [
     :data="users"
     :loading
     :row-key="(user: DirectoryUser) => user.id"
-    :scroll-x="980"
+    :scroll-x="900"
   />
 </template>

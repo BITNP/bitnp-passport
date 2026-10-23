@@ -30,6 +30,7 @@ useHead({ title: () => props.title });
 <template>
   <NuxtLayout name="page">
     <NPageHeader
+      class="admin-heading"
       :on-back="props.back ? () => navigateTo(props.back) : undefined"
     >
       <template #title>
@@ -54,3 +55,21 @@ useHead({ title: () => props.title });
     <slot />
   </NuxtLayout>
 </template>
+
+<style scoped>
+.admin-heading :deep(.n-page-header) {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin-heading :deep(.n-page-header__main) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-heading :deep(.n-page-header__title) {
+  min-width: 0;
+  margin-right: 0;
+  overflow-wrap: anywhere;
+}
+</style>

@@ -27,3 +27,8 @@ export interface ProfileInput {
   name: string;
   email?: string | null;
 }
+
+export const userLabel = (user: Pick<User, "name" | "username">): string =>
+  user.name && user.name !== user.username
+    ? `${user.name}（${user.username}）`
+    : user.username;

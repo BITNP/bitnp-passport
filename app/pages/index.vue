@@ -19,7 +19,6 @@ useHead({ title: "首页" });
         <UserIdentity
           v-if="session"
           class="account-summary"
-          :description="session.user.username"
           :size="48"
           to="/account"
           :user="session.user"

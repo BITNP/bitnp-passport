@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import type { InternalApi } from "nitropack/types";
 
+import type { DirectoryUser } from "#shared/user";
+import { userLabel } from "#shared/user";
+
 const { user, memberships, refresh } = defineProps<{
-  user: { id: string; username: string; enabled: boolean };
+  user: DirectoryUser;
   memberships: InternalApi["/api/admin/users/:id"]["get"]["permissions"]["memberships"];
   refresh: () => Promise<void>;
 }>();
@@ -81,7 +84,7 @@ useFetchError(error, refreshGroups);
           <template #suffix>
             <ConfirmAction
               :disabled="pending"
-              :message="`确认将 ${user.username} 从 ${group.label} 移除？`"
+              :message="`确认将 ${userLabel(user)} 从 ${group.label} 移除？`"
               @confirm="removeGroup(group.id)"
             >
               移除

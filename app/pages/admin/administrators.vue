@@ -15,7 +15,7 @@ useFetchError(error, refresh);
             <NFlex align="center" :size="8">
               <UserIdentity
                 class="administrator-name"
-                :label="user.username"
+                show-username
                 :to="`/admin/users/${encodeURIComponent(user.id)}`"
                 :user
               />

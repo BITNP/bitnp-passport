@@ -4,6 +4,7 @@ import type { InternalApi } from "nitropack/types";
 
 import { ConfirmAction, UserIdentity } from "#components";
 import type { DirectoryUser } from "#shared/user";
+import { userLabel } from "#shared/user";
 
 const { groupId, members, note, loading, session, refresh } = defineProps<{
   groupId: string;
@@ -38,9 +39,9 @@ const removeMember = (subject: string) =>
 
 const columns: DataTableColumns<DirectoryUser> = [
   {
-    title: "用户名",
-    key: "username",
-    minWidth: 200,
+    title: "用户",
+    key: "user",
+    minWidth: 240,
     render: (member) => {
       const target = session?.administrator
         ? `/admin/users/${encodeURIComponent(member.id)}`
@@ -50,16 +51,10 @@ const columns: DataTableColumns<DirectoryUser> = [
 
       return h(UserIdentity, {
         user: member,
-        label: member.username,
+        showUsername: true,
         to: target,
       });
     },
-  },
-  {
-    title: "姓名",
-    key: "name",
-    minWidth: 120,
-    render: (member) => member.name || " - ",
   },
   {
     title: "邮箱",
@@ -76,7 +71,7 @@ const columns: DataTableColumns<DirectoryUser> = [
         ConfirmAction,
         {
           disabled: pending.value,
-          message: `确认将 ${member.username} 从本群组移除？`,
+          message: `确认将 ${userLabel(member)} 从本群组移除？`,
           onConfirm: () => removeMember(member.id),
         },
         { default: () => "移除" },
@@ -141,7 +136,7 @@ const columns: DataTableColumns<DirectoryUser> = [
           size: 'small',
         }"
         :row-key="(member) => member.id"
-        :scroll-x="720"
+        :scroll-x="600"
       />
     </NFlex>
   </NCard>

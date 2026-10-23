@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { userLabel } from "#shared/user";
+
 definePageMeta({ middleware: ["auth", "admin"] });
 
 const route = useRoute();
@@ -13,7 +15,7 @@ useFetchError(error, refresh);
   <NuxtLayout
     :back="{ path: '/admin/users', query: route.query }"
     name="admin"
-    :title="data?.user.username || '用户详情'"
+    :title="data ? userLabel(data.user) : '用户详情'"
   >
     <NCard>
       <UserSearch />
