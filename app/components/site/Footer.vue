@@ -1,3 +1,7 @@
+<script setup lang="ts">
+const { version } = useAppConfig();
+</script>
+
 <template>
   <NLayoutFooter>
     <NFlex
@@ -6,10 +10,13 @@
       justify="space-between"
       :size="12"
     >
-      <NText depth="3" tag="small">
-        北京理工大学网络开拓者协会。图标来自
-        <a href="https://www.flaticon.com/authors/freepik">Freepik</a>
-      </NText>
+      <NFlex :size="2" vertical>
+        <NText depth="2" tag="small">网协通行证 v{{ version }}</NText>
+        <NText depth="3" tag="small">
+          北京理工大学网络开拓者协会。图标来自
+          <a href="https://www.flaticon.com/authors/freepik">Freepik</a>
+        </NText>
+      </NFlex>
       <NFlex align="center" :size="20">
         <LinkButton size="tiny" text to="/tos">使用条款</LinkButton>
         <LinkButton size="tiny" text to="/help">联系与帮助</LinkButton>

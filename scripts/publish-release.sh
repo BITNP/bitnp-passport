@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-version=${1:?usage: scripts/publish-release.sh v1.0.0}
+version="v$(node -p 'require("./package.json").version')"
 revision=$(git rev-parse HEAD)
 short_revision=$(git rev-parse --short=12 HEAD)
 readonly version revision short_revision

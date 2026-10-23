@@ -1,9 +1,14 @@
 import { NaiveUiResolver } from "unplugin-vue-components/resolvers";
 import Components from "unplugin-vue-components/vite";
 
+import { version } from "./package.json";
+
 export default defineNuxtConfig({
   compatibilityDate: "2026-09-06",
   ssr: false,
+  appConfig: {
+    version,
+  },
   modules: ["@nuxt/eslint", "@nuxtjs/color-mode"],
   imports: {
     presets: [{ from: "naive-ui", imports: ["useMessage"] }],

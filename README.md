@@ -142,8 +142,10 @@ git remote add forgejo https://git.bitnp.net/BITNP/bitnp-passport.git
 docker login git.bitnp.net
 ```
 
+先更新 `package.json` 中的版本号，再发布：
+
 ```sh
-scripts/publish-release.sh v1.0.0
+scripts/publish-release.sh
 ```
 
 ## 组织与换届
