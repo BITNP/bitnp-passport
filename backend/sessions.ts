@@ -2,6 +2,7 @@ import { and, eq, gt, gte, inArray, isNull, lt, or } from "drizzle-orm";
 import * as oidc from "openid-client";
 
 import { decrypt, encrypt, randomToken, tokenHash } from "#backend/crypto";
+import type { DatabaseTransaction } from "#backend/database";
 import { db } from "#backend/database";
 import { ApplicationError } from "#backend/errors";
 import { pick } from "#backend/utils";
@@ -171,8 +172,12 @@ export async function readSession(token: string) {
   };
 }
 
-export async function updateSessionProfile(subject: string, profile: Profile) {
-  await db
+export async function updateSessionProfile(
+  tx: DatabaseTransaction,
+  subject: string,
+  profile: Profile,
+) {
+  await tx
     .update(sessions)
     .set({
       username: profile.username,

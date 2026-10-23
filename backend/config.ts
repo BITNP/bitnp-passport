@@ -15,6 +15,24 @@ const settings = z.object({
 });
 
 const value = settings.parse(process.env);
+const { S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET } = process.env;
+const storage = [S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET].some(
+  Boolean,
+)
+  ? z
+      .object({
+        endpoint: httpUrl,
+        accessKey: z.string().min(1),
+        secretKey: z.string().min(1),
+        bucket: z.string().min(1),
+      })
+      .parse({
+        endpoint: S3_ENDPOINT,
+        accessKey: S3_ACCESS_KEY,
+        secretKey: S3_SECRET_KEY,
+        bucket: S3_BUCKET,
+      })
+  : null;
 const appUrl = new URL(value.APP_URL);
 
 export const config = {
@@ -26,4 +44,5 @@ export const config = {
   serviceClientSecret: value.KEYCLOAK_SERVICE_CLIENT_SECRET,
   encryptionKey: Buffer.from(value.SESSION_ENCRYPTION_KEY, "base64"),
   secureCookies: appUrl.protocol === "https:",
+  storage,
 };

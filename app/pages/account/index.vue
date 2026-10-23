@@ -18,10 +18,17 @@ useFetchError(error, refresh);
       :y-gap="20"
     >
       <NGi span="1 m:2">
-        <AccountProfileForm
-          :profile="account.profile"
-          @saved="account = { ...account, profile: $event }"
-        />
+        <NFlex :size="20" vertical>
+          <AccountAvatar
+            :profile="account.profile"
+            :upload-enabled="account.avatarUploadEnabled"
+            @saved="account = { ...account, profile: $event }"
+          />
+          <AccountProfileForm
+            :profile="account.profile"
+            @saved="account = { ...account, profile: $event }"
+          />
+        </NFlex>
       </NGi>
       <NGi>
         <NCard title="权限信息">

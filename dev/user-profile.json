@@ -14,6 +14,18 @@
       }
     },
     {
+      "name": "picture",
+      "displayName": "头像",
+      "permissions": {
+        "view": ["admin", "user"],
+        "edit": ["admin", "user"]
+      },
+      "validations": {
+        "length": { "max": 2048 }
+      },
+      "multivalued": false
+    },
+    {
       "name": "email",
       "displayName": "${email}",
       "required": { "roles": ["user"] },

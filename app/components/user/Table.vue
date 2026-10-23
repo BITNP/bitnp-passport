@@ -5,7 +5,7 @@ import type { InternalApi } from "nitropack/types";
 import type { VNode } from "vue";
 import type { LocationQueryRaw } from "vue-router";
 
-import { NuxtLink } from "#components";
+import { NuxtLink, UserAvatar } from "#components";
 import { formatDateTime } from "#shared/utils";
 
 type User = InternalApi["/api/admin/users"]["get"]["users"][number];
@@ -26,9 +26,14 @@ const columns: DataTableColumns<User> = [
   {
     title: "用户名",
     key: "username",
-    minWidth: 160,
+    minWidth: 200,
     render: (user) =>
       h(NFlex, { align: "center", size: 8 }, () => [
+        h(UserAvatar, {
+          name: [user.lastName, user.firstName].join("") || user.username,
+          size: 24,
+          src: user.avatarUrl,
+        }),
         h(
           NuxtLink,
           {
@@ -95,6 +100,6 @@ const columns: DataTableColumns<User> = [
     :data="users"
     :loading
     :row-key="(user: User) => user.id"
-    :scroll-x="940"
+    :scroll-x="980"
   />
 </template>

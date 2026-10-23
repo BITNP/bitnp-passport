@@ -1,3 +1,4 @@
+import { avatarUrlFromAttributes } from "#shared/avatar";
 import type { GroupNode } from "#shared/types";
 
 import { config } from "./config.ts";
@@ -9,8 +10,8 @@ import type {
 import { allPages, client, request } from "./keycloak/shared.ts";
 import { pick } from "./utils.ts";
 
-const userSummary = (user: UserRepresentation) =>
-  pick(user as Required<UserRepresentation>, [
+const userSummary = (user: UserRepresentation) => ({
+  ...pick(user as Required<UserRepresentation>, [
     "id",
     "username",
     "firstName",
@@ -18,7 +19,9 @@ const userSummary = (user: UserRepresentation) =>
     "email",
     "enabled",
     "createdTimestamp",
-  ]);
+  ]),
+  avatarUrl: avatarUrlFromAttributes(user.attributes),
+});
 
 export const consoleUrl = new URL(
   `../../admin/${encodeURIComponent(client.realmName)}/console/`,
@@ -70,13 +73,13 @@ export async function searchUsers(search: string, first: number) {
         search,
         first,
         max: 50,
-        briefRepresentation: true,
+        briefRepresentation: false,
       }),
       client.users.count({ search }),
     ]),
   );
 
-  return { users: users as Required<UserRepresentation>[], total };
+  return { users: users.map(userSummary), total };
 }
 
 export async function resolveUser(identifier: string) {
@@ -179,7 +182,7 @@ export async function members(id: string) {
         id,
         first,
         max,
-        briefRepresentation: true,
+        briefRepresentation: false,
       }),
     ),
   );

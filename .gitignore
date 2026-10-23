@@ -17,3 +17,6 @@ devenv.local.nix
 .env
 .env.*
 !.env.example
+
+.eslintcache
+.prettier-cache

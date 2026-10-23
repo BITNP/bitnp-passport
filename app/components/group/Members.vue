@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { DataTableColumns } from "naive-ui";
+import { NFlex } from "naive-ui";
 import type { InternalApi } from "nitropack/types";
 
-import { ConfirmAction, NuxtLink } from "#components";
+import { ConfirmAction, NuxtLink, UserAvatar } from "#components";
 
 type Member = InternalApi["/api/groups/:id"]["get"]["members"][number];
 
@@ -41,21 +42,24 @@ const columns: DataTableColumns<Member> = [
   {
     title: "用户名",
     key: "username",
-    minWidth: 160,
+    minWidth: 200,
     render: (member) => {
-      if (session?.administrator) {
-        return h(
-          NuxtLink,
-          { to: `/admin/users/${encodeURIComponent(member.id)}` },
-          () => member.username,
-        );
-      }
+      const target = session?.administrator
+        ? `/admin/users/${encodeURIComponent(member.id)}`
+        : session?.user.subject === member.id
+          ? "/account"
+          : null;
 
-      if (session?.user.subject === member.id) {
-        return h(NuxtLink, { to: "/account" }, () => member.username);
-      }
-
-      return member.username;
+      return h(NFlex, { align: "center", size: 8 }, () => [
+        h(UserAvatar, {
+          name: [member.lastName, member.firstName].join("") || member.username,
+          size: 24,
+          src: member.avatarUrl,
+        }),
+        target
+          ? h(NuxtLink, { to: target }, () => member.username)
+          : member.username,
+      ]);
     },
   },
   {
@@ -144,7 +148,7 @@ const columns: DataTableColumns<Member> = [
           size: 'small',
         }"
         :row-key="(member) => member.id"
-        :scroll-x="680"
+        :scroll-x="720"
       />
     </NFlex>
   </NCard>

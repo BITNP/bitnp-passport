@@ -3,8 +3,9 @@ import type { InternalApi } from "nitropack/types";
 
 import { formatDateTime } from "#shared/utils";
 
-const { user } = defineProps<{
+const { user, avatarUrl } = defineProps<{
   user: InternalApi["/api/admin/users/:id"]["get"]["user"];
+  avatarUrl: string | null;
 }>();
 
 const keycloakPages = {
@@ -21,6 +22,19 @@ const keycloakPages = {
         操作记录
       </NuxtLink>
     </template>
+    <NFlex align="center" class="profile-header" :size="16">
+      <UserAvatar
+        :name="[user.lastName, user.firstName].join('') || user.username"
+        :size="64"
+        :src="avatarUrl"
+      />
+      <div class="profile-identity">
+        <div class="profile-name">
+          {{ [user.lastName, user.firstName].join("") || user.username }}
+        </div>
+        <NText depth="3">{{ user.username }}</NText>
+      </div>
+    </NFlex>
     <NDescriptions :column="1" label-placement="left">
       <NDescriptionsItem label="用户名">
         {{ user.username }}
@@ -76,3 +90,21 @@ const keycloakPages = {
     </NDescriptions>
   </NCard>
 </template>
+
+<style scoped>
+.profile-header {
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--divider-color);
+}
+
+.profile-identity {
+  min-width: 0;
+}
+
+.profile-name {
+  font-size: 18px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+</style>
