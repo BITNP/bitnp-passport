@@ -1,13 +1,12 @@
 import { and, eq, gt, gte, inArray, isNull, lt, or } from "drizzle-orm";
-import { decodeJwt } from "jose";
 import * as oidc from "openid-client";
 
 import { decrypt, encrypt, randomToken, tokenHash } from "#backend/crypto";
+import type { DatabaseTransaction } from "#backend/database";
 import { db } from "#backend/database";
 import { ApplicationError } from "#backend/errors";
 import { pick } from "#backend/utils";
 import { logoutTokens, sessions } from "#database/schema";
-import { normalizeAvatarUrl } from "#shared/avatar";
 import type { Profile } from "#shared/types";
 
 import { identityClient } from "./oidc.ts";
@@ -36,21 +35,6 @@ function sessionValues(tokens: oidc.TokenEndpointResponse) {
     refreshAt: new Date(now + Math.max(1, tokens.expires_in! - 30) * 1000),
     expiresAt: new Date(now + sessionRetention),
   };
-}
-
-function avatarFromTokens(tokens: Pick<Tokens, "accessToken" | "idToken">) {
-  for (const token of [tokens.idToken, tokens.accessToken]) {
-    try {
-      const avatarUrl = normalizeAvatarUrl(decodeJwt(token).picture);
-      if (avatarUrl) {
-        return avatarUrl;
-      }
-    } catch {
-      // Opaque or malformed tokens simply carry no avatar.
-    }
-  }
-
-  return null;
 }
 
 export async function createSession(
@@ -183,70 +167,17 @@ export async function readSession(token: string) {
       "email",
       "expiresAt",
     ]),
-    avatarUrl: avatarFromTokens({ accessToken, idToken }),
     accessToken,
     idToken,
   };
 }
 
-export async function refreshSession(token: string) {
-  const hash = tokenHash(token);
-
-  return db.transaction(
-    async (tx) => {
-      const [current] = await tx
-        .select()
-        .from(sessions)
-        .where(eq(sessions.tokenHash, hash))
-        .for("update");
-      if (!current) {
-        return null;
-      }
-
-      const { refreshToken } = JSON.parse(
-        decrypt(current.encryptedTokens),
-      ) as Tokens;
-
-      let tokens: Awaited<ReturnType<typeof oidc.refreshTokenGrant>>;
-      try {
-        tokens = await oidc.refreshTokenGrant(
-          await identityClient(),
-          refreshToken,
-        );
-      } catch (error) {
-        if (
-          error instanceof oidc.ResponseBodyError &&
-          error.error === "invalid_grant"
-        ) {
-          await tx.delete(sessions).where(eq(sessions.tokenHash, hash));
-
-          return null;
-        }
-
-        throw error;
-      }
-
-      const claims = tokens.claims()!;
-      if (claims.sub !== current.subject) {
-        await tx.delete(sessions).where(eq(sessions.tokenHash, hash));
-
-        return null;
-      }
-
-      const [updated] = await tx
-        .update(sessions)
-        .set(sessionValues(tokens))
-        .where(eq(sessions.tokenHash, hash))
-        .returning({ expiresAt: sessions.expiresAt });
-
-      return updated ?? null;
-    },
-    { isolationLevel: "serializable" },
-  );
-}
-
-export async function updateSessionProfile(subject: string, profile: Profile) {
-  await db
+export async function updateSessionProfile(
+  tx: DatabaseTransaction,
+  subject: string,
+  profile: Profile,
+) {
+  await tx
     .update(sessions)
     .set({
       username: profile.username,

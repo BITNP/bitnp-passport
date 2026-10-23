@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@keycloak/keycloak-admin-client": "26.7.3",
+    "aws4fetch": "1.0.20",
     "drizzle-orm": "0.45.2",
     "h3": "1.15.11",
     "jose": "6.2.12",

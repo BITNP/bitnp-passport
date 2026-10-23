@@ -1,3 +1,5 @@
+export const maxAvatarBytes = 2 * 1024 * 1024;
+
 const maxAvatarUrlLength = 2048;
 
 export function normalizeAvatarUrl(value: unknown): string | null {

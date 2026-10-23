@@ -1,120 +1,108 @@
 <script setup lang="ts">
-import type { Profile } from "#shared/types";
+import type { InternalApi } from "nitropack/types";
+import { Cropper } from "vue-advanced-cropper";
 
-interface AvatarCropperInstance {
-  crop: () => Promise<Blob | null>;
-  reset: () => void;
-  rotate: (angle: number) => void;
-  zoom: (factor: number) => void;
-}
+import { avatarUrlFromAttributes } from "#shared/avatar";
 
-const emit = defineEmits<{ updated: [avatarUrl: string | null] }>();
-const props = defineProps<{
+import "vue-advanced-cropper/dist/style.css";
+
+type Profile = InternalApi["/api/account"]["get"]["profile"];
+
+const emit = defineEmits<{ saved: [profile: Profile] }>();
+const { profile, uploadEnabled } = defineProps<{
   profile: Profile;
-  avatarUrl: string | null;
+  uploadEnabled: boolean;
 }>();
 const message = useMessage();
-const { data: session } = await usePortalSession();
-const { submit, pending } = useMutation();
-
-const fileInput = ref<HTMLInputElement | null>(null);
-const cropper = ref<AvatarCropperInstance | null>(null);
-const selectedFile = ref<File | null>(null);
+const { submit, pending } = useMutation(() =>
+  refreshNuxtData("portal-session"),
+);
+const fileInput = useTemplateRef<HTMLInputElement>("fileInput");
+const cropper = useTemplateRef<InstanceType<typeof Cropper>>("cropper");
+const imageUrl = ref<string | null>(null);
 const editing = ref(false);
 const cropReady = ref(false);
 
-const maxOriginalBytes = 10 * 1024 * 1024;
-const acceptedTypes = ["image/jpeg", "image/png", "image/webp"];
-
+const avatarUrl = computed(() => avatarUrlFromAttributes(profile.attributes));
 const avatarName = computed(
-  () =>
-    [props.profile.lastName, props.profile.firstName].join("") ||
-    props.profile.username,
+  () => [profile.lastName, profile.firstName].join("") || profile.username,
 );
 const pictureReadOnly = computed(
   () =>
-    props.profile.userProfileMetadata?.attributes.find(
+    profile.userProfileMetadata?.attributes.find(
       (field) => field.name === "picture",
     )?.readOnly === true,
 );
 
-function applyAvatar(avatarUrl: string | null) {
-  emit("updated", avatarUrl);
-  if (session.value) {
-    session.value.user.avatarUrl = avatarUrl;
+function releaseImage() {
+  if (imageUrl.value) {
+    URL.revokeObjectURL(imageUrl.value);
+    imageUrl.value = null;
   }
 }
 
-function pickFile() {
-  if (pictureReadOnly.value) {
-    return;
-  }
+onBeforeUnmount(releaseImage);
 
-  fileInput.value?.click();
-}
-
-function onFileChange(event: Event) {
+function selectImage(event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = "";
+
   if (!file) {
     return;
   }
-  if (!acceptedTypes.includes(file.type)) {
+
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
     message.error("仅支持 JPG、PNG 或 WebP 图片");
 
     return;
   }
-  if (file.size > maxOriginalBytes) {
+
+  if (file.size > 10 * 1024 * 1024) {
     message.error("原图不能超过 10 MiB");
 
     return;
   }
 
-  selectedFile.value = file;
+  releaseImage();
+  imageUrl.value = URL.createObjectURL(file);
   cropReady.value = false;
   editing.value = true;
 }
 
-function clearCropper() {
-  selectedFile.value = null;
-  cropReady.value = false;
-}
-
 const save = () =>
   submit(async () => {
-    const blob = await cropper.value?.crop();
+    const canvas = cropper.value!.getResult().canvas;
+
+    if (!canvas) {
+      throw new Error("图片尚未准备好");
+    }
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.9),
+    );
+
     if (!blob) {
       throw new Error("裁剪失败，请重试");
     }
-    if (blob.size > 2 * 1024 * 1024) {
-      throw new Error("裁剪后的头像不能超过 2 MiB");
-    }
 
-    const body = new FormData();
-    body.append("file", blob, "avatar.jpg");
-    const result = await $fetch<{
-      profile: Profile;
-      avatarUrl: string | null;
-    }>("/api/account/avatar", { method: "POST", body });
-
-    applyAvatar(result.avatarUrl);
+    const updated = await $fetch("/api/account/avatar", {
+      method: "POST",
+      body: blob,
+    });
+    emit("saved", updated);
     editing.value = false;
     message.success("头像已更新");
   });
 
 const remove = () =>
   submit(async () => {
-    const result = await $fetch<{
-      profile: Profile;
-      avatarUrl: string | null;
-    }>("/api/account/avatar", { method: "DELETE" });
-
-    applyAvatar(result.avatarUrl);
+    const updated = await $fetch("/api/account/avatar", { method: "DELETE" });
+    emit("saved", updated);
     message.success("头像已移除");
   });
 
-function onCropError() {
+function cropError() {
   cropReady.value = false;
   message.error("图片加载失败，请更换图片");
 }
@@ -123,10 +111,13 @@ function onCropError() {
 <template>
   <NCard title="头像">
     <NFlex align="center" :size="16" wrap>
-      <UserAvatar :name="avatarName" :size="80" :src="avatarUrl" />
+      <UserAvatar :name="avatarName" :size="64" :src="avatarUrl" />
       <NFlex :size="8" vertical>
         <NFlex :size="8" wrap>
-          <NButton :disabled="pictureReadOnly || pending" @click="pickFile">
+          <NButton
+            :disabled="!uploadEnabled || pictureReadOnly || pending"
+            @click="fileInput?.click()"
+          >
             {{ avatarUrl ? "更换头像" : "上传头像" }}
           </NButton>
           <ConfirmAction
@@ -138,49 +129,86 @@ function onCropError() {
             移除
           </ConfirmAction>
         </NFlex>
-        <NText class="hint" depth="3">
-          支持 JPG、PNG、WebP，裁剪为正方形；头像将公开显示。
-        </NText>
         <NText v-if="pictureReadOnly" class="hint" depth="3">
-          头像已由管理员锁定。
+          当前账户不能修改头像
+        </NText>
+        <NText v-else-if="!uploadEnabled" class="hint" depth="3">
+          头像上传暂未开放
+        </NText>
+        <NText v-else class="hint" depth="3">
+          支持 JPG、PNG、WebP，头像将公开显示
         </NText>
       </NFlex>
     </NFlex>
-
     <input
       ref="fileInput"
       accept="image/jpeg,image/png,image/webp"
       class="file-input"
       type="file"
-      @change="onFileChange"
+      @change="selectImage"
     />
-
     <NModal
       v-model:show="editing"
       class="avatar-modal"
+      :closable="!pending"
+      :close-on-esc="!pending"
+      :mask-closable="!pending"
       preset="card"
       title="编辑头像"
-      @after-leave="clearCropper"
+      @after-leave="releaseImage"
     >
-      <div class="cropper-shell">
-        <AccountAvatarCropper
-          v-if="selectedFile"
-          ref="cropper"
-          :file="selectedFile"
-          @error="onCropError"
-          @ready="cropReady = true"
-        />
-      </div>
+      <Cropper
+        v-if="imageUrl"
+        ref="cropper"
+        :canvas="{ width: 512, height: 512, fillColor: '#fff' }"
+        check-orientation
+        class="avatar-cropper"
+        :debounce="0"
+        image-restriction="fit-area"
+        :resize-image="{
+          touch: true,
+          wheel: { ratio: 0.1 },
+          adjustStencil: false,
+        }"
+        :src="imageUrl"
+        :stencil-props="{ aspectRatio: 1 }"
+        @error="cropError"
+        @ready="cropReady = true"
+      />
       <template #footer>
         <NFlex align="center" justify="space-between" :size="12" wrap>
           <NFlex :size="8" wrap>
-            <NButton size="small" @click="cropper?.zoom(0.85)">缩小</NButton>
-            <NButton size="small" @click="cropper?.zoom(1.15)">放大</NButton>
-            <NButton size="small" @click="cropper?.rotate(90)">旋转</NButton>
-            <NButton size="small" @click="cropper?.reset()">重置</NButton>
+            <NButton
+              :disabled="!cropReady || pending"
+              size="small"
+              @click="cropper?.zoom(0.85)"
+            >
+              缩小
+            </NButton>
+            <NButton
+              :disabled="!cropReady || pending"
+              size="small"
+              @click="cropper?.zoom(1.15)"
+            >
+              放大
+            </NButton>
+            <NButton
+              :disabled="!cropReady || pending"
+              size="small"
+              @click="cropper?.rotate(90)"
+            >
+              旋转
+            </NButton>
+            <NButton
+              :disabled="!cropReady || pending"
+              size="small"
+              @click="cropper?.reset()"
+            >
+              重置
+            </NButton>
           </NFlex>
           <NFlex :size="8">
-            <NButton @click="editing = false">取消</NButton>
+            <NButton :disabled="pending" @click="editing = false">取消</NButton>
             <NButton
               :disabled="!cropReady"
               :loading="pending"
@@ -197,12 +225,9 @@ function onCropError() {
 </template>
 
 <style scoped>
-.cropper-shell {
-  height: 320px;
-}
-
-.cropper-shell :deep(.vue-advanced-cropper) {
-  height: 100%;
+.avatar-cropper {
+  height: min(320px, 50vh);
+  background: rgba(127, 127, 127, 0.12);
 }
 
 :global(.avatar-modal) {

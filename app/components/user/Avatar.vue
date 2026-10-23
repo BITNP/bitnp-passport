@@ -10,15 +10,16 @@ const {
   name?: string | null;
   size?: number;
 }>();
-
-const initials = computed(() => avatarInitials(name));
 </script>
 
 <template>
-  <NAvatar v-if="src" :img-props="{ alt: name ?? '头像' }" round :size :src>
-    <template #fallback>{{ initials }}</template>
-  </NAvatar>
-  <NAvatar v-else round :size>
-    {{ initials }}
+  <NAvatar
+    :img-props="{ alt: name ?? '头像' }"
+    round
+    :size
+    :src="src ?? undefined"
+  >
+    <template v-if="!src" #default>{{ avatarInitials(name) }}</template>
+    <template #fallback>{{ avatarInitials(name) }}</template>
   </NAvatar>
 </template>

@@ -1,19 +1,22 @@
+import { sql } from "drizzle-orm";
 import type { FetchOptions } from "ofetch";
 import { FetchError, ofetch } from "ofetch";
 
 import { avatarUrlFromAttributes } from "#shared/avatar";
+import { systemAdministratorRole } from "#shared/identity";
 import type { Actor, Profile, ProfileInput } from "#shared/types";
 
 import { detectAvatarImage } from "./avatar.ts";
 import { config } from "./config.ts";
+import type { DatabaseTransaction } from "./database.ts";
+import { db } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
 import { userIdentity } from "./identity.ts";
+import { effectiveUserRoles } from "./keycloak/roles.ts";
+import * as keycloak from "./keycloak.ts";
 import { revokeAccountSessions, updateSessionProfile } from "./sessions.ts";
-import {
-  avatarStorageConfigured,
-  putAvatar,
-  removeAvatar as removeAvatarObject,
-} from "./storage.ts";
+import { deleteAvatar, putAvatar } from "./storage.ts";
+import { pick } from "./utils.ts";
 
 interface AccountSession extends Actor {
   accessToken: string;
@@ -76,51 +79,45 @@ const request = <T = void>(
 const readProfile = (accessToken: string) =>
   request<Profile>(accessToken, "?userProfileMetadata=true");
 
-interface ProfileChanges {
-  firstName?: string | null;
-  lastName?: string | null;
-  email?: string | null;
-  picture?: string | null;
+async function writeProfile(accessToken: string, profile: Profile) {
+  await request(
+    accessToken,
+    "",
+    "POST",
+    pick(profile, ["username", "firstName", "lastName", "email", "attributes"]),
+  );
 }
 
-async function writeProfile(
-  accessToken: string,
-  profile: Profile,
-  changes: ProfileChanges,
-) {
-  const attributes = { ...(profile.attributes ?? {}) };
-  if (changes.picture === null) {
-    delete attributes.picture;
-  } else if (changes.picture) {
-    attributes.picture = [changes.picture];
-  }
+const withProfileLock = <T>(
+  subject: string,
+  run: (tx: DatabaseTransaction) => Promise<T>,
+) =>
+  db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`bitnp-profile:${subject}`}, 0))`,
+    );
 
-  try {
-    await request(accessToken, "", "POST", {
-      username: profile.username,
-      attributes,
-      firstName:
-        changes.firstName === undefined ? profile.firstName : changes.firstName,
-      lastName:
-        changes.lastName === undefined ? profile.lastName : changes.lastName,
-      email: changes.email === undefined ? profile.email : changes.email,
-    });
-  } catch (error) {
-    if (
-      changes.picture !== undefined &&
-      error instanceof FetchError &&
-      error.response?.status === 400
-    ) {
-      throw new ApplicationError(
-        422,
-        "Keycloak 用户资料未接受头像字段，请联系管理员",
-      );
-    }
+    return run(tx);
+  });
 
-    throw error;
-  }
+export async function session(actor: Actor) {
+  const [user, roles] = await Promise.all([
+    keycloak.user(actor.subject),
+    effectiveUserRoles(actor.subject),
+  ]);
 
-  return readProfile(accessToken);
+  return {
+    user: {
+      subject: user.id,
+      username: user.username,
+      displayName: [user.lastName, user.firstName].join("") || user.username,
+      email: user.email ?? null,
+      avatarUrl: avatarUrlFromAttributes(user.attributes),
+    },
+    administrator:
+      user.enabled &&
+      roles.some((role) => role.name === systemAdministratorRole),
+  };
 }
 
 export async function security(accessToken: string) {
@@ -142,81 +139,86 @@ export async function overview(actor: AccountSession) {
 
   return {
     profile,
-    avatarUrl: avatarUrlFromAttributes(profile.attributes),
+    avatarUploadEnabled: config.storage !== null,
     permissions: identity.permissions,
   };
 }
 
-export async function updateProfile(
-  actor: AccountSession,
-  input: ProfileInput,
-) {
-  const profile = await readProfile(actor.accessToken);
-  const updated = await writeProfile(actor.accessToken, profile, {
-    firstName: input.name,
-    lastName: null,
-    email: input.email,
+export const updateProfile = (actor: AccountSession, input: ProfileInput) =>
+  withProfileLock(actor.subject, async (tx) => {
+    const profile = await readProfile(actor.accessToken);
+    await writeProfile(actor.accessToken, {
+      ...profile,
+      firstName: input.name,
+      lastName: null,
+      ...(input.email === undefined ? {} : { email: input.email }),
+    });
+
+    const updated = await readProfile(actor.accessToken);
+    await updateSessionProfile(tx, actor.subject, updated);
+
+    return updated;
   });
-
-  await updateSessionProfile(actor.subject, updated);
-
-  return updated;
-}
 
 export async function updateAvatar(actor: AccountSession, bytes: Buffer) {
-  if (!avatarStorageConfigured()) {
-    throw new ApplicationError(503, "头像存储未配置");
-  }
-
-  const profile = await readProfile(actor.accessToken);
   const contentType = detectAvatarImage(bytes);
-  const previousAvatarUrl = avatarUrlFromAttributes(profile.attributes);
-  const avatarUrl = await putAvatar(actor.subject, bytes, contentType);
 
-  let updated: Profile;
-  try {
-    updated = await writeProfile(actor.accessToken, profile, {
-      picture: avatarUrl,
-    });
-  } catch (error) {
-    if (avatarUrl !== previousAvatarUrl) {
-      await removeAvatarObject(actor.subject, avatarUrl);
+  return withProfileLock(actor.subject, async () => {
+    const profile = await readProfile(actor.accessToken);
+    const previousAvatarUrl = avatarUrlFromAttributes(profile.attributes);
+    const avatarUrl = await putAvatar(actor.subject, bytes, contentType);
+    try {
+      await writeProfile(actor.accessToken, {
+        ...profile,
+        attributes: { ...profile.attributes, picture: [avatarUrl] },
+      });
+    } catch (error) {
+      if (
+        avatarUrl !== previousAvatarUrl &&
+        error instanceof FetchError &&
+        error.response &&
+        [400, 401, 403, 404, 422].includes(error.response.status)
+      ) {
+        await deleteAvatar(actor.subject, avatarUrl);
+      }
+
+      throw error;
     }
 
-    throw error;
-  }
+    const updated = await readProfile(actor.accessToken);
 
-  if (avatarUrlFromAttributes(updated.attributes) !== avatarUrl) {
-    throw new ApplicationError(
-      422,
-      "Keycloak 用户资料未接受头像字段，请联系管理员",
-    );
-  }
+    if (avatarUrlFromAttributes(updated.attributes) !== avatarUrl) {
+      await deleteAvatar(actor.subject, avatarUrl);
 
-  if (previousAvatarUrl && previousAvatarUrl !== avatarUrl) {
-    await removeAvatarObject(actor.subject, previousAvatarUrl);
-  }
+      throw new ApplicationError(422, "Keycloak 未接受头像字段，请联系管理员");
+    }
 
-  return { profile: updated, avatarUrl };
-}
+    if (previousAvatarUrl !== avatarUrl) {
+      await deleteAvatar(actor.subject, previousAvatarUrl);
+    }
 
-export async function removeAvatar(actor: AccountSession) {
-  const profile = await readProfile(actor.accessToken);
-  const previousAvatarUrl = avatarUrlFromAttributes(profile.attributes);
-  const updated = await writeProfile(actor.accessToken, profile, {
-    picture: null,
+    return updated;
   });
-
-  if (avatarUrlFromAttributes(updated.attributes)) {
-    throw new ApplicationError(422, "Keycloak 未能移除头像，请联系管理员");
-  }
-
-  if (previousAvatarUrl) {
-    await removeAvatarObject(actor.subject, previousAvatarUrl);
-  }
-
-  return { profile: updated, avatarUrl: null };
 }
+
+export const removeAvatar = (actor: AccountSession) =>
+  withProfileLock(actor.subject, async () => {
+    const profile = await readProfile(actor.accessToken);
+    const previousAvatarUrl = avatarUrlFromAttributes(profile.attributes);
+    const attributes = { ...profile.attributes };
+    delete attributes.picture;
+
+    await writeProfile(actor.accessToken, { ...profile, attributes });
+    const updated = await readProfile(actor.accessToken);
+
+    if (avatarUrlFromAttributes(updated.attributes)) {
+      throw new ApplicationError(422, "Keycloak 未能移除头像，请联系管理员");
+    }
+
+    await deleteAvatar(actor.subject, previousAvatarUrl);
+
+    return updated;
+  });
 
 export async function removeCredential(accessToken: string, id: string) {
   const { credentials } = await security(accessToken);

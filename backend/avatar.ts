@@ -1,6 +1,6 @@
-import { ApplicationError } from "./errors.ts";
+import { maxAvatarBytes } from "#shared/avatar";
 
-export const maxAvatarBytes = 2 * 1024 * 1024;
+import { ApplicationError } from "./errors.ts";
 
 const isJpeg = (data: Buffer) =>
   data.length >= 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff;
