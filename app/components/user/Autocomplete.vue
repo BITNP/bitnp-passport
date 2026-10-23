@@ -17,11 +17,7 @@ const options = computed(() => {
   return (data.value?.users ?? []).map((user) => ({
     value: user.username,
     label: user.username,
-    description: [
-      user.username,
-      [user.lastName, user.firstName].join(""),
-      user.email,
-    ]
+    description: [user.username, user.name, user.email]
       .filter(Boolean)
       .join("，"),
   }));

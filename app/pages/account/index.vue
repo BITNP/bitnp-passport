@@ -2,7 +2,10 @@
 definePageMeta({ middleware: "auth" });
 
 const [{ data: account, error, refresh }, { data: session }] =
-  await Promise.all([useFetch("/api/account"), usePortalSession()]);
+  await Promise.all([
+    useFetch("/api/account", { deep: true }),
+    usePortalSession(),
+  ]);
 
 useFetchError(error, refresh);
 </script>
@@ -22,11 +25,11 @@ useFetchError(error, refresh);
           <AccountAvatar
             :profile="account.profile"
             :upload-enabled="account.avatarUploadEnabled"
-            @saved="account = { ...account, profile: $event }"
+            @saved="account.profile = $event"
           />
           <AccountProfileForm
             :profile="account.profile"
-            @saved="account = { ...account, profile: $event }"
+            @saved="account.profile = $event"
           />
         </NFlex>
       </NGi>

@@ -1,25 +1,25 @@
 <script setup lang="ts">
 import { avatarInitials } from "#shared/avatar";
+import type { User } from "#shared/user";
 
-const {
-  src = null,
-  name = null,
-  size = 32,
-} = defineProps<{
-  src?: string | null;
-  name?: string | null;
+const { user, size = 32 } = defineProps<{
+  user: User;
   size?: number;
 }>();
+
+const name = computed(() => user.name || user.username);
 </script>
 
 <template>
   <NAvatar
-    :img-props="{ alt: name ?? '头像' }"
+    :img-props="{ alt: name }"
     round
     :size
-    :src="src ?? undefined"
+    :src="user.avatarUrl ?? undefined"
   >
-    <template v-if="!src" #default>{{ avatarInitials(name) }}</template>
+    <template v-if="!user.avatarUrl" #default>
+      {{ avatarInitials(name) }}
+    </template>
     <template #fallback>{{ avatarInitials(name) }}</template>
   </NAvatar>
 </template>

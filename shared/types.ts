@@ -15,27 +15,6 @@ export interface GroupNode {
   children: GroupNode[];
 }
 
-export interface Profile {
-  username: string;
-  firstName?: string | null;
-  lastName?: string | null;
-  email?: string | null;
-  emailVerified: boolean;
-  attributes?: Record<string, string[]>;
-  userProfileMetadata?: {
-    attributes: {
-      name: string;
-      required?: boolean;
-      readOnly?: boolean;
-    }[];
-  };
-}
-
-export interface ProfileInput {
-  name: string;
-  email?: string | null;
-}
-
 export interface TaskData {
   jobId: string;
   queueId: string;
@@ -45,7 +24,7 @@ export interface TaskData {
 interface PreviewUser {
   id: string;
   username: string;
-  email?: string;
+  email?: string | null;
   enabled?: boolean;
 }
 

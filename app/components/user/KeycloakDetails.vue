@@ -5,7 +5,7 @@ type UserDetail = InternalApi["/api/admin/users/:id"]["get"];
 
 const { roles, attributes } = defineProps<{
   roles: UserDetail["roles"];
-  attributes: UserDetail["user"]["attributes"];
+  attributes: UserDetail["attributes"];
 }>();
 </script>
 
@@ -30,7 +30,7 @@ const { roles, attributes } = defineProps<{
             </NDescriptionsItem>
           </NDescriptions>
           <NTable
-            v-if="Object.keys(attributes ?? {}).length > 0"
+            v-if="Object.keys(attributes).length > 0"
             :bordered="false"
             class="attributes"
             size="small"

@@ -28,7 +28,7 @@ useFetchError(error, refresh);
         :y-gap="20"
       >
         <NGi span="1 m:3">
-          <UserProfile :avatar-url="data.avatarUrl" :user="data.user" />
+          <UserProfile :user="data.user" />
         </NGi>
         <NGi span="1 m:2">
           <NCard title="权限信息">
@@ -51,10 +51,7 @@ useFetchError(error, refresh);
         :refresh
         :user="data.user"
       />
-      <UserKeycloakDetails
-        :attributes="data.user.attributes"
-        :roles="data.roles"
-      />
+      <UserKeycloakDetails :attributes="data.attributes" :roles="data.roles" />
     </template>
   </NuxtLayout>
 </template>

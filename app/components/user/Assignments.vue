@@ -60,10 +60,7 @@ const confirm = () =>
 
     await refreshNuxtData("portal-session");
 
-    if (
-      session.value?.user.subject === user.id &&
-      !session.value.administrator
-    ) {
+    if (session.value?.user.id === user.id && !session.value.administrator) {
       await navigateTo("/account");
     } else {
       await refresh();

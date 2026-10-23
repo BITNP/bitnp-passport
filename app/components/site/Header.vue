@@ -68,16 +68,7 @@ useFetchError(sessionError, refreshSession);
         </LinkButton>
         <SiteColorModeSwitch />
         <template v-if="session">
-          <NuxtLink class="username" to="/account">
-            <UserAvatar
-              :name="session.user.displayName"
-              :size="24"
-              :src="session.user.avatarUrl"
-            />
-            <NEllipsis class="username-text">
-              {{ session.user.displayName }}
-            </NEllipsis>
-          </NuxtLink>
+          <UserIdentity class="username" to="/account" :user="session.user" />
           <NButton :loading="pending" size="small" @click="signOut">
             退出
           </NButton>
@@ -136,14 +127,7 @@ useFetchError(sessionError, refreshSession);
 }
 
 .username {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.username-text {
-  max-width: 120px;
+  max-width: 152px;
 }
 
 .mobile-menu,

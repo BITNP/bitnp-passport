@@ -121,7 +121,7 @@ export async function previewRoleChanges(
         }));
 
     previews.push({
-      user: { id: user.id, username: user.username, enabled: user.enabled },
+      user,
       before: summarize(sources),
       after: summarize(remaining),
     });

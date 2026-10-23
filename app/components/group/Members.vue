@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import type { DataTableColumns } from "naive-ui";
-import { NFlex } from "naive-ui";
 import type { InternalApi } from "nitropack/types";
 
-import { ConfirmAction, NuxtLink, UserAvatar } from "#components";
-
-type Member = InternalApi["/api/groups/:id"]["get"]["members"][number];
+import { ConfirmAction, UserIdentity } from "#components";
+import type { DirectoryUser } from "#shared/user";
 
 const { groupId, members, note, loading, session, refresh } = defineProps<{
   groupId: string;
-  members: Member[];
+  members: DirectoryUser[];
   note?: string;
   loading: boolean;
   session: InternalApi["/api/session"]["get"] | undefined;
@@ -38,7 +36,7 @@ const removeMember = (subject: string) =>
     message.success("成员已移除");
   });
 
-const columns: DataTableColumns<Member> = [
+const columns: DataTableColumns<DirectoryUser> = [
   {
     title: "用户名",
     key: "username",
@@ -46,33 +44,28 @@ const columns: DataTableColumns<Member> = [
     render: (member) => {
       const target = session?.administrator
         ? `/admin/users/${encodeURIComponent(member.id)}`
-        : session?.user.subject === member.id
+        : session?.user.id === member.id
           ? "/account"
           : null;
 
-      return h(NFlex, { align: "center", size: 8 }, () => [
-        h(UserAvatar, {
-          name: [member.lastName, member.firstName].join("") || member.username,
-          size: 24,
-          src: member.avatarUrl,
-        }),
-        target
-          ? h(NuxtLink, { to: target }, () => member.username)
-          : member.username,
-      ]);
+      return h(UserIdentity, {
+        user: member,
+        label: member.username,
+        to: target,
+      });
     },
   },
   {
     title: "姓名",
     key: "name",
     minWidth: 120,
-    render: (member) => [member.lastName, member.firstName].join("") || " - ",
+    render: (member) => member.name || " - ",
   },
   {
     title: "邮箱",
     key: "email",
     minWidth: 240,
-    render: (member) => member.email || " - ",
+    render: (member) => member.email ?? " - ",
   },
   {
     title: "操作",

@@ -7,7 +7,7 @@ import { db } from "#backend/database";
 import { ApplicationError } from "#backend/errors";
 import { pick } from "#backend/utils";
 import { logoutTokens, sessions } from "#database/schema";
-import type { Profile } from "#shared/types";
+import type { User } from "#shared/user";
 
 import { identityClient } from "./oidc.ts";
 
@@ -174,18 +174,16 @@ export async function readSession(token: string) {
 
 export async function updateSessionProfile(
   tx: DatabaseTransaction,
-  subject: string,
-  profile: Profile,
+  user: User,
 ) {
   await tx
     .update(sessions)
     .set({
-      username: profile.username,
-      displayName:
-        [profile.lastName, profile.firstName].join("") || profile.username,
-      email: profile.email ?? null,
+      username: user.username,
+      displayName: user.name || user.username,
+      email: user.email,
     })
-    .where(eq(sessions.subject, subject));
+    .where(eq(sessions.subject, user.id));
 }
 
 export async function deleteSession(token: string) {

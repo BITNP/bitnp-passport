@@ -1,12 +1,8 @@
 <script setup lang="ts">
-import type { InternalApi } from "nitropack/types";
+import type { AccountProfile, ProfileInput } from "#shared/user";
 
-import type { ProfileInput } from "#shared/types";
-
-type Profile = InternalApi["/api/account"]["get"]["profile"];
-
-const emit = defineEmits<{ saved: [profile: Profile] }>();
-const { profile } = defineProps<{ profile: Profile }>();
+const emit = defineEmits<{ saved: [profile: AccountProfile] }>();
+const { profile } = defineProps<{ profile: AccountProfile }>();
 const { submit, pending } = useMutation(() =>
   refreshNuxtData("portal-session"),
 );
@@ -17,23 +13,10 @@ const form = reactive<ProfileInput>({ name: "" });
 watch(
   () => profile,
   (value) => {
-    form.name = [value.lastName, value.firstName].join("");
-    form.email = value.email;
+    form.name = value.user.name;
+    form.email = value.user.email;
   },
   { immediate: true },
-);
-
-const nameReadOnly = computed(() =>
-  profile.userProfileMetadata?.attributes.some(
-    (field) =>
-      (field.name === "firstName" || field.name === "lastName") &&
-      field.readOnly,
-  ),
-);
-const emailMetadata = computed(() =>
-  profile.userProfileMetadata?.attributes.find(
-    (field) => field.name === "email",
-  ),
 );
 
 const save = () =>
@@ -51,7 +34,7 @@ const save = () =>
   <NCard title="个人资料">
     <NForm @submit.prevent="save">
       <NFormItem label="用户名">
-        <NText>{{ profile.username }}</NText>
+        <NText>{{ profile.user.username }}</NText>
       </NFormItem>
       <NFormItem label="真实姓名" :label-props="{ for: 'name' }" required>
         <NInput
@@ -61,18 +44,18 @@ const save = () =>
             autocomplete: 'name',
             required: true,
           }"
-          :readonly="nameReadOnly"
+          :readonly="profile.readOnly.name"
         />
       </NFormItem>
       <NFormItem
         label="邮箱"
         :label-props="{ for: 'email' }"
-        :required="emailMetadata?.required"
+        :required="profile.emailRequired"
       >
         <template #label>
           邮箱
           <NTag
-            v-if="profile.email && form.email === profile.email"
+            v-if="profile.user.email && form.email === profile.user.email"
             :bordered="false"
             size="small"
             :type="profile.emailVerified ? 'success' : 'warning'"
@@ -85,10 +68,10 @@ const save = () =>
           :input-props="{
             id: 'email',
             autocomplete: 'email',
-            required: emailMetadata?.required,
+            required: profile.emailRequired,
             type: 'email',
           }"
-          :readonly="emailMetadata?.readOnly"
+          :readonly="profile.readOnly.email"
         />
       </NFormItem>
       <NButton attr-type="submit" :loading="pending" type="primary">

@@ -1,50 +1,41 @@
 <script setup lang="ts">
 import type { DataTableColumns } from "naive-ui";
 import { NFlex, NTag } from "naive-ui";
-import type { InternalApi } from "nitropack/types";
 import type { VNode } from "vue";
 import type { LocationQueryRaw } from "vue-router";
 
-import { NuxtLink, UserAvatar } from "#components";
+import { UserIdentity } from "#components";
+import type { DirectoryUser } from "#shared/user";
 import { formatDateTime } from "#shared/utils";
 
-type User = InternalApi["/api/admin/users"]["get"]["users"][number];
-
 const { userQuery } = defineProps<{
-  users: User[];
+  users: DirectoryUser[];
   loading?: boolean;
   userQuery?: LocationQueryRaw;
 }>();
 
 const slots = defineSlots<{
-  actions: (props: { user: User }) => VNode[];
+  actions: (props: { user: DirectoryUser }) => VNode[];
 }>();
 
 const { data: session } = await usePortalSession();
 
-const columns: DataTableColumns<User> = [
+const columns: DataTableColumns<DirectoryUser> = [
   {
     title: "用户名",
     key: "username",
     minWidth: 200,
     render: (user) =>
       h(NFlex, { align: "center", size: 8 }, () => [
-        h(UserAvatar, {
-          name: [user.lastName, user.firstName].join("") || user.username,
-          size: 24,
-          src: user.avatarUrl,
-        }),
-        h(
-          NuxtLink,
-          {
-            to: {
-              path: `/admin/users/${encodeURIComponent(user.id)}`,
-              query: userQuery,
-            },
+        h(UserIdentity, {
+          user,
+          label: user.username,
+          to: {
+            path: `/admin/users/${encodeURIComponent(user.id)}`,
+            query: userQuery,
           },
-          () => user.username,
-        ),
-        session.value?.user.subject === user.id
+        }),
+        session.value?.user.id === user.id
           ? h(NTag, { bordered: false, size: "small" }, () => "当前账户")
           : null,
       ]),
@@ -53,7 +44,7 @@ const columns: DataTableColumns<User> = [
     title: "姓名",
     key: "name",
     minWidth: 120,
-    render: (user) => [user.lastName, user.firstName].join("") || " - ",
+    render: (user) => user.name || " - ",
   },
   {
     title: "邮箱",
@@ -99,7 +90,7 @@ const columns: DataTableColumns<User> = [
     :columns
     :data="users"
     :loading
-    :row-key="(user: User) => user.id"
+    :row-key="(user: DirectoryUser) => user.id"
     :scroll-x="980"
   />
 </template>

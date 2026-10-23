@@ -16,20 +16,15 @@ useHead({ title: "首页" });
     </NPageHeader>
     <NCard size="small">
       <div class="account-content">
-        <div class="account-summary">
-          <UserAvatar
-            v-if="session"
-            :name="session.user.displayName"
-            :size="48"
-            :src="session.user.avatarUrl"
-          />
-          <div class="account-summary-text">
-            <h2>{{ session ? session.user.displayName : "未登录" }}</h2>
-            <NText v-if="session" depth="3">
-              {{ session.user.username }}
-            </NText>
-          </div>
-        </div>
+        <UserIdentity
+          v-if="session"
+          class="account-summary"
+          :description="session.user.username"
+          :size="48"
+          to="/account"
+          :user="session.user"
+        />
+        <h2 v-else>未登录</h2>
         <NFlex align="center" class="account-buttons" :size="16">
           <LinkButton v-if="session" to="/account" type="primary">
             我的账户
@@ -103,20 +98,14 @@ useHead({ title: "首页" });
 }
 
 .account-summary {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
 }
 
-.account-summary-text {
-  min-width: 0;
-}
-
-.account-summary h2 {
+.account-content h2 {
   margin: 0;
   font-size: 16px;
-  overflow-wrap: anywhere;
 }
 
 .account-buttons {

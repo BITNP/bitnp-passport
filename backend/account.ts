@@ -4,7 +4,8 @@ import { FetchError, ofetch } from "ofetch";
 
 import { avatarUrlFromAttributes } from "#shared/avatar";
 import { systemAdministratorRole } from "#shared/identity";
-import type { Actor, Profile, ProfileInput } from "#shared/types";
+import type { Actor } from "#shared/types";
+import type { AccountProfile, ProfileInput } from "#shared/user";
 
 import { detectAvatarImage } from "./avatar.ts";
 import { config } from "./config.ts";
@@ -20,6 +21,53 @@ import { pick } from "./utils.ts";
 
 interface AccountSession extends Actor {
   accessToken: string;
+}
+
+interface KeycloakProfile {
+  username: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  emailVerified: boolean;
+  attributes?: Record<string, string[]>;
+  userProfileMetadata?: {
+    attributes: {
+      name: string;
+      required?: boolean;
+      readOnly?: boolean;
+    }[];
+  };
+}
+
+function accountProfile(id: string, profile: KeycloakProfile): AccountProfile {
+  const fields = profile.userProfileMetadata?.attributes ?? [];
+
+  return {
+    user: {
+      id,
+      username: profile.username,
+      name: [profile.lastName, profile.firstName].join(""),
+      email: profile.email ?? null,
+      avatarUrl: avatarUrlFromAttributes(profile.attributes),
+    },
+    emailVerified: profile.emailVerified,
+    readOnly: {
+      name: fields.some(
+        (field) =>
+          (field.name === "firstName" || field.name === "lastName") &&
+          field.readOnly === true,
+      ),
+      email: fields.some(
+        (field) => field.name === "email" && field.readOnly === true,
+      ),
+      avatar: fields.some(
+        (field) => field.name === "picture" && field.readOnly === true,
+      ),
+    },
+    emailRequired: fields.some(
+      (field) => field.name === "email" && field.required === true,
+    ),
+  };
 }
 
 interface CredentialType {
@@ -77,9 +125,9 @@ const request = <T = void>(
   });
 
 const readProfile = (accessToken: string) =>
-  request<Profile>(accessToken, "?userProfileMetadata=true");
+  request<KeycloakProfile>(accessToken, "?userProfileMetadata=true");
 
-async function writeProfile(accessToken: string, profile: Profile) {
+async function writeProfile(accessToken: string, profile: KeycloakProfile) {
   await request(
     accessToken,
     "",
@@ -107,13 +155,7 @@ export async function session(actor: Actor) {
   ]);
 
   return {
-    user: {
-      subject: user.id,
-      username: user.username,
-      displayName: [user.lastName, user.firstName].join("") || user.username,
-      email: user.email ?? null,
-      avatarUrl: avatarUrlFromAttributes(user.attributes),
-    },
+    user,
     administrator:
       user.enabled &&
       roles.some((role) => role.name === systemAdministratorRole),
@@ -138,7 +180,7 @@ export async function overview(actor: AccountSession) {
   ]);
 
   return {
-    profile,
+    profile: accountProfile(actor.subject, profile),
     avatarUploadEnabled: config.storage !== null,
     permissions: identity.permissions,
   };
@@ -154,8 +196,11 @@ export const updateProfile = (actor: AccountSession, input: ProfileInput) =>
       ...(input.email === undefined ? {} : { email: input.email }),
     });
 
-    const updated = await readProfile(actor.accessToken);
-    await updateSessionProfile(tx, actor.subject, updated);
+    const updated = accountProfile(
+      actor.subject,
+      await readProfile(actor.accessToken),
+    );
+    await updateSessionProfile(tx, updated.user);
 
     return updated;
   });
@@ -197,7 +242,7 @@ export async function updateAvatar(actor: AccountSession, bytes: Buffer) {
       await deleteAvatar(actor.subject, previousAvatarUrl);
     }
 
-    return updated;
+    return accountProfile(actor.subject, updated);
   });
 }
 
@@ -217,7 +262,7 @@ export const removeAvatar = (actor: AccountSession) =>
 
     await deleteAvatar(actor.subject, previousAvatarUrl);
 
-    return updated;
+    return accountProfile(actor.subject, updated);
   });
 
 export async function removeCredential(accessToken: string, id: string) {

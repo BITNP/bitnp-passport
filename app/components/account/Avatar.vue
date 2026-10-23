@@ -1,16 +1,13 @@
 <script setup lang="ts">
-import type { InternalApi } from "nitropack/types";
 import { Cropper } from "vue-advanced-cropper";
 
-import { avatarUrlFromAttributes } from "#shared/avatar";
+import type { AccountProfile } from "#shared/user";
 
 import "vue-advanced-cropper/dist/style.css";
 
-type Profile = InternalApi["/api/account"]["get"]["profile"];
-
-const emit = defineEmits<{ saved: [profile: Profile] }>();
+const emit = defineEmits<{ saved: [profile: AccountProfile] }>();
 const { profile, uploadEnabled } = defineProps<{
-  profile: Profile;
+  profile: AccountProfile;
   uploadEnabled: boolean;
 }>();
 const message = useMessage();
@@ -22,17 +19,6 @@ const cropper = useTemplateRef<InstanceType<typeof Cropper>>("cropper");
 const imageUrl = ref<string | null>(null);
 const editing = ref(false);
 const cropReady = ref(false);
-
-const avatarUrl = computed(() => avatarUrlFromAttributes(profile.attributes));
-const avatarName = computed(
-  () => [profile.lastName, profile.firstName].join("") || profile.username,
-);
-const pictureReadOnly = computed(
-  () =>
-    profile.userProfileMetadata?.attributes.find(
-      (field) => field.name === "picture",
-    )?.readOnly === true,
-);
 
 function releaseImage() {
   if (imageUrl.value) {
@@ -111,26 +97,26 @@ function cropError() {
 <template>
   <NCard title="头像">
     <NFlex align="center" :size="16" wrap>
-      <UserAvatar :name="avatarName" :size="64" :src="avatarUrl" />
+      <UserAvatar :size="64" :user="profile.user" />
       <NFlex :size="8" vertical>
         <NFlex :size="8" wrap>
           <NButton
-            :disabled="!uploadEnabled || pictureReadOnly || pending"
+            :disabled="!uploadEnabled || profile.readOnly.avatar || pending"
             size="small"
             @click="fileInput?.click()"
           >
-            {{ avatarUrl ? "更换头像" : "上传头像" }}
+            {{ profile.user.avatarUrl ? "更换头像" : "上传头像" }}
           </NButton>
           <ConfirmAction
-            v-if="avatarUrl"
-            :disabled="pictureReadOnly || pending"
+            v-if="profile.user.avatarUrl"
+            :disabled="profile.readOnly.avatar || pending"
             message="确认移除头像？"
             @confirm="remove"
           >
             移除
           </ConfirmAction>
         </NFlex>
-        <NText v-if="pictureReadOnly" class="hint" depth="3">
+        <NText v-if="profile.readOnly.avatar" class="hint" depth="3">
           当前账户不能修改头像
         </NText>
         <NText v-else-if="!uploadEnabled" class="hint" depth="3">

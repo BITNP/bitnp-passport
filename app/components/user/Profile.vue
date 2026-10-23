@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import type { InternalApi } from "nitropack/types";
-
+import type { DirectoryUser } from "#shared/user";
 import { formatDateTime } from "#shared/utils";
 
-const { user, avatarUrl } = defineProps<{
-  user: InternalApi["/api/admin/users/:id"]["get"]["user"];
-  avatarUrl: string | null;
+const { user } = defineProps<{
+  user: DirectoryUser;
 }>();
 
 const keycloakPages = {
@@ -22,25 +20,18 @@ const keycloakPages = {
         操作记录
       </NuxtLink>
     </template>
-    <NFlex align="center" class="profile-header" :size="16">
-      <UserAvatar
-        :name="[user.lastName, user.firstName].join('') || user.username"
-        :size="64"
-        :src="avatarUrl"
-      />
-      <div class="profile-identity">
-        <div class="profile-name">
-          {{ [user.lastName, user.firstName].join("") || user.username }}
-        </div>
-        <NText depth="3">{{ user.username }}</NText>
-      </div>
-    </NFlex>
+    <UserIdentity
+      class="profile-header"
+      :description="user.username"
+      :size="64"
+      :user
+    />
     <NDescriptions :column="1" label-placement="left">
       <NDescriptionsItem label="用户名">
         {{ user.username }}
       </NDescriptionsItem>
       <NDescriptionsItem label="姓名">
-        {{ [user.lastName, user.firstName].join("") || " - " }}
+        {{ user.name || " - " }}
       </NDescriptionsItem>
       <NDescriptionsItem label="邮箱">
         <NFlex align="center" :size="8">
@@ -93,18 +84,11 @@ const keycloakPages = {
 
 <style scoped>
 .profile-header {
+  width: 100%;
   padding-bottom: 16px;
   margin-bottom: 16px;
   border-bottom: 1px solid var(--divider-color);
-}
-
-.profile-identity {
-  min-width: 0;
-}
-
-.profile-name {
   font-size: 18px;
   font-weight: 600;
-  overflow-wrap: anywhere;
 }
 </style>

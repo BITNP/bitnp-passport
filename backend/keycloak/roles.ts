@@ -1,5 +1,7 @@
+import type { DirectoryUser } from "#shared/user";
+
 import * as keycloak from "../keycloak.ts";
-import type { GroupRepresentation, UserRepresentation } from "./shared.ts";
+import type { GroupRepresentation } from "./shared.ts";
 import { allPages, client, request } from "./shared.ts";
 
 export type Role = Awaited<
@@ -199,8 +201,8 @@ export async function effectiveRoleHolders(name: string) {
   );
   const holders = new Map<
     string,
-    { user: UserRepresentation; sources: RoleSource[] }
-  >(users.map((user) => [user.id!, { user, sources: [] }]));
+    { user: DirectoryUser; sources: RoleSource[] }
+  >(users.map((user) => [user.id, { user, sources: [] }]));
   const graph = new RoleGraph();
 
   function assign(ids: Iterable<string>, source: RoleSource) {

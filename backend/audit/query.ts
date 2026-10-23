@@ -65,11 +65,9 @@ async function userReference(
     return { id, label: null, to: null };
   }
 
-  const name = [user.lastName, user.firstName].join("");
-
   return {
     id,
-    label: name ? `${name}（${user.username}）` : user.username,
+    label: user.name ? `${user.name}（${user.username}）` : user.username,
     to:
       id === viewer.subject
         ? "/account"

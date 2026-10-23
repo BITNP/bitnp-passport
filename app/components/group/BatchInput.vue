@@ -36,7 +36,7 @@ const importMembers = (sourceGroupId: string) =>
     );
 
     for (const member of members) {
-      if (!identifiers.has(member.email)) {
+      if (!member.email || !identifiers.has(member.email)) {
         identifiers.add(member.username);
       }
     }

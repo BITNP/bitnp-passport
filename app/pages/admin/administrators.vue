@@ -10,22 +10,22 @@ useFetchError(error, refresh);
   <NuxtLayout name="admin" title="系统管理权限">
     <NCard title="有效系统权限持有人">
       <NList v-if="data">
-        <NListItem v-for="user in data" :key="user.id">
+        <NListItem v-for="{ user, sources } in data" :key="user.id">
           <div class="administrator-row">
             <NFlex align="center" :size="8">
-              <NuxtLink
+              <UserIdentity
                 class="administrator-name"
+                :label="user.username"
                 :to="`/admin/users/${encodeURIComponent(user.id)}`"
-              >
-                {{ user.username }}
-              </NuxtLink>
+                :user
+              />
               <NTag v-if="!user.enabled" :bordered="false" size="small">
                 已停用
               </NTag>
             </NFlex>
             <NFlex :size="[16, 8]" wrap>
               <NFlex
-                v-for="source in user.sources"
+                v-for="source in sources"
                 :key="`${source.group?.id ?? 'user'}:${source.role}`"
                 align="center"
                 :size="6"

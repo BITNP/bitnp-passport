@@ -14,12 +14,7 @@ export async function administrators(actor: Actor) {
   ]);
 
   return holders.map(({ user, sources }) => ({
-    id: user.id!,
-    username: user.username!,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    enabled: user.enabled,
+    user,
     sources: describeRoleSources(sources, labels),
   }));
 }

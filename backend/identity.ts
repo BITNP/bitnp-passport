@@ -1,4 +1,3 @@
-import { avatarUrlFromAttributes } from "#shared/avatar";
 import {
   departmentCodes,
   departments,
@@ -32,8 +31,8 @@ export const describeRoleSources = (
   }));
 
 export async function userIdentity(subject: string) {
-  const [user, assignments, labels] = await Promise.all([
-    keycloak.user(subject),
+  const [{ user, attributes }, assignments, labels] = await Promise.all([
+    keycloak.userDetails(subject),
     userRoleAssignments(subject),
     groupLabels(),
   ]);
@@ -59,7 +58,7 @@ export async function userIdentity(subject: string) {
 
   return {
     user,
-    avatarUrl: avatarUrlFromAttributes(user.attributes),
+    attributes,
     roles: assignments.effectiveRoles.map((role) => pick(role, ["id", "name"])),
     directRoles: assignments.directRoles.map((role) => role.name!),
     permissions: {

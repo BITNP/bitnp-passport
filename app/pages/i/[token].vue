@@ -64,15 +64,12 @@ const switchAccount = () =>
       </header>
       <NDescriptions :column="1" label-placement="left">
         <NDescriptionsItem v-if="session" label="当前账户">
-          <NFlex align="center" :size="8">
-            <UserAvatar
-              :name="session.user.displayName"
-              :size="24"
-              :src="session.user.avatarUrl"
-            />
-            <NText>{{ session.user.displayName }}</NText>
-            <NText depth="3">{{ session.user.username }}</NText>
-          </NFlex>
+          <UserIdentity
+            :description="session.user.username"
+            :size="32"
+            to="/account"
+            :user="session.user"
+          />
         </NDescriptionsItem>
         <NDescriptionsItem label="有效期至">
           {{

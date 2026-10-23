@@ -1,5 +1,6 @@
 import { avatarUrlFromAttributes } from "#shared/avatar";
 import type { GroupNode } from "#shared/types";
+import type { DirectoryUser } from "#shared/user";
 
 import { config } from "./config.ts";
 import { ApplicationError } from "./errors.ts";
@@ -10,17 +11,15 @@ import type {
 import { allPages, client, request } from "./keycloak/shared.ts";
 import { pick } from "./utils.ts";
 
-const userSummary = (user: UserRepresentation) => ({
-  ...pick(user as Required<UserRepresentation>, [
-    "id",
-    "username",
-    "firstName",
-    "lastName",
-    "email",
-    "enabled",
-    "createdTimestamp",
-  ]),
+const fromKeycloak = (user: UserRepresentation): DirectoryUser => ({
+  id: user.id!,
+  username: user.username!,
+  name: [user.lastName, user.firstName].join(""),
+  email: user.email ?? null,
   avatarUrl: avatarUrlFromAttributes(user.attributes),
+  enabled: user.enabled!,
+  emailVerified: user.emailVerified!,
+  createdTimestamp: user.createdTimestamp ?? null,
 });
 
 export const consoleUrl = new URL(
@@ -45,26 +44,38 @@ export async function directRoleHolders(name: string) {
         name,
         first,
         max,
-        briefRepresentation: true,
+        briefRepresentation: false,
       }),
     ),
   );
 
-  return users.map(userSummary);
+  return users.map(fromKeycloak);
 }
 
 export async function user(id: string) {
   const user = await request(() => client.users.findOne({ id }));
 
-  return user as Required<UserRepresentation>;
+  return fromKeycloak(user!);
 }
 
-export const allUsers = (search?: string) =>
-  request(() =>
+export async function userDetails(id: string) {
+  const user = await request(() => client.users.findOne({ id }));
+
+  return {
+    user: fromKeycloak(user!),
+    attributes: user!.attributes ?? {},
+  };
+}
+
+export async function allUsers(search?: string) {
+  const users = await request(() =>
     allPages((first, max) =>
-      client.users.find({ search, first, max, briefRepresentation: true }),
+      client.users.find({ search, first, max, briefRepresentation: false }),
     ),
   );
+
+  return users.map(fromKeycloak);
+}
 
 export async function searchUsers(search: string, first: number) {
   const [users, total] = await request(() =>
@@ -79,7 +90,7 @@ export async function searchUsers(search: string, first: number) {
     ]),
   );
 
-  return { users: users.map(userSummary), total };
+  return { users: users.map(fromKeycloak), total };
 }
 
 export async function resolveUser(identifier: string) {
@@ -92,7 +103,7 @@ export async function resolveUser(identifier: string) {
     throw new ApplicationError(404, `找不到用户：${identifier}`);
   }
 
-  return userSummary(user);
+  return fromKeycloak(user);
 }
 
 export async function groupsForUser(id: string) {
@@ -187,7 +198,7 @@ export async function members(id: string) {
     ),
   );
 
-  return users.map(userSummary);
+  return users.map(fromKeycloak);
 }
 
 export async function addMember(userId: string, groupId: string) {
