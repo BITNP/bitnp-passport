@@ -1,7 +1,7 @@
 {
   "name": "bitnp-passport",
   "private": true,
-  "version": "1.5.0",
+  "version": "1.5.1",
   "packageManager": "pnpm@12.3.4",
   "type": "module",
   "description": "BITNP Passport account portal",
