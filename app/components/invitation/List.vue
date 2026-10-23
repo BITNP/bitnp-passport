@@ -124,6 +124,7 @@ useFetchError(error, refresh);
                 <NText v-if="invitation.note" strong>
                   {{ invitation.note }}
                 </NText>
+                <NText v-else depth="3">未填写备注</NText>
                 <NButton
                   :disabled="pending"
                   size="small"
