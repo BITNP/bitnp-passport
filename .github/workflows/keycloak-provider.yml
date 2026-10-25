@@ -1,0 +1,53 @@
+name: Keycloak default avatar
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - keycloak/**
+      - .github/workflows/keycloak-provider.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: keycloak-default-avatar
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: keycloak/pom.xml
+
+      - name: Build JAR
+        run: mvn --batch-mode --no-transfer-progress --file keycloak/pom.xml package
+
+      - name: Publish JAR
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: keycloak-default-avatar
+          name: Keycloak 默认头像
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          make_latest: false
+          files: keycloak/target/bitnp-default-avatar.jar
+          fail_on_unmatched_files: true
+
+      - name: Update release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh api --method PATCH \
+            "repos/${GH_REPO}/git/refs/tags/keycloak-default-avatar" \
+            -f sha="${GITHUB_SHA}" \
+            -F force=true

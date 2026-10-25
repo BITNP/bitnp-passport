@@ -88,9 +88,30 @@ openssl rand -base64 32
 - Backchannel logout URL 填 `<APP_URL>/auth/backchannel-logout`
 - 开启 Backchannel logout session required，并保证 Keycloak 可以访问该 URL
 - 在 Realm settings → User profile 中，取消 `lastName` 的 Required；通行证用一个“真实姓名”字段保存姓名，可将 `firstName` 的 Display name 设为“真实姓名”，保留用户编辑权限
-- 启用头像上传时，在 User profile 中添加单值属性 `picture`，允许用户和管理员查看、用户编辑，长度上限设为 2048
+- 使用头像功能时，在 User profile 中添加单值属性 `picture`，允许用户和管理员查看、用户编辑，长度上限设为 2048
 
 修改密码、删除认证器等操作会跳转到 Keycloak 完成，然后返回通行证。
+
+### 注册默认头像
+
+`keycloak/` 提供注册事件监听器。新用户注册成功且未设置 `picture` 时，随机保存 `https://s3.bitnp.net/avatar/avatars/default/1.jpg` 至 `9.jpg` 中的一张。
+
+本地开发的 Keycloak 镜像已包含该监听器。源码更新后执行：
+
+```sh
+docker compose -f compose.dev.yaml build keycloak
+docker compose -f compose.dev.yaml up -d keycloak
+```
+
+固定下载地址：[bitnp-default-avatar.jar](https://github.com/BITNP/bitnp-passport/releases/download/keycloak-default-avatar/bitnp-default-avatar.jar)。
+
+也可在本地单独构建插件：
+
+```sh
+mvn -f keycloak/pom.xml package
+```
+
+将 `keycloak/target/bitnp-default-avatar.jar` 放入 Keycloak 的 `/opt/keycloak/providers/`。使用 `start --optimized` 的实例需要重新执行 `kc.sh build`，然后重启 Keycloak。
 
 ### 注册、身份与账户策略
 

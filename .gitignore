@@ -20,3 +20,4 @@ devenv.local.nix
 
 .eslintcache
 .prettier-cache
+/keycloak/target/
