@@ -14,10 +14,12 @@ export interface DirectoryUser extends User {
 
 export interface AccountProfile {
   user: User;
+  qqNumber: string | null;
   emailVerified: boolean;
   readOnly: {
     name: boolean;
     email: boolean;
+    qqNumber: boolean;
     avatar: boolean;
   };
   emailRequired: boolean;
@@ -25,7 +27,8 @@ export interface AccountProfile {
 
 export interface ProfileInput {
   name: string;
-  email?: string | null;
+  email: string | null;
+  qqNumber: string | null;
 }
 
 export const userLabel = (user: Pick<User, "name" | "username">): string =>

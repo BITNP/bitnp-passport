@@ -8,13 +8,14 @@ const { submit, pending } = useMutation(() =>
 );
 const message = useMessage();
 
-const form = reactive<ProfileInput>({ name: "" });
+const form = reactive<ProfileInput>({ name: "", email: null, qqNumber: null });
 
 watch(
   () => profile,
   (value) => {
     form.name = value.user.name;
     form.email = value.user.email;
+    form.qqNumber = value.qqNumber;
   },
   { immediate: true },
 );
@@ -72,6 +73,18 @@ const save = () =>
             type: 'email',
           }"
           :readonly="profile.readOnly.email"
+        />
+      </NFormItem>
+      <NFormItem label="QQ 号" :label-props="{ for: 'qqNumber' }">
+        <NInput
+          v-model:value="form.qqNumber"
+          :input-props="{
+            id: 'qqNumber',
+            autocomplete: 'off',
+            maxlength: 12,
+            pattern: '[0-9]{5,12}',
+          }"
+          :readonly="profile.readOnly.qqNumber"
         />
       </NFormItem>
       <NButton attr-type="submit" :loading="pending" type="primary">

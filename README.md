@@ -89,6 +89,7 @@ openssl rand -base64 32
 - 开启 Backchannel logout session required，并保证 Keycloak 可以访问该 URL
 - 在 Realm settings → User profile 中，取消 `lastName` 的 Required；通行证用一个“真实姓名”字段保存姓名，可将 `firstName` 的 Display name 设为“真实姓名”，保留用户编辑权限
 - 使用头像功能时，在 User profile 中添加单值属性 `picture`，允许用户和管理员查看、用户编辑，长度上限设为 2048
+- 使用 QQ 号功能时，在 User profile 中添加单值属性 `qq_number`，Display name 设为“QQ”，允许用户和管理员查看、用户编辑，长度上限设为 20
 
 修改密码、删除认证器等操作会跳转到 Keycloak 完成，然后返回通行证。
 

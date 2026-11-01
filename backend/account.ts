@@ -50,6 +50,7 @@ function accountProfile(id: string, profile: KeycloakProfile): AccountProfile {
       email: profile.email ?? null,
       avatarUrl: avatarUrlFromAttributes(profile.attributes),
     },
+    qqNumber: profile.attributes?.qq_number?.[0] ?? null,
     emailVerified: profile.emailVerified,
     readOnly: {
       name: fields.some(
@@ -59,6 +60,9 @@ function accountProfile(id: string, profile: KeycloakProfile): AccountProfile {
       ),
       email: fields.some(
         (field) => field.name === "email" && field.readOnly === true,
+      ),
+      qqNumber: fields.some(
+        (field) => field.name === "qq_number" && field.readOnly === true,
       ),
       avatar: fields.some(
         (field) => field.name === "picture" && field.readOnly === true,
@@ -189,17 +193,24 @@ export async function overview(actor: AccountSession) {
 export const updateProfile = (actor: AccountSession, input: ProfileInput) =>
   withProfileLock(actor.subject, async (tx) => {
     const profile = await readProfile(actor.accessToken);
+
     await writeProfile(actor.accessToken, {
       ...profile,
       firstName: input.name,
       lastName: null,
-      ...(input.email === undefined ? {} : { email: input.email }),
+      email: input.email,
+      attributes: {
+        ...profile.attributes,
+        // Keycloak stores user attributes as string arrays; [] removes the key.
+        qq_number: input.qqNumber === null ? [] : [input.qqNumber],
+      },
     });
 
     const updated = accountProfile(
       actor.subject,
       await readProfile(actor.accessToken),
     );
+
     await updateSessionProfile(tx, updated.user);
 
     return updated;
@@ -258,10 +269,11 @@ export const removeAvatar = (actor: AccountSession) =>
   withProfileLock(actor.subject, async () => {
     const profile = await readProfile(actor.accessToken);
     const previousAvatarUrl = avatarUrlFromAttributes(profile.attributes);
-    const attributes = { ...profile.attributes };
-    delete attributes.picture;
 
-    await writeProfile(actor.accessToken, { ...profile, attributes });
+    await writeProfile(actor.accessToken, {
+      ...profile,
+      attributes: { ...profile.attributes, picture: [] },
+    });
     const updated = await readProfile(actor.accessToken);
 
     if (avatarUrlFromAttributes(updated.attributes)) {
