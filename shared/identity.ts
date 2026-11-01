@@ -57,6 +57,10 @@ export function roleLabel(name: string) {
     return "系统管理";
   }
 
+  if (name === "permission-management-access") {
+    return "管理层访问";
+  }
+
   for (const department of departmentCodes) {
     const label = departments[department];
 
