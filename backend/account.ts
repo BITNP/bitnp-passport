@@ -1,12 +1,18 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { FetchOptions } from "ofetch";
 import { FetchError, ofetch } from "ofetch";
 
+import { sessions } from "#database/schema";
 import { avatarUrlFromAttributes } from "#shared/avatar";
 import { systemAdministratorRole } from "#shared/identity";
 import type { Actor } from "#shared/types";
-import type { AccountProfile, ProfileInput } from "#shared/user";
+import type {
+  AccountProfile,
+  AdminProfileInput,
+  ProfileInput,
+} from "#shared/user";
 
+import { audited } from "./audit.ts";
 import { detectAvatarImage } from "./avatar.ts";
 import { config } from "./config.ts";
 import type { DatabaseTransaction } from "./database.ts";
@@ -15,6 +21,7 @@ import { ApplicationError } from "./errors.ts";
 import { userIdentity } from "./identity.ts";
 import { effectiveUserRoles } from "./keycloak/roles.ts";
 import * as keycloak from "./keycloak.ts";
+import { requireAdministrator } from "./permissions.ts";
 import { revokeAccountSessions, updateSessionProfile } from "./sessions.ts";
 import { avatarStorage } from "./storage.ts";
 import { pick } from "./utils.ts";
@@ -60,9 +67,6 @@ function accountProfile(id: string, profile: KeycloakProfile): AccountProfile {
       ),
       email: fields.some(
         (field) => field.name === "email" && field.readOnly === true,
-      ),
-      qqNumber: fields.some(
-        (field) => field.name === "qq_number" && field.readOnly === true,
       ),
       avatar: fields.some(
         (field) => field.name === "picture" && field.readOnly === true,
@@ -190,31 +194,77 @@ export async function overview(actor: AccountSession) {
   };
 }
 
-export const updateProfile = (actor: AccountSession, input: ProfileInput) =>
-  withProfileLock(actor.subject, async (tx) => {
-    const profile = await readProfile(actor.accessToken);
+export async function updateProfile(
+  actor: AccountSession,
+  input: ProfileInput,
+) {
+  const { qqNumber } = input;
+  if (qqNumber !== undefined) {
+    await requireAdministrator(actor);
+  }
 
-    await writeProfile(actor.accessToken, {
-      ...profile,
-      firstName: input.name,
-      lastName: null,
-      email: input.email,
-      attributes: {
-        ...profile.attributes,
-        // Keycloak stores user attributes as string arrays; [] removes the key.
-        qq_number: input.qqNumber === null ? [] : [input.qqNumber],
-      },
+  const save = () =>
+    withProfileLock(actor.subject, async (tx) => {
+      const profile = await readProfile(actor.accessToken);
+
+      await writeProfile(actor.accessToken, {
+        ...profile,
+        firstName: input.name,
+        lastName: null,
+        email: input.email,
+      });
+
+      if (qqNumber !== undefined) {
+        await keycloak.updateUserQqNumber(actor.subject, qqNumber);
+      }
+
+      const updated = accountProfile(
+        actor.subject,
+        await readProfile(actor.accessToken),
+      );
+
+      await updateSessionProfile(tx, updated.user);
+
+      return updated;
     });
 
-    const updated = accountProfile(
-      actor.subject,
-      await readProfile(actor.accessToken),
-    );
+  return qqNumber === undefined
+    ? save()
+    : audited(
+        actor,
+        {
+          operation: "user.profile.update",
+          target: { type: "user", id: actor.subject },
+        },
+        save,
+      );
+}
 
-    await updateSessionProfile(tx, updated.user);
+export async function updateUserProfile(
+  actor: Actor,
+  subject: string,
+  input: AdminProfileInput,
+) {
+  await requireAdministrator(actor);
 
-    return updated;
-  });
+  return audited(
+    actor,
+    { operation: "user.profile.update", target: { type: "user", id: subject } },
+    () =>
+      withProfileLock(subject, async (tx) => {
+        await keycloak.updateUserProfile(subject, input);
+        const saved = await keycloak.userDetails(subject);
+
+        if (saved.user.enabled) {
+          await updateSessionProfile(tx, saved.user);
+        } else {
+          await tx.delete(sessions).where(eq(sessions.subject, subject));
+        }
+
+        return saved;
+      }),
+  );
+}
 
 export async function updateAvatar(actor: AccountSession, bytes: Buffer) {
   const contentType = detectAvatarImage(bytes);

@@ -12,6 +12,10 @@ export interface DirectoryUser extends User {
   createdTimestamp: number | null;
 }
 
+export interface AdminUserProfile extends DirectoryUser {
+  qqNumber: string | null;
+}
+
 export interface AccountProfile {
   user: User;
   qqNumber: string | null;
@@ -19,7 +23,6 @@ export interface AccountProfile {
   readOnly: {
     name: boolean;
     email: boolean;
-    qqNumber: boolean;
     avatar: boolean;
   };
   emailRequired: boolean;
@@ -28,7 +31,13 @@ export interface AccountProfile {
 export interface ProfileInput {
   name: string;
   email: string | null;
+  qqNumber?: string | null;
+}
+
+export interface AdminProfileInput extends ProfileInput {
   qqNumber: string | null;
+  enabled: boolean;
+  emailVerified: boolean;
 }
 
 export const userLabel = (user: Pick<User, "name" | "username">): string =>

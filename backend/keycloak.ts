@@ -1,6 +1,10 @@
 import { avatarUrlFromAttributes } from "#shared/avatar";
 import type { GroupNode } from "#shared/types";
-import type { DirectoryUser } from "#shared/user";
+import type {
+  AdminProfileInput,
+  AdminUserProfile,
+  DirectoryUser,
+} from "#shared/user";
 
 import { config } from "./config.ts";
 import { ApplicationError } from "./errors.ts";
@@ -60,11 +64,59 @@ export async function user(id: string) {
 
 export async function userDetails(id: string) {
   const user = await request(() => client.users.findOne({ id }));
+  const attributes: Record<string, string[]> = user!.attributes ?? {};
+  const profile: AdminUserProfile = {
+    ...fromKeycloak(user!),
+    qqNumber: attributes.qq_number?.[0] ?? null,
+  };
 
   return {
-    user: fromKeycloak(user!),
-    attributes: user!.attributes ?? {},
+    user: profile,
+    attributes,
   };
+}
+
+export async function updateUserProfile(id: string, input: AdminProfileInput) {
+  const user = await request(() => client.users.findOne({ id }));
+
+  await request(() =>
+    client.users.update(
+      { id },
+      {
+        username: user!.username,
+        firstName: input.name,
+        lastName: "",
+        email: input.email ?? "",
+        emailVerified: input.emailVerified,
+        enabled: input.enabled,
+        attributes: {
+          ...user!.attributes,
+          qq_number: input.qqNumber === null ? [] : [input.qqNumber],
+        },
+      },
+    ),
+  );
+
+  if (!input.enabled) {
+    await request(() => client.users.logout({ id }));
+  }
+}
+
+export async function updateUserQqNumber(id: string, qqNumber: string | null) {
+  const user = await request(() => client.users.findOne({ id }));
+
+  await request(() =>
+    client.users.update(
+      { id },
+      {
+        ...pick(user!, ["username", "firstName", "lastName", "email"]),
+        attributes: {
+          ...user!.attributes,
+          qq_number: qqNumber === null ? [] : [qqNumber],
+        },
+      },
+    ),
+  );
 }
 
 export async function allUsers(search?: string) {

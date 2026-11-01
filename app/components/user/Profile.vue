@@ -1,10 +1,58 @@
 <script setup lang="ts">
-import type { DirectoryUser } from "#shared/user";
+import type { AdminProfileInput, AdminUserProfile } from "#shared/user";
 import { formatDateTime } from "#shared/utils";
 
-const { user } = defineProps<{
-  user: DirectoryUser;
+const { user, refresh } = defineProps<{
+  user: AdminUserProfile;
+  refresh: () => Promise<void>;
 }>();
+
+const form = reactive<AdminProfileInput>({
+  name: user.name,
+  email: user.email,
+  qqNumber: user.qqNumber,
+  enabled: user.enabled,
+  emailVerified: user.emailVerified,
+});
+watch(
+  () => user,
+  (value) => {
+    Object.assign(form, {
+      name: value.name,
+      email: value.email,
+      qqNumber: value.qqNumber,
+      enabled: value.enabled,
+      emailVerified: value.emailVerified,
+    });
+  },
+);
+watch(
+  () => form.email,
+  (value) => {
+    if (value !== user.email) {
+      form.emailVerified = false;
+    }
+  },
+);
+
+const { submit, pending } = useMutation();
+const { data: session } = await usePortalSession();
+const message = useMessage();
+const save = () =>
+  submit(async () => {
+    await $fetch(`/api/admin/users/${encodeURIComponent(user.id)}/profile`, {
+      method: "PUT",
+      body: form,
+    });
+    await refreshNuxtData("portal-session");
+    if (!session.value) {
+      await navigateTo("/account");
+
+      return;
+    }
+    await refresh();
+    message.success("用户资料已保存");
+  });
 
 const keycloakPages = {
   settings: "用户信息",
@@ -21,31 +69,50 @@ const keycloakPages = {
       </NuxtLink>
     </template>
     <UserIdentity class="profile-header" show-username :size="64" :user />
+    <NForm :disabled="pending" @submit.prevent="save">
+      <NFormItem label="真实姓名" :label-props="{ for: 'admin-name' }">
+        <NInput
+          v-model:value="form.name"
+          :input-props="{
+            id: 'admin-name',
+            autocomplete: 'off',
+          }"
+        />
+      </NFormItem>
+      <NFormItem label="邮箱" :label-props="{ for: 'admin-email' }">
+        <NInput
+          v-model:value="form.email"
+          :input-props="{
+            id: 'admin-email',
+            type: 'email',
+            autocomplete: 'off',
+          }"
+        />
+      </NFormItem>
+      <NFormItem label="邮箱验证">
+        <NCheckbox v-model:checked="form.emailVerified" :disabled="!form.email">
+          已验证
+        </NCheckbox>
+      </NFormItem>
+      <NFormItem label="QQ 号" :label-props="{ for: 'admin-qq' }">
+        <NInput
+          v-model:value="form.qqNumber"
+          :input-props="{
+            id: 'admin-qq',
+            autocomplete: 'off',
+            inputmode: 'numeric',
+          }"
+        />
+      </NFormItem>
+      <NFormItem label="账户状态">
+        <NCheckbox v-model:checked="form.enabled">允许登录</NCheckbox>
+      </NFormItem>
+      <NButton attr-type="submit" :loading="pending" type="primary">
+        保存资料
+      </NButton>
+    </NForm>
+    <NDivider />
     <NDescriptions :column="1" label-placement="left">
-      <NDescriptionsItem label="邮箱">
-        <NFlex align="center" :size="8">
-          <template v-if="user.email">
-            <a :href="`mailto:${user.email}`">{{ user.email }}</a>
-            <NTag
-              :bordered="false"
-              size="small"
-              :type="user.emailVerified ? 'success' : 'warning'"
-            >
-              {{ user.emailVerified ? "已验证" : "未验证" }}
-            </NTag>
-          </template>
-          <NText v-else depth="3">未设置</NText>
-        </NFlex>
-      </NDescriptionsItem>
-      <NDescriptionsItem label="状态">
-        <NTag
-          :bordered="false"
-          size="small"
-          :type="user.enabled ? 'success' : 'default'"
-        >
-          {{ user.enabled ? "已启用" : "已停用" }}
-        </NTag>
-      </NDescriptionsItem>
       <NDescriptionsItem label="创建时间">
         {{
           user.createdTimestamp ? formatDateTime(user.createdTimestamp) : " - "

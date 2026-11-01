@@ -3,6 +3,11 @@ import type { JobResult } from "./jobs.ts";
 import type { SiteService } from "./types.ts";
 
 export const auditOperations = {
+  "user.profile.update": {
+    label: "修改用户资料",
+    context: [],
+    targets: ["user"],
+  },
   "organization.prepare": { label: "准备新届组织", context: [], targets: [] },
   "handover.execute": {
     label: "组织与任职换届",

@@ -3,6 +3,7 @@ import type { AccountProfile, ProfileInput } from "#shared/user";
 
 const emit = defineEmits<{ saved: [profile: AccountProfile] }>();
 const { profile } = defineProps<{ profile: AccountProfile }>();
+const { data: session } = await usePortalSession();
 const { submit, pending } = useMutation(() =>
   refreshNuxtData("portal-session"),
 );
@@ -24,7 +25,11 @@ const save = () =>
   submit(async () => {
     const profile = await $fetch("/api/account/profile", {
       method: "PUT",
-      body: form,
+      body: {
+        name: form.name,
+        email: form.email,
+        ...(session.value?.administrator && { qqNumber: form.qqNumber }),
+      },
     });
     emit("saved", profile);
     message.success("个人资料已保存");
@@ -78,13 +83,8 @@ const save = () =>
       <NFormItem label="QQ 号" :label-props="{ for: 'qqNumber' }">
         <NInput
           v-model:value="form.qqNumber"
-          :input-props="{
-            id: 'qqNumber',
-            autocomplete: 'off',
-            maxlength: 12,
-            pattern: '[0-9]{5,12}',
-          }"
-          :readonly="profile.readOnly.qqNumber"
+          :disabled="!session?.administrator || pending"
+          :input-props="{ id: 'qqNumber', autocomplete: 'off' }"
         />
       </NFormItem>
       <NButton attr-type="submit" :loading="pending" type="primary">
