@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DataTableColumns } from "naive-ui";
+import type { DataTableColumns, DataTableRowKey } from "naive-ui";
 
 import { UserIdentity } from "#components";
 import type { MembershipPreview } from "#shared/types";
@@ -45,6 +45,10 @@ const enqueue = () =>
     await navigateTo(`/jobs/${result.id}`);
   });
 
+function selectSubjects(keys: DataTableRowKey[]) {
+  job.subjects = keys.map(String);
+}
+
 const columns: DataTableColumns<(typeof candidates.value)[number]> = [
   { type: "selection" },
   {
@@ -71,7 +75,7 @@ const columns: DataTableColumns<(typeof candidates.value)[number]> = [
         :data="candidates"
         :row-key="(user) => user.id"
         :scroll-x="520"
-        @update:checked-row-keys="job.subjects = $event as string[]"
+        @update:checked-row-keys="selectSubjects"
       />
       <NFlex align="center" justify="space-between">
         <NText depth="3">已选 {{ job.subjects.length }} 人</NText>

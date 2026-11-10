@@ -1,5 +1,5 @@
 <script setup lang="ts">
-definePageMeta({ middleware: "auth" });
+definePageMeta({ middleware: ["auth", "management"] });
 useHead({ title: "后台任务" });
 
 const route = useRoute();
@@ -51,7 +51,7 @@ useFetchError(groupsError, refreshGroups);
 </script>
 
 <template>
-  <NuxtLayout name="page">
+  <NuxtLayout name="manage">
     <NPageHeader>
       <template #title><h1>后台任务</h1></template>
       <template v-if="selectedGroup" #extra>

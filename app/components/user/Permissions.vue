@@ -2,41 +2,14 @@
 import type { InternalApi } from "nitropack/types";
 
 import { UserPermissionSources } from "#components";
-import { isCurrentPositionRole } from "#shared/identity";
 
 const props = defineProps<{
   permissions: InternalApi["/api/account"]["get"]["permissions"];
   viewerAdministrator: boolean;
 }>();
 
-const currentPositions = computed(() =>
-  props.permissions.positions.filter((position) =>
-    isCurrentPositionRole(position.name),
-  ),
-);
-
-const positionSources = computed(() => {
-  const seen = new Set<string>();
-
-  // A composite role can be a source for more than one position; keep one row
-  // per group and role.
-  return currentPositions.value
-    .flatMap((position) => position.sources)
-    .filter((source) => {
-      const key = `${source.group?.id ?? "user"}:${source.role}`;
-
-      if (seen.has(key)) {
-        return false;
-      }
-
-      seen.add(key);
-
-      return true;
-    });
-});
-
 const sections = computed(() => [
-  { title: "身份与任职", roles: currentPositions.value },
+  { title: "身份与任职", roles: props.permissions.positions },
   { title: "功能权限", roles: props.permissions.permissions },
 ]);
 </script>
@@ -45,7 +18,7 @@ const sections = computed(() => [
   <NFlex class="permissions-panel" :size="14" vertical>
     <NFlex align="center" :size="6">
       <NPopover
-        v-if="currentPositions.length > 0"
+        v-if="permissions.active"
         placement="bottom-start"
         trigger="click"
       >
@@ -62,7 +35,7 @@ const sections = computed(() => [
           </NButton>
         </template>
         <UserPermissionSources
-          :sources="positionSources"
+          :sources="permissions.activeSources"
           :viewer-administrator
         />
       </NPopover>

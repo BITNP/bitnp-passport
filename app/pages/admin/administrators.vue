@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { systemAdministratorRole } from "#shared/identity";
-
 definePageMeta({ middleware: ["auth", "admin"] });
 const { data, error, refresh } = await useFetch("/api/admin/administrators");
 useFetchError(error, refresh);
@@ -22,6 +20,14 @@ useFetchError(error, refresh);
               <NTag v-if="!user.enabled" :bordered="false" size="small">
                 已停用
               </NTag>
+              <NTag
+                v-if="user.serviceAccount"
+                :bordered="false"
+                size="small"
+                type="warning"
+              >
+                服务账户
+              </NTag>
             </NFlex>
             <NFlex :size="[16, 8]" wrap>
               <NFlex
@@ -32,13 +38,7 @@ useFetchError(error, refresh);
               >
                 <NTag :bordered="false" size="small">{{ source.label }}</NTag>
                 <NText class="source-origin" depth="3">
-                  {{
-                    source.group
-                      ? `来自 ${source.group.label}`
-                      : source.role === systemAdministratorRole
-                        ? "个人特批"
-                        : "角色继承"
-                  }}
+                  {{ source.group ? `来自 ${source.group.label}` : "直接授予" }}
                 </NText>
               </NFlex>
             </NFlex>

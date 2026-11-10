@@ -7,9 +7,10 @@ import type {
   CreateInvitationInput,
   UpdateInvitationInput,
 } from "#shared/invitations";
+import { invitationStatus } from "#shared/invitations";
 import type { Actor } from "#shared/types";
 
-import { audited } from "./audit.ts";
+import { audited, auditedConfigurationChange } from "./audit.ts";
 import { config } from "./config.ts";
 import { randomToken } from "./crypto.ts";
 import type { DatabaseTransaction } from "./database.ts";
@@ -49,8 +50,11 @@ export async function listInvitations(actor: Actor, groupId: string) {
     .where(eq(invitations.groupId, groupId))
     .orderBy(desc(invitations.createdAt), desc(invitations.id));
 
+  const now = Date.now();
+
   return rows.map(({ token, ...invitation }) => ({
     ...invitation,
+    status: invitationStatus(invitation, now),
     url: `${config.appUrl}/i/${token}`,
   }));
 }
@@ -102,7 +106,7 @@ export const updateInvitation = async (
   withIdentityLock(async () => {
     await requireGroupManager(actor, groupId);
 
-    return audited(
+    return auditedConfigurationChange(
       actor,
       {
         operation: "invitation.update",
@@ -116,6 +120,7 @@ export const updateInvitation = async (
             .select({
               note: invitations.note,
               allowRegistration: invitations.allowRegistration,
+              revokedAt: invitations.revokedAt,
             })
             .from(invitations)
             .where(
@@ -124,6 +129,9 @@ export const updateInvitation = async (
             .for("update");
           if (!invitation) {
             throw new ApplicationError(404, "邀请不存在");
+          }
+          if (invitation.revokedAt) {
+            throw new ApplicationError(409, "已撤销的邀请不能修改");
           }
 
           recordBefore(invitation);
@@ -194,7 +202,7 @@ export const revokeInvitation = async (
         target: { type: "invitation", id },
       },
       async () => {
-        await db
+        const [revoked] = await db
           .update(invitations)
           .set({ revokedAt: new Date() })
           .where(
@@ -203,7 +211,12 @@ export const revokeInvitation = async (
               eq(invitations.groupId, groupId),
               isNull(invitations.revokedAt),
             ),
-          );
+          )
+          .returning({ id: invitations.id });
+
+        if (!revoked) {
+          throw new ApplicationError(404, "邀请不存在或已撤销");
+        }
       },
     );
   });

@@ -17,21 +17,16 @@ const links = computed(() => {
   const items = [];
 
   if (session.value) {
-    items.push(
-      { to: "/account", label: "我的账户" },
-      { to: "/groups", label: "群组" },
-      { to: "/jobs", label: "任务" },
-      { to: "/audit", label: "记录" },
-    );
+    items.push({ key: "/account", label: "我的账户" });
   }
 
-  items.push({ to: "/help", label: "帮助" });
+  items.push({ key: "/help", label: "帮助" });
 
   return items;
 });
 
 const renderLink = (option: MenuOption) =>
-  h(NuxtLink, { to: option.to as string }, () => option.label as string);
+  h(NuxtLink, { to: String(option.key) }, () => option.label);
 
 const signOut = () =>
   submit(async () => {
@@ -50,7 +45,6 @@ useFetchError(sessionError, refreshSession);
       </LinkButton>
       <NMenu
         class="desktop-nav"
-        key-field="to"
         mode="horizontal"
         :options="links"
         :render-label="renderLink"
@@ -58,13 +52,21 @@ useFetchError(sessionError, refreshSession);
       />
       <div class="account-actions">
         <LinkButton
-          v-if="session?.administrator"
+          v-if="session?.management"
           size="small"
-          to="/admin"
+          to="/manage"
           type="primary"
           @click="menuOpen = false"
         >
-          管理后台
+          管理工作台
+        </LinkButton>
+        <LinkButton
+          v-if="session?.administrator"
+          size="small"
+          to="/admin"
+          @click="menuOpen = false"
+        >
+          系统设置
         </LinkButton>
         <SiteColorModeSwitch />
         <template v-if="session">
@@ -87,7 +89,6 @@ useFetchError(sessionError, refreshSession);
     <NMenu
       v-if="menuOpen"
       class="mobile-nav"
-      key-field="to"
       mode="horizontal"
       :options="links"
       :render-label="renderLink"
@@ -121,6 +122,7 @@ useFetchError(sessionError, refreshSession);
 
 .account-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
   margin-left: auto;
@@ -150,6 +152,7 @@ useFetchError(sessionError, refreshSession);
 
   .account-actions {
     gap: 8px;
+    max-width: 100%;
   }
 
   .desktop-nav,

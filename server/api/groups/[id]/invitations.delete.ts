@@ -9,5 +9,5 @@ export default defineEventHandler(async (event) => {
 
   const { id } = await readValidatedBody(event, input.parse);
 
-  return revokeInvitation(actor, getRouterParam(event, "id")!, id);
+  return revokeInvitation(actor, routeParam(event, "id"), id);
 });

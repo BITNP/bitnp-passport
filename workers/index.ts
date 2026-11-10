@@ -37,17 +37,19 @@ try {
 
   await boss.work<TaskData>(
     operationQueue,
-    { localConcurrency: 3, groupConcurrency: 1 },
-    async ([task]) => {
+    { batchSize: 1, localConcurrency: 3, groupConcurrency: 1 },
+    async (tasks) => {
+      const task = tasks[0]!;
+
       try {
-        await runTask(task!);
+        await runTask(task);
       } catch (err) {
         log.error(
           {
             err,
             queue: operationQueue,
-            queueId: task!.id,
-            jobId: task!.data.jobId,
+            queueId: task.id,
+            jobId: task.data.jobId,
           },
           "任务执行失败",
         );
@@ -57,17 +59,24 @@ try {
     },
   );
 
-  await boss.work<TaskData>(failedQueue, async ([task]) => {
+  await boss.work<TaskData>(failedQueue, { batchSize: 1 }, async (tasks) => {
+    const task = tasks[0]!;
+
     try {
-      await failTask(task!.data);
+      await failTask(task.data);
 
       log.warn(
-        { jobId: task!.data.jobId, queueId: task!.data.queueId },
+        { jobId: task.data.jobId, queueId: task.data.queueId },
         "任务重试已耗尽",
       );
     } catch (err) {
       log.error(
-        { err, queue: failedQueue, queueId: task!.id, jobId: task!.data.jobId },
+        {
+          err,
+          queue: failedQueue,
+          queueId: task.id,
+          jobId: task.data.jobId,
+        },
         "任务失败状态保存失败",
       );
 
@@ -75,12 +84,18 @@ try {
     }
   });
 
-  await boss.work(cleanupQueue, async ([task]) => {
+  await boss.work(cleanupQueue, { batchSize: 1 }, async (tasks) => {
+    const task = tasks[0]!;
+
     try {
       await cleanupExpiredSessions();
     } catch (err) {
       log.error(
-        { err, queue: cleanupQueue, queueId: task!.id },
+        {
+          err,
+          queue: cleanupQueue,
+          queueId: task.id,
+        },
         "过期数据清理失败",
       );
 

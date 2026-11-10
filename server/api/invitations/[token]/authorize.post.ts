@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   const { mode } = await readValidatedBody(event, input.parse);
   const url = await beginAuthentication(event, {
     type: "invitation",
-    token: getRouterParam(event, "token")!,
+    token: routeParam(event, "token"),
     mode,
   });
 

@@ -26,15 +26,12 @@ const availableGroups = computed(() =>
 const { submit, pending } = useMutation(refresh);
 const message = useMessage();
 
-const addGroup = () =>
+const addGroup = (groupId: string) =>
   submit(async () => {
-    await $fetch(
-      `/api/groups/${encodeURIComponent(selectedGroupId.value!)}/members`,
-      {
-        method: "POST",
-        body: { identifier: user.username },
-      },
-    );
+    await $fetch(`/api/groups/${encodeURIComponent(groupId)}/members`, {
+      method: "POST",
+      body: { identifier: user.username },
+    });
     selectedGroupId.value = null;
     message.success("已加入群组");
   });
@@ -54,7 +51,10 @@ useFetchError(error, refreshGroups);
 <template>
   <NCard title="所属群组">
     <NFlex :size="20" vertical>
-      <NForm v-if="availableGroups" @submit.prevent="addGroup">
+      <NForm
+        v-if="availableGroups"
+        @submit.prevent="selectedGroupId && addGroup(selectedGroupId)"
+      >
         <NFormItem label="添加到群组" :show-feedback="false">
           <NInputGroup>
             <GroupSelect

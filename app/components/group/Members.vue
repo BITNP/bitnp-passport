@@ -1,17 +1,15 @@
 <script setup lang="ts">
 import type { DataTableColumns } from "naive-ui";
-import type { InternalApi } from "nitropack/types";
 
 import { ConfirmAction, UserIdentity } from "#components";
 import type { DirectoryUser } from "#shared/user";
 import { userLabel } from "#shared/user";
 
-const { groupId, members, note, loading, session, refresh } = defineProps<{
+const { groupId, members, note, loading, refresh } = defineProps<{
   groupId: string;
   members: DirectoryUser[];
   note?: string;
   loading: boolean;
-  session: InternalApi["/api/session"]["get"] | undefined;
   refresh: () => Promise<void>;
 }>();
 const { submit, pending } = useMutation(refresh);
@@ -42,19 +40,12 @@ const columns: DataTableColumns<DirectoryUser> = [
     title: "用户",
     key: "user",
     minWidth: 240,
-    render: (member) => {
-      const target = session?.administrator
-        ? `/admin/users/${encodeURIComponent(member.id)}`
-        : session?.user.id === member.id
-          ? "/account"
-          : null;
-
-      return h(UserIdentity, {
+    render: (member) =>
+      h(UserIdentity, {
         user: member,
         showUsername: true,
-        to: target,
-      });
-    },
+        to: `/manage/users/${encodeURIComponent(member.id)}`,
+      }),
   },
   {
     title: "邮箱",
@@ -100,23 +91,12 @@ const columns: DataTableColumns<DirectoryUser> = [
         >
           <NInputGroup>
             <UserAutocomplete
-              v-if="session?.administrator"
               v-model:value="identifier"
               :input-props="{
                 id: 'member',
                 autocomplete: 'off',
                 required: true,
               }"
-            />
-            <NInput
-              v-else
-              v-model:value="identifier"
-              :input-props="{
-                id: 'member',
-                autocomplete: 'off',
-                required: true,
-              }"
-              placeholder="准确的用户名或邮箱"
             />
             <NButton attr-type="submit" :loading="pending" type="primary">
               添加

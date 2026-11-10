@@ -7,7 +7,7 @@ const subjects = z
   .transform((ids) => [...new Set(ids)]);
 
 const appointment = z.strictObject({
-  role: z.string().refine((role) => appointmentRoles.includes(role)),
+  role: z.enum(appointmentRoles),
   current: subjects,
   next: subjects,
 });

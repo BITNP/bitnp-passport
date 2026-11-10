@@ -1,20 +1,26 @@
+export const departmentCodes = [
+  "techdept",
+  "clinic",
+  "digimedia",
+  "techsvc",
+] as const;
+
+export type Department = (typeof departmentCodes)[number];
+
 export const departments = {
   techdept: "技术部",
   clinic: "电脑诊所",
   digimedia: "数字媒体中心",
   techsvc: "技术保障中心",
-} as const;
-
-export type Department = keyof typeof departments;
-export const departmentCodes = Object.keys(
-  departments,
-) as readonly Department[];
+} as const satisfies Record<Department, string>;
+export const activeOrganizationRole = "bitnp-active";
 export const systemAdministratorRole = "permission-system-admin";
+export const supportGroupNames = ["master", "management"] as const;
 
 export const memberRole = (department: Department) =>
   `position-${department}-member`;
 
-export const positionLabels = {
+const positionLabels = {
   "position-association-chair": "主席",
   "position-association-vice-chair": "副主席",
   "position-association-vice-chair-techdept": "分管技术部副主席",
@@ -37,28 +43,42 @@ export const positionLabels = {
   "position-techsvc-deputy-director": "技术保障中心副主任",
 } as const;
 
+type PositionRole = keyof typeof positionLabels;
+
+export type AppointmentRole = Exclude<
+  PositionRole,
+  `${string}-member` | "position-association-vice-chair"
+>;
+
+const isPositionLabel = (name: string): name is keyof typeof positionLabels =>
+  Object.hasOwn(positionLabels, name);
+
 /**
  * The generic vice-chair role is only the composite parent of the
  * portfolio-specific vice-chair roles, not a separately managed appointment.
  */
-export const isCurrentPositionRole = (name: string) =>
-  name.startsWith("position-") && name !== "position-association-vice-chair";
+export const isCurrentPositionRole = (name: string): name is PositionRole =>
+  isPositionLabel(name) && name !== "position-association-vice-chair";
 
-export const appointmentRoles = Object.keys(positionLabels).filter(
-  (role) => !role.endsWith("-member") && isCurrentPositionRole(role),
-);
+const isAppointmentRole = (name: string): name is AppointmentRole =>
+  isPositionLabel(name) &&
+  name !== "position-association-vice-chair" &&
+  !name.endsWith("-member");
+
+export const appointmentRoles =
+  Object.keys(positionLabels).filter(isAppointmentRole);
 
 export function roleLabel(name: string) {
-  if (name in positionLabels) {
-    return positionLabels[name as keyof typeof positionLabels];
+  if (isPositionLabel(name)) {
+    return positionLabels[name];
+  }
+
+  if (name === activeOrganizationRole) {
+    return "网协现任";
   }
 
   if (name === systemAdministratorRole) {
     return "系统管理";
-  }
-
-  if (name === "permission-management-access") {
-    return "管理层访问";
   }
 
   for (const department of departmentCodes) {
@@ -75,3 +95,15 @@ export function roleLabel(name: string) {
 
   return name;
 }
+
+export const roleSourceLabel = (role: string, groupId: string | null) =>
+  groupId === null && role === systemAdministratorRole
+    ? "个人特批"
+    : roleLabel(role);
+
+export const managedDepartmentCodes = (roles: ReadonlySet<string>) =>
+  departmentCodes.filter(
+    (code) =>
+      roles.has(systemAdministratorRole) ||
+      roles.has(`permission-${code}-admin`),
+  );

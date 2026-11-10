@@ -1,12 +1,19 @@
 import type { DirectoryUser } from "#shared/user";
 
+import { ApplicationError } from "../errors.ts";
 import * as keycloak from "../keycloak.ts";
-import type { GroupRepresentation } from "./shared.ts";
-import { allPages, client, request } from "./shared.ts";
+import type { Group, KeycloakGroup } from "./shared.ts";
+import { allPages, asGroup, client, request } from "./shared.ts";
 
-export type Role = Awaited<
+type RawRole = Awaited<
   ReturnType<typeof client.users.listRealmRoleMappings>
 >[number];
+
+type Role = RawRole & { id: string; name: string };
+
+export type RoleExpansionCache = Map<string, Promise<Role[]>>;
+
+const rolesFromKeycloak = (roles: RawRole[]) => roles as Role[];
 
 export interface RoleChange {
   groupId: string | null;
@@ -14,62 +21,72 @@ export interface RoleChange {
   assigned: boolean;
 }
 
-interface RoleSource {
-  group: Pick<Required<GroupRepresentation>, "id" | "name" | "path"> | null;
+export interface RoleSource {
+  group: Pick<Group, "id" | "name" | "path"> | null;
   role: string;
   roles: string[];
 }
 
-export class RoleGraph {
-  private children = new Map<string, Promise<Role[]>>();
+export async function expandRoles(assigned: Role[], cache: RoleExpansionCache) {
+  const roles = new Map<string, Role>();
 
-  public async expand(assigned: Role[]) {
-    const roles = new Map<string, Role>();
-    const pending = [...assigned];
-
-    while (pending.length > 0) {
-      const role = pending.pop()!;
-      if (roles.has(role.id!)) {
-        continue;
-      }
-
-      roles.set(role.id!, role);
-
-      if (!role.composite) {
-        continue;
-      }
-
-      let children = this.children.get(role.id!);
-
-      if (!children) {
-        children = request(() =>
-          client.roles.getCompositeRoles({ id: role.id! }),
-        );
-        this.children.set(role.id!, children);
-      }
-
-      pending.push(...(await children));
+  async function visit(role: Role) {
+    if (roles.has(role.id)) {
+      return;
     }
 
-    return [...roles.values()];
+    roles.set(role.id, role);
+
+    if (!role.composite) {
+      return;
+    }
+
+    let children = cache.get(role.id);
+
+    if (!children) {
+      children = (async () => {
+        const items = await request(() =>
+          client.roles.getCompositeRoles({ id: role.id }),
+        );
+
+        return rolesFromKeycloak(items);
+      })();
+      cache.set(role.id, children);
+    }
+
+    for (const child of await children) {
+      await visit(child);
+    }
   }
+
+  for (const role of assigned) {
+    await visit(role);
+  }
+
+  return [...roles.values()];
 }
 
-export const effectiveUserRoles = (id: string) =>
-  request(() => client.users.listCompositeRealmRoleMappings({ id }));
+export async function effectiveUserRoles(id: string) {
+  const roles = await request(() =>
+    client.users.listCompositeRealmRoleMappings({ id }),
+  );
 
-export const directUserRoles = (id: string) =>
-  request(() => client.users.listRealmRoleMappings({ id }));
+  return rolesFromKeycloak(roles);
+}
 
-export const directGroupRoles = (id: string) =>
-  request(() => client.groups.listRealmRoleMappings({ id }));
+async function realmRole(name: string) {
+  const role = await request(() => client.roles.findOneByName({ name }));
 
-export const realmRole = async (name: string) =>
-  (await request(() => client.roles.findOneByName({ name })))!;
+  if (!role) {
+    throw new ApplicationError(404, `角色不存在：${name}`);
+  }
+
+  return role as Role;
+}
 
 export async function setUserRole(id: string, name: string, assigned: boolean) {
   const role = await realmRole(name);
-  const payload = { id, roles: [{ id: role.id!, name: role.name! }] };
+  const payload = { id, roles: [{ id: role.id, name: role.name }] };
 
   await request(() =>
     assigned
@@ -84,7 +101,7 @@ export async function setGroupRole(
   assigned: boolean,
 ) {
   const role = await realmRole(name);
-  const payload = { id, roles: [{ id: role.id!, name: role.name! }] };
+  const payload = { id, roles: [{ id: role.id, name: role.name }] };
 
   await request(() =>
     assigned
@@ -93,50 +110,84 @@ export async function setGroupRole(
   );
 }
 
-export async function userRoleAssignments(id: string, graph = new RoleGraph()) {
+export async function roleGroups(name: string) {
+  const groupsWithRole = client.roles.makeRequest<
+    {
+      name: string;
+      first: number;
+      max: number;
+      briefRepresentation: boolean;
+    },
+    KeycloakGroup[]
+  >({
+    method: "GET",
+    path: "/roles/{name}/groups",
+    urlParamKeys: ["name"],
+  });
+
+  const groups = await request(() =>
+    allPages((first, max) =>
+      groupsWithRole({
+        name,
+        first,
+        max,
+        briefRepresentation: false,
+      }),
+    ),
+  );
+
+  return groups.map(asGroup);
+}
+
+export async function userRoleAssignments(
+  id: string,
+  cache: RoleExpansionCache = new Map(),
+) {
   const memberships = await keycloak.groupsForUser(id);
   const inherited = await keycloak.inheritedGroups(memberships);
-  const origins = await Promise.all(
-    [null, ...inherited].map(async (group) => ({
-      group,
-      mappings: await request(() =>
-        group === null
-          ? client.users.listRoleMappings({ id })
-          : client.groups.listRoleMappings({ id: group.id }),
-      ),
-    })),
-  );
+  const [directMappings, groupOrigins] = await Promise.all([
+    request(() => client.users.listRoleMappings({ id })),
+    Promise.all(
+      inherited.map(async (group) => ({
+        group,
+        mappings: await request(() =>
+          client.groups.listRoleMappings({ id: group.id }),
+        ),
+      })),
+    ),
+  ]);
+  const origins = [{ group: null, mappings: directMappings }, ...groupOrigins];
   const sources: RoleSource[] = [];
   const effective = new Map<string, Role>();
 
   for (const { group, mappings } of origins) {
     const assignments = [
-      ...(mappings.realmMappings ?? []).map((role) => ({
+      ...rolesFromKeycloak(mappings.realmMappings ?? []).map((role) => ({
         role,
-        name: role.name!,
+        name: role.name,
       })),
       ...Object.entries(mappings.clientMappings ?? {}).flatMap(
-        ([name, mapping]) =>
-          ((mapping.mappings ?? []) as Role[]).map((role) => ({
+        ([clientId, mapping]) =>
+          rolesFromKeycloak(mapping.mappings ?? []).map((role) => ({
             role,
-            name: `${name}: ${role.name}`,
+            name: `${clientId}: ${role.name}`,
           })),
       ),
     ];
 
     for (const { role, name } of assignments) {
-      const expanded = (await graph.expand([role])).filter(
+      const expanded = (await expandRoles([role], cache)).filter(
         (child) => !child.clientRole,
       );
 
       for (const child of expanded) {
-        effective.set(child.id!, child);
+        effective.set(child.id, child);
       }
 
       sources.push({
         group,
         role: name,
-        roles: expanded.map((child) => child.name!),
+        roles: expanded.map((child) => child.name),
       });
     }
   }
@@ -144,7 +195,7 @@ export async function userRoleAssignments(id: string, graph = new RoleGraph()) {
   return {
     memberships,
     inheritedGroups: new Map(inherited.map((group) => [group.id, group])),
-    directRoles: origins[0]!.mappings.realmMappings ?? [],
+    directRoles: rolesFromKeycloak(directMappings.realmMappings ?? []),
     effectiveRoles: [...effective.values()],
     sources,
   };
@@ -152,14 +203,19 @@ export async function userRoleAssignments(id: string, graph = new RoleGraph()) {
 
 export async function projectRoleSources(
   sources: Awaited<ReturnType<typeof userRoleAssignments>>["sources"],
-  inheritedGroups: Map<string, Required<GroupRepresentation>>,
+  inheritedGroups: Map<string, Group>,
   changes: RoleChange[],
-  graph: RoleGraph,
+  cache: RoleExpansionCache,
 ) {
   let result = [...sources];
 
   for (const change of changes) {
-    if (change.groupId !== null && !inheritedGroups.has(change.groupId)) {
+    const sourceGroup =
+      change.groupId === null
+        ? null
+        : (inheritedGroups.get(change.groupId) ?? null);
+
+    if (change.groupId !== null && !sourceGroup) {
       continue;
     }
 
@@ -170,14 +226,13 @@ export async function projectRoleSources(
     );
 
     if (change.assigned) {
-      const expanded = await graph.expand([await realmRole(change.role)]);
+      const expanded = await expandRoles([await realmRole(change.role)], cache);
       result.push({
-        group:
-          change.groupId === null ? null : inheritedGroups.get(change.groupId)!,
+        group: sourceGroup,
         role: change.role,
         roles: expanded
           .filter((role) => !role.clientRole)
-          .map((role) => role.name!),
+          .map((role) => role.name),
       });
     }
   }
@@ -185,38 +240,17 @@ export async function projectRoleSources(
   return result;
 }
 
-export async function effectiveRoleHolders(name: string) {
-  const [users, realmRoles, clients] = await Promise.all([
-    keycloak.allUsers(),
-    request(() => client.roles.find()),
-    request(() =>
-      allPages((first, max) => client.clients.find({ first, max })),
-    ),
-  ]);
-  const clientRoles = await request(() =>
-    Promise.all(clients.map(({ id }) => client.clients.listRoles({ id: id! }))),
-  );
-  const clientNames = new Map(
-    clients.map(({ id, clientId }) => [id, clientId]),
-  );
-  const holders = new Map<
-    string,
-    { user: DirectoryUser; sources: RoleSource[] }
-  >(users.map((user) => [user.id, { user, sources: [] }]));
-  const graph = new RoleGraph();
-
-  function assign(ids: Iterable<string>, source: RoleSource) {
-    for (const id of ids) {
-      const holder = holders.get(id);
-
-      if (holder) {
-        holder.sources.push(source);
-      }
-    }
+async function collectGroupMembers(
+  id: string,
+  cache: Map<string, Promise<DirectoryUser[]>>,
+): Promise<DirectoryUser[]> {
+  const cached = cache.get(id);
+  if (cached) {
+    return cached;
   }
 
-  async function collectMembers(id: string, members: Set<string>) {
-    const [users, children] = await Promise.all([
+  const members = (async () => {
+    const [directMembers, children] = await Promise.all([
       keycloak.members(id),
       request(() =>
         allPages((first, max) =>
@@ -229,85 +263,89 @@ export async function effectiveRoleHolders(name: string) {
         ),
       ),
     ]);
+    const childMembers = await Promise.all(
+      children.map((child) => collectGroupMembers(child.id!, cache)),
+    );
+    const uniqueMembers = new Map(directMembers.map((user) => [user.id, user]));
 
-    for (const user of users) {
-      members.add(user.id);
+    for (const user of childMembers.flat()) {
+      uniqueMembers.set(user.id, user);
     }
 
-    for (const child of children) {
-      await collectMembers(child.id!, members);
-    }
-  }
+    return [...uniqueMembers.values()];
+  })();
 
-  for (const role of [...realmRoles, ...clientRoles.flat()]) {
-    const expanded = await graph.expand([role]);
+  cache.set(id, members);
 
-    if (!expanded.some((child) => !child.clientRole && child.name === name)) {
+  return members;
+}
+
+export async function effectiveRealmRoleHolders(name: string) {
+  const roles = rolesFromKeycloak(
+    await request(() =>
+      allPages((first, max) => client.roles.find({ first, max })),
+    ),
+  );
+  const cache: RoleExpansionCache = new Map();
+  const sourceRoles: { name: string; roles: string[] }[] = [];
+  const groupMemberCache = new Map<string, Promise<DirectoryUser[]>>();
+
+  for (const role of roles) {
+    const expanded = await expandRoles([role], cache);
+
+    if (
+      !expanded.some(
+        (candidate) => !candidate.clientRole && candidate.name === name,
+      )
+    ) {
       continue;
     }
 
-    const sourceRole = role.clientRole
-      ? `${clientNames.get(role.containerId)}: ${role.name}`
-      : role.name!;
-    const groupsWithRole = (
-      role.clientRole ? client.clients : client.roles
-    ).makeRequest<
-      { id: string; name: string; first: number; max: number },
-      GroupRepresentation[]
-    >({
-      method: "GET",
-      path: role.clientRole
-        ? "/{id}/roles/{name}/groups"
-        : "/roles/{name}/groups",
-      urlParamKeys: ["id", "name"],
+    sourceRoles.push({
+      name: role.name,
+      roles: expanded
+        .filter((candidate) => !candidate.clientRole)
+        .map((candidate) => candidate.name),
     });
-    const [assignedUsers, assignedGroups] = await request(() =>
-      Promise.all([
-        allPages((first, max) =>
-          role.clientRole
-            ? client.clients.findUsersWithRole({
-                id: role.containerId!,
-                roleName: role.name!,
-                first,
-                max,
-                briefRepresentation: true,
-              })
-            : client.roles.findUsersWithRole({
-                name: role.name!,
-                first,
-                max,
-                briefRepresentation: true,
-              }),
-        ),
-        allPages((first, max) =>
-          groupsWithRole({
-            id: role.containerId!,
-            name: role.name!,
-            first,
-            max,
-          }),
-        ),
-      ]),
-    );
-    const roles = expanded
-      .filter((child) => !child.clientRole)
-      .map((child) => child.name!);
+  }
 
-    assign(
-      assignedUsers.map((user) => user.id!),
-      { group: null, role: sourceRole, roles },
-    );
+  const holders = new Map<
+    string,
+    { user: DirectoryUser; sources: RoleSource[] }
+  >();
 
-    for (const group of assignedGroups) {
-      const members = new Set<string>();
-      await collectMembers(group.id!, members);
-      assign(members, {
-        group: { id: group.id!, name: group.name!, path: group.path! },
-        role: sourceRole,
-        roles,
+  function assign(user: DirectoryUser, source: RoleSource) {
+    const holder = holders.get(user.id) ?? { user, sources: [] };
+    holder.sources.push(source);
+    holders.set(user.id, holder);
+  }
+
+  for (const sourceRole of sourceRoles) {
+    const [directUsers, groups] = await Promise.all([
+      keycloak.directRoleHolders(sourceRole.name),
+      roleGroups(sourceRole.name),
+    ]);
+
+    for (const user of directUsers) {
+      assign(user, {
+        group: null,
+        role: sourceRole.name,
+        roles: sourceRole.roles,
       });
+    }
+
+    for (const group of groups) {
+      const members = await collectGroupMembers(group.id, groupMemberCache);
+
+      for (const user of members) {
+        assign(user, {
+          group,
+          role: sourceRole.name,
+          roles: sourceRole.roles,
+        });
+      }
     }
   }
 
-  return [...holders.values()].filter((holder) => holder.sources.length > 0);
+  return [...holders.values()];
 }

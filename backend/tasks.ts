@@ -56,7 +56,7 @@ export async function runTask(task: Job<TaskData>) {
       return runMembershipTask(task, job.groupId);
     }
     case "handover": {
-      return runHandoverTask(task, job.data.input);
+      return runHandoverTask(task, job.data);
     }
   }
 }

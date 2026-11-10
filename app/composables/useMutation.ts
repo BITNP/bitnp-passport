@@ -12,10 +12,10 @@ export function useMutation(refresh?: () => Promise<void>) {
     try {
       await request();
       await refresh?.();
-    } catch (cause: any) {
-      message.error(cause.data?.message ?? cause.message);
+    } catch (cause: unknown) {
+      message.error(requestErrorMessage(cause));
 
-      if (cause.statusCode === 401) {
+      if (requestStatusCode(cause) === 401) {
         await refreshNuxtData("portal-session");
       }
     } finally {

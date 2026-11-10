@@ -9,5 +9,5 @@ export default defineEventHandler(async (event) => {
 
   const { subject } = await readValidatedBody(event, input.parse);
 
-  return removeMember(actor, getRouterParam(event, "id")!, subject);
+  return removeMember(actor, routeParam(event, "id"), subject);
 });

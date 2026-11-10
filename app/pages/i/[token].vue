@@ -142,7 +142,7 @@ const switchAccount = () =>
     </NFlex>
     <NResult
       v-else-if="loadError"
-      :description="(loadError.data as any)?.message ?? loadError.message"
+      :description="requestErrorMessage(loadError)"
       status="warning"
       title="邀请加载失败"
     >

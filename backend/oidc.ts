@@ -1,9 +1,8 @@
 import * as oidc from "openid-client";
 
 import { config } from "./config.ts";
-import { createSharedAsync } from "./utils.ts";
 
-export const identityClient = createSharedAsync(() =>
+const discover = () =>
   oidc.discovery(
     new URL(config.issuer),
     config.clientId,
@@ -15,5 +14,13 @@ export const identityClient = createSharedAsync(() =>
         ? [oidc.allowInsecureRequests, oidc.enableNonRepudiationChecks]
         : [oidc.enableNonRepudiationChecks],
     },
-  ),
-);
+  );
+
+let identityClientPromise: ReturnType<typeof discover> | undefined;
+
+export const identityClient = () =>
+  (identityClientPromise ??= discover().catch((error) => {
+    identityClientPromise = undefined;
+
+    throw error;
+  }));

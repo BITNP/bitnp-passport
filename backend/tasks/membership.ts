@@ -11,7 +11,7 @@ import * as keycloak from "../keycloak.ts";
 import { logger } from "../logger.ts";
 import { requireGroupManager } from "../permissions.ts";
 
-export async function runMembershipTask(task: Job<TaskData>, groupId: string) {
+async function executeMembershipTask(task: Job<TaskData>, groupId: string) {
   const { jobId, queueId } = task.data;
   const currentRun = and(
     eq(jobs.id, jobId),
@@ -22,6 +22,8 @@ export async function runMembershipTask(task: Job<TaskData>, groupId: string) {
   const actor = { subject: task.data.actorSubject };
 
   try {
+    await requireGroupManager(actor, groupId);
+
     const items = await db
       .select()
       .from(jobItems)
@@ -36,76 +38,95 @@ export async function runMembershipTask(task: Job<TaskData>, groupId: string) {
       );
 
       try {
-        const proceed = await withIdentityLock(() =>
-          db.transaction(async (tx) => {
-            // Audit inserts use a separate connection and take a foreign-key KEY SHARE lock
-            // NO KEY UPDATE serializes task steps without blocking those inserts
-            const [active] = await tx
-              .select()
-              .from(jobs)
-              .where(currentRun)
-              .for("no key update");
-            if (!active) {
-              return false;
-            }
+        let member = false;
+        try {
+          member = (await keycloak.groupsForUser(item.itemKey)).some(
+            (group) => group.id === groupId,
+          );
+        } catch (error) {
+          const alreadyRemoved =
+            item.operation === "remove" &&
+            error instanceof ApplicationError &&
+            error.statusCode === 404;
+          if (!alreadyRemoved) {
+            throw error;
+          }
+        }
 
-            await requireGroupManager(actor, groupId);
+        if (item.operation === "add" && !member) {
+          const user = await keycloak.user(item.itemKey);
+          if (!user.enabled) {
+            throw new ApplicationError(422, "不能添加已停用的用户");
+          }
+        }
 
-            // Heartbeat retries can overlap an older callback with the same item snapshot
-            const saved = await tx.query.jobItems.findFirst({
-              where: itemCondition,
-            });
-            if (saved!.status === "succeeded") {
-              return true;
-            }
+        task.signal.throwIfAborted();
 
-            await audited(
-              actor,
-              {
-                operation: `job.${item.operation}`,
-                jobId,
-                groupId,
-                target: { type: "user", id: item.itemKey },
-              },
-              async () => {
-                if (item.operation === "add") {
-                  const user = await keycloak.user(item.itemKey);
-                  if (!user.enabled) {
-                    throw new ApplicationError(422, "不能添加已停用的用户");
-                  }
+        const shouldExecute = await db.transaction(async (tx) => {
+          // NO KEY UPDATE serializes task steps without blocking audit FK inserts.
+          const [currentItem] = await tx
+            .select({ status: jobItems.status })
+            .from(jobItems)
+            .innerJoin(jobs, eq(jobs.id, jobItems.jobId))
+            .where(and(currentRun, itemCondition))
+            .for("no key update");
+          if (!currentItem || currentItem.status === "succeeded") {
+            return false;
+          }
 
-                  task.signal.throwIfAborted();
-                  await keycloak.addMember(item.itemKey, groupId);
-                } else {
-                  task.signal.throwIfAborted();
-                  await keycloak.removeMember(item.itemKey, groupId);
-                }
-              },
-            );
+          task.signal.throwIfAborted();
 
-            task.signal.throwIfAborted();
+          const alreadyApplied = item.operation === "add" ? member : !member;
+          if (alreadyApplied) {
             await tx
               .update(jobItems)
               .set({ status: "succeeded", error: null })
               .where(itemCondition);
 
-            return true;
-          }),
-        );
-        if (!proceed) {
-          return;
+            return false;
+          }
+
+          return true;
+        });
+        if (!shouldExecute) {
+          continue;
         }
-      } catch (error) {
-        task.signal.throwIfAborted();
+
+        await audited(
+          actor,
+          {
+            operation: `job.${item.operation}`,
+            jobId,
+            groupId,
+            target: { type: "user", id: item.itemKey },
+          },
+          () =>
+            item.operation === "add"
+              ? keycloak.addMember(item.itemKey, groupId)
+              : keycloak.removeMember(item.itemKey, groupId),
+        );
+
         await db
           .update(jobItems)
-          .set({ status: "failed", error: errorMessage(error) })
+          .set({ status: "succeeded", error: null })
+          .where(and(itemCondition, ne(jobItems.status, "succeeded")));
+      } catch (error) {
+        task.signal.throwIfAborted();
+
+        const knownFailure =
+          error instanceof ApplicationError && error.statusCode < 500;
+
+        await db
+          .update(jobItems)
+          .set({
+            status: knownFailure ? "failed" : "pending",
+            error: errorMessage(error),
+          })
           .where(and(itemCondition, ne(jobItems.status, "succeeded")));
 
         if (
-          !(error instanceof ApplicationError) ||
-          error.statusCode >= 500 ||
-          error.statusCode === 403
+          !knownFailure ||
+          (error instanceof ApplicationError && error.statusCode === 403)
         ) {
           throw error;
         }
@@ -130,7 +151,7 @@ export async function runMembershipTask(task: Job<TaskData>, groupId: string) {
         .update(jobs)
         .set({
           status: incomplete ? "failed" : "succeeded",
-          error: incomplete ? "部分成员变更失败，请处理后重试" : null,
+          error: incomplete ? "部分成员变更未完成，请按明细处理后重试" : null,
           updatedAt: new Date(),
         })
         .where(eq(jobs.id, jobId));
@@ -159,3 +180,6 @@ export async function runMembershipTask(task: Job<TaskData>, groupId: string) {
     );
   }
 }
+
+export const runMembershipTask = (task: Job<TaskData>, groupId: string) =>
+  withIdentityLock(() => executeMembershipTask(task, groupId));

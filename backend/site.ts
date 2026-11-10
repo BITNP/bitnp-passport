@@ -3,16 +3,23 @@ import { eq } from "drizzle-orm";
 import { siteSettings } from "#database/schema";
 import type { Actor } from "#shared/types";
 
-import { audited } from "./audit.ts";
+import { auditedConfigurationChange } from "./audit.ts";
 import { db } from "./database.ts";
+import { ApplicationError } from "./errors.ts";
 import { requireAdministrator } from "./permissions.ts";
+
+const missingSettingsMessage = "站点设置缺失，请运行数据库迁移";
 
 export async function readSite() {
   const settings = await db.query.siteSettings.findFirst({
     columns: { id: false },
   });
 
-  return settings!;
+  if (!settings) {
+    throw new ApplicationError(503, missingSettingsMessage);
+  }
+
+  return settings;
 }
 
 export async function updateSite(
@@ -21,7 +28,7 @@ export async function updateSite(
 ) {
   await requireAdministrator(actor);
 
-  return audited(
+  return auditedConfigurationChange(
     actor,
     { operation: "site.update", detail: { after: input } },
     (recordBefore) =>
@@ -31,7 +38,11 @@ export async function updateSite(
           .from(siteSettings)
           .where(eq(siteSettings.id, true))
           .for("update");
-        recordBefore(previous!);
+        if (!previous) {
+          throw new ApplicationError(503, missingSettingsMessage);
+        }
+
+        recordBefore(previous);
 
         await tx
           .update(siteSettings)

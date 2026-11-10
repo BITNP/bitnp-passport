@@ -56,7 +56,8 @@ useFetchError(error, refresh);
             v-model:value="editor.supportUrl"
             :input-props="{
               id: 'support-url',
-              type: 'url',
+              type: 'text',
+              inputmode: 'url',
               required: true,
               pattern: '(https?://|mailto:).+',
             }"

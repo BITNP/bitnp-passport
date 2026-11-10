@@ -36,6 +36,13 @@ function matchesGroup(pattern: string, id: string) {
     value.toLocaleLowerCase().includes(query),
   );
 }
+
+function selectTree(keys: (string | number)[]) {
+  const id = keys[0];
+  if (id !== undefined) {
+    emit("select", String(id));
+  }
+}
 </script>
 
 <template>
@@ -66,7 +73,7 @@ function matchesGroup(pattern: string, id: string) {
             :render-label="({ option }) => nodes.get(String(option.id))!.label"
             :selected-keys="selectedId ? [selectedId] : []"
             show-line
-            @update:selected-keys="emit('select', String($event[0]))"
+            @update:selected-keys="selectTree"
           />
           <NEmpty v-else description="暂无群组" />
         </NScrollbar>

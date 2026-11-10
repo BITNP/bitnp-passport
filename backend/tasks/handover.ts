@@ -2,9 +2,8 @@ import { and, eq } from "drizzle-orm";
 import type { Job } from "pg-boss";
 
 import { jobs } from "#database/schema";
-import type { HandoverInput } from "#shared/handover";
-import { roleLabel } from "#shared/identity";
-import type { JobResult } from "#shared/jobs";
+import { activeOrganizationRole, roleLabel } from "#shared/identity";
+import type { JobData, JobResult } from "#shared/jobs";
 import type { TaskData } from "#shared/types";
 import { userLabel } from "#shared/user";
 
@@ -16,17 +15,15 @@ import { previewHandover } from "../handover.ts";
 import { closeGroupInvitations } from "../invitations/revocation.ts";
 import { setGroupRole, setUserRole } from "../keycloak/roles.ts";
 
-export const runHandoverTask = (task: Job<TaskData>, input: HandoverInput) =>
+type HandoverJobData = Extract<JobData, { type: "handover" }>;
+
+export const runHandoverTask = (task: Job<TaskData>, data: HandoverJobData) =>
   withIdentityLock(async () => {
     const currentRun = and(
       eq(jobs.id, task.data.jobId),
       eq(jobs.queueId, task.data.queueId),
       eq(jobs.status, "running"),
     );
-
-    if (!(await db.query.jobs.findFirst({ where: currentRun }))) {
-      return;
-    }
 
     const actor = { subject: task.data.actorSubject };
     const results: JobResult[] = [];
@@ -35,7 +32,18 @@ export const runHandoverTask = (task: Job<TaskData>, input: HandoverInput) =>
 
     try {
       task.signal.throwIfAborted();
-      const preview = await previewHandover(actor, input);
+      const preview = await previewHandover(actor, data.input);
+
+      await db
+        .update(jobs)
+        .set({
+          data: {
+            ...data,
+            total: preview.changes.length + preview.groupChanges.length + 1,
+          },
+          updatedAt: new Date(),
+        })
+        .where(currentRun);
 
       await audited(
         actor,
@@ -47,27 +55,30 @@ export const runHandoverTask = (task: Job<TaskData>, input: HandoverInput) =>
           detail: {
             previousRootId: preview.previous.id,
             nextRootId: preview.next.id,
-            results,
           },
         },
         async () => {
           async function perform(label: string, run: () => Promise<unknown>) {
+            task.signal.throwIfAborted();
+
             try {
-              task.signal.throwIfAborted();
               await run();
               task.signal.throwIfAborted();
             } catch (cause) {
+              const knownFailure =
+                cause instanceof ApplicationError && cause.statusCode < 500;
               results.push({
                 label,
-                outcome:
-                  cause instanceof ApplicationError && cause.statusCode < 500
-                    ? "failed"
-                    : "unknown",
+                outcome: knownFailure ? "failed" : "pending",
                 error: errorMessage(cause),
               });
               await saveProgress();
 
-              throw new ApplicationError(409, "换届未完成。", { cause });
+              throw new ApplicationError(
+                knownFailure ? 409 : 503,
+                "换届未完成。",
+                { cause },
+              );
             }
 
             results.push({ label, outcome: "succeeded" });
@@ -78,34 +89,76 @@ export const runHandoverTask = (task: Job<TaskData>, input: HandoverInput) =>
             closeGroupInvitations(preview.previousGroups),
           );
 
-          for (const assigned of [true, false]) {
-            for (const change of preview.changes.filter(
-              (change) => change.assigned === assigned,
-            )) {
-              await perform(
-                `${assigned ? "任命" : "撤销"} ${userLabel(change.preview.user)}：${roleLabel(change.role)}`,
-                async () => {
-                  await previewAssignment(change.subject, {
-                    role: change.role,
-                    assigned,
-                    previouslyAssigned: !assigned,
-                  });
+          const groupGrants = preview.groupChanges.filter(
+            (change) =>
+              change.assigned && change.role !== activeOrganizationRole,
+          );
+          const groupRevokes = preview.groupChanges.filter(
+            (change) =>
+              !change.assigned && change.role !== activeOrganizationRole,
+          );
+          const activeMarkerChanges = [
+            ...preview.groupChanges.filter(
+              (change) =>
+                change.role === activeOrganizationRole && !change.assigned,
+            ),
+            ...preview.groupChanges.filter(
+              (change) =>
+                change.role === activeOrganizationRole && change.assigned,
+            ),
+          ];
 
-                  await setUserRole(change.subject, change.role, assigned);
-                },
-              );
-            }
-          }
-
-          for (const member of preview.members) {
-            await perform(`接入新届${member.label}成员身份`, () =>
-              setGroupRole(member.next.id, member.role, true),
+          // Establish every new source before revoking anything. The active
+          // marker is switched last so there is never more than one current root.
+          for (const change of groupGrants) {
+            await perform(change.label, () =>
+              setGroupRole(change.groupId, change.role, true),
             );
           }
 
-          for (const member of preview.members) {
-            await perform(`移除前届${member.label}成员身份`, () =>
-              setGroupRole(member.previous.id, member.role, false),
+          for (const change of preview.changes.filter(
+            (change) => change.assigned,
+          )) {
+            await perform(
+              `任命 ${userLabel(change.preview.user)}：${roleLabel(change.role)}`,
+              async () => {
+                await previewAssignment(change.subject, {
+                  role: change.role,
+                  assigned: true,
+                  previouslyAssigned: false,
+                });
+
+                await setUserRole(change.subject, change.role, true);
+              },
+            );
+          }
+
+          for (const change of preview.changes.filter(
+            (change) => !change.assigned,
+          )) {
+            await perform(
+              `撤销 ${userLabel(change.preview.user)}：${roleLabel(change.role)}`,
+              async () => {
+                await previewAssignment(change.subject, {
+                  role: change.role,
+                  assigned: false,
+                  previouslyAssigned: true,
+                });
+
+                await setUserRole(change.subject, change.role, false);
+              },
+            );
+          }
+
+          for (const change of groupRevokes) {
+            await perform(change.label, () =>
+              setGroupRole(change.groupId, change.role, false),
+            );
+          }
+
+          for (const change of activeMarkerChanges) {
+            await perform(change.label, () =>
+              setGroupRole(change.groupId, change.role, change.assigned),
             );
           }
         },

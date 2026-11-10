@@ -1,5 +1,6 @@
 import { and, eq, gt, gte, inArray, isNull, lt, or } from "drizzle-orm";
 import * as oidc from "openid-client";
+import { z } from "zod";
 
 import { decrypt, encrypt, randomToken, tokenHash } from "#backend/crypto";
 import type { DatabaseTransaction } from "#backend/database";
@@ -17,22 +18,56 @@ interface Tokens {
   idToken: string;
 }
 
+const persistedTokens = z.object({
+  accessToken: z.string().min(1),
+  refreshToken: z.string().min(1),
+  idToken: z.string().min(1),
+});
+
+type OidcTokens = oidc.TokenEndpointResponse &
+  oidc.TokenEndpointResponseHelpers;
+
 const sessionRetention = 14 * 24 * 60 * 60 * 1000;
 
 const logoutRetention = 12 * 60 * 60;
 
-function sessionValues(tokens: oidc.TokenEndpointResponse) {
+export function idTokenClaims(tokens: OidcTokens) {
+  const claims = tokens.claims();
+
+  if (!claims) {
+    throw new ApplicationError(502, "身份服务未返回有效的 ID 令牌");
+  }
+
+  return claims;
+}
+
+const readTokens = (encrypted: string) =>
+  persistedTokens.parse(JSON.parse(decrypt(encrypted)));
+
+function sessionValues(tokens: OidcTokens, previous?: Tokens) {
   const now = Date.now();
+  const refreshToken = tokens.refresh_token ?? previous?.refreshToken;
+  const idToken = tokens.id_token ?? previous?.idToken;
+
+  if (!refreshToken) {
+    throw new ApplicationError(502, "身份服务未返回刷新令牌");
+  }
+  if (!idToken) {
+    throw new ApplicationError(502, "身份服务未返回 ID 令牌");
+  }
+  if (tokens.expires_in === undefined) {
+    throw new ApplicationError(502, "身份服务未返回有效的令牌有效期");
+  }
 
   return {
     encryptedTokens: encrypt(
       JSON.stringify({
         accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        idToken: tokens.id_token,
+        refreshToken,
+        idToken,
       }),
     ),
-    refreshAt: new Date(now + Math.max(1, tokens.expires_in! - 30) * 1000),
+    refreshAt: new Date(now + Math.max(1, tokens.expires_in - 30) * 1000),
     expiresAt: new Date(now + sessionRetention),
   };
 }
@@ -42,16 +77,22 @@ export async function createSession(
   user: oidc.UserInfoResponse,
   previous?: string,
 ) {
-  const claims = tokens.claims()!;
+  const claims = idTokenClaims(tokens);
+  const preferredUsername = user.preferred_username?.trim();
+  const preferredName = user.name?.trim();
+  const username = preferredUsername?.length ? preferredUsername : user.sub;
   const profile = {
     subject: user.sub,
-    username: user.preferred_username!,
-    displayName: user.name ?? user.preferred_username!,
+    username,
+    displayName: preferredName?.length ? preferredName : username,
     email: user.email,
-    oidcSid: claims.sid as string,
+    oidcSid: typeof claims.sid === "string" ? claims.sid : null,
   };
   const values = sessionValues(tokens);
   const token = randomToken();
+  const sidMatch = profile.oidcSid
+    ? eq(logoutTokens.oidcSid, profile.oidcSid)
+    : undefined;
 
   await db.transaction(
     async (tx) => {
@@ -62,7 +103,7 @@ export async function createSession(
           and(
             gt(logoutTokens.expiresAt, new Date()),
             or(
-              eq(logoutTokens.oidcSid, profile.oidcSid),
+              sidMatch,
               and(
                 isNull(logoutTokens.oidcSid),
                 eq(logoutTokens.subject, profile.subject),
@@ -100,7 +141,17 @@ export async function readSession(token: string) {
     where: eq(sessions.tokenHash, hash),
   });
 
-  if (session && session.refreshAt.getTime() <= Date.now()) {
+  if (!session) {
+    return null;
+  }
+
+  if (session.expiresAt.getTime() <= Date.now()) {
+    await db.delete(sessions).where(eq(sessions.tokenHash, hash));
+
+    return null;
+  }
+
+  if (session.refreshAt.getTime() <= Date.now()) {
     session = await db.transaction(async (tx) => {
       const [current] = await tx
         .select()
@@ -111,15 +162,13 @@ export async function readSession(token: string) {
         return current;
       }
 
-      const { refreshToken } = JSON.parse(
-        decrypt(current.encryptedTokens),
-      ) as Tokens;
+      const previousTokens = readTokens(current.encryptedTokens);
 
       let tokens: Awaited<ReturnType<typeof oidc.refreshTokenGrant>>;
       try {
         tokens = await oidc.refreshTokenGrant(
           await identityClient(),
-          refreshToken,
+          previousTokens.refreshToken,
         );
       } catch (error) {
         if (
@@ -134,7 +183,7 @@ export async function readSession(token: string) {
         throw error;
       }
 
-      const claims = tokens.claims()!;
+      const claims = idTokenClaims(tokens);
       if (claims.sub !== current.subject) {
         await tx.delete(sessions).where(eq(sessions.tokenHash, hash));
 
@@ -143,7 +192,7 @@ export async function readSession(token: string) {
 
       const [updated] = await tx
         .update(sessions)
-        .set(sessionValues(tokens))
+        .set(sessionValues(tokens, previousTokens))
         .where(eq(sessions.tokenHash, hash))
         .returning();
 
@@ -155,9 +204,7 @@ export async function readSession(token: string) {
     return null;
   }
 
-  const { accessToken, idToken } = JSON.parse(
-    decrypt(session.encryptedTokens),
-  ) as Tokens;
+  const { accessToken, idToken } = readTokens(session.encryptedTokens);
 
   return {
     ...pick(session, [
@@ -180,7 +227,7 @@ export async function updateSessionProfile(
     .update(sessions)
     .set({
       username: user.username,
-      displayName: user.name || user.username,
+      displayName: user.name,
       email: user.email,
     })
     .where(eq(sessions.subject, user.id));
@@ -219,7 +266,7 @@ export async function revokeAccountSessions(subject: string, ids: string[]) {
 
 export async function revokeSessions(token: {
   jti: string;
-  subject: string;
+  subject?: string;
   oidcSid?: string;
   issuedAt: Date;
 }) {
@@ -228,7 +275,10 @@ export async function revokeSessions(token: {
       const inserted = await tx
         .insert(logoutTokens)
         .values({
-          ...token,
+          jti: token.jti,
+          subject: token.subject ?? null,
+          oidcSid: token.oidcSid ?? null,
+          issuedAt: token.issuedAt,
           expiresAt: new Date(Date.now() + logoutRetention * 1000),
         })
         .onConflictDoNothing()
@@ -241,8 +291,8 @@ export async function revokeSessions(token: {
         .delete(sessions)
         .where(
           and(
+            token.subject ? eq(sessions.subject, token.subject) : undefined,
             token.oidcSid ? eq(sessions.oidcSid, token.oidcSid) : undefined,
-            eq(sessions.subject, token.subject),
           ),
         );
     },

@@ -31,12 +31,19 @@ const columns: DataTableColumns<DirectoryUser> = [
           user,
           showUsername: true,
           to: {
-            path: `/admin/users/${encodeURIComponent(user.id)}`,
+            path: `/manage/users/${encodeURIComponent(user.id)}`,
             query: userQuery,
           },
         }),
         session.value?.user.id === user.id
           ? h(NTag, { bordered: false, size: "small" }, () => "当前账户")
+          : null,
+        user.serviceAccount
+          ? h(
+              NTag,
+              { bordered: false, size: "small", type: "warning" },
+              () => "服务账户",
+            )
           : null,
       ]),
   },

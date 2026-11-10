@@ -13,6 +13,10 @@
   "roles": {
     "realm": [
       {
+        "name": "bitnp-active",
+        "description": "身份｜当前届网协成员"
+      },
+      {
         "name": "permission-clinic-access",
         "description": "权限｜电脑诊所普通功能访问"
       },
@@ -579,7 +583,7 @@
         },
         {
           "name": "active-2026",
-          "realmRoles": [],
+          "realmRoles": ["bitnp-active"],
           "id": "abf0a25a-fbd9-50a3-bef4-047765d6c647",
           "subGroups": [
             {

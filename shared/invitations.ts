@@ -15,3 +15,19 @@ export const updateInvitationInput = invitationFields.extend({
 
 export type CreateInvitationInput = z.infer<typeof createInvitationInput>;
 export type UpdateInvitationInput = z.infer<typeof updateInvitationInput>;
+
+type InvitationStatus = "active" | "expired" | "revoked";
+
+export function invitationStatus(
+  invitation: {
+    expiresAt: Date | string;
+    revokedAt: Date | string | null;
+  },
+  now = Date.now(),
+): InvitationStatus {
+  if (invitation.revokedAt !== null) {
+    return "revoked";
+  }
+
+  return new Date(invitation.expiresAt).getTime() <= now ? "expired" : "active";
+}

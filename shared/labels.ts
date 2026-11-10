@@ -1,13 +1,10 @@
-import type { AuditConfigurationEntry } from "./events.ts";
+import type { AuditConfigurationKey } from "./events.ts";
 import { auditOperations } from "./events.ts";
 
-export function auditOperationLabel(operation: string) {
-  const definition = Object.entries(auditOperations).find(
-    ([name]) => name === operation,
-  );
+const auditOperationLabels = new Map(Object.entries(auditOperations));
 
-  return definition?.[1].label ?? operation;
-}
+export const auditOperationLabel = (operation: string) =>
+  auditOperationLabels.get(operation) ?? operation;
 
 export const jobStatusLabels = {
   queued: "等待执行",
@@ -31,17 +28,15 @@ export const jobOperationLabels = {
 };
 
 export const itemStatusLabels = {
-  pending: "等待执行",
+  pending: "待处理",
   succeeded: "已完成",
   failed: "失败",
-  unknown: "结果待核对",
 };
 
 export const itemStatusTypes = {
   pending: "default",
   succeeded: "success",
   failed: "error",
-  unknown: "warning",
 } as const;
 
 export const auditOutcomeLabels = {
@@ -51,7 +46,14 @@ export const auditOutcomeLabels = {
   unknown: "结果未确认",
 };
 
-export const auditFieldLabels: Record<AuditConfigurationEntry[0], string> = {
+export const auditOutcomeTypes = {
+  pending: "default",
+  succeeded: "success",
+  failed: "error",
+  unknown: "warning",
+} as const;
+
+export const auditFieldLabels: Record<AuditConfigurationKey, string> = {
   name: "路径名称",
   label: "显示名称",
   note: "管理备注",

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-definePageMeta({ middleware: "auth" });
+definePageMeta({ middleware: ["auth", "management"] });
 
 const route = useRoute();
 const groupId = computed(() => String(route.params.id));
@@ -25,7 +25,7 @@ useFetchError(error, refresh);
 </script>
 
 <template>
-  <NuxtLayout name="page">
+  <NuxtLayout name="manage">
     <NPageHeader @back="navigateTo('/groups')">
       <template #title>
         <h1>{{ groupLabel }}</h1>
@@ -65,7 +65,6 @@ useFetchError(error, refresh);
         :members="group.members"
         :note="group.settings ? group.settings.note : undefined"
         :refresh
-        :session
       />
       <InvitationList
         id="invitations"

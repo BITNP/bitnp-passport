@@ -9,14 +9,19 @@ import { revokeSessions } from "#backend/sessions";
 let jwks: ReturnType<typeof createRemoteJWKSet> | undefined;
 
 const logoutEvent = "http://schemas.openid.net/event/backchannel-logout";
-const logoutClaims = z.object({
-  jti: z.string().min(1),
-  iat: z.number().int(),
-  sub: z.string().min(1),
-  sid: z.string().min(1).optional(),
-  nonce: z.never().optional(),
-  events: z.object({ [logoutEvent]: z.strictObject({}) }),
-});
+const logoutClaims = z
+  .object({
+    jti: z.string().min(1),
+    iat: z.number().int(),
+    sub: z.string().min(1).optional(),
+    sid: z.string().min(1).optional(),
+    nonce: z.never().optional(),
+    events: z.object({ [logoutEvent]: z.strictObject({}) }),
+  })
+  .refine((claims) => claims.sub !== undefined || claims.sid !== undefined, {
+    message: "注销令牌必须包含 sub 或 sid",
+    path: ["sid"],
+  });
 
 const input = z.object({ logout_token: z.string().min(1) });
 
@@ -25,8 +30,11 @@ export default defineEventHandler(async (event) => {
 
   if (!jwks) {
     const uri = (await identityClient()).serverMetadata().jwks_uri;
+    if (!uri) {
+      throw new ApplicationError(503, "身份服务未提供 JWKS 地址");
+    }
 
-    jwks = createRemoteJWKSet(new URL(uri!), { timeoutDuration: 10_000 });
+    jwks = createRemoteJWKSet(new URL(uri), { timeoutDuration: 10_000 });
   }
 
   let claims: z.infer<typeof logoutClaims>;
@@ -36,6 +44,7 @@ export default defineEventHandler(async (event) => {
       audience: config.clientId,
       maxTokenAge: "5m",
       clockTolerance: 5,
+      typ: "logout+jwt",
     });
 
     claims = logoutClaims.parse(payload);

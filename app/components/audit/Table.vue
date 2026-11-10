@@ -4,7 +4,11 @@ import { NButton, NTag } from "naive-ui";
 import type { InternalApi } from "nitropack/types";
 
 import { EntityReference, NuxtLink } from "#components";
-import { auditOperationLabel, auditOutcomeLabels } from "#shared/labels";
+import {
+  auditOperationLabel,
+  auditOutcomeLabels,
+  auditOutcomeTypes,
+} from "#shared/labels";
 import { formatDateTime } from "#shared/utils";
 
 type AuditEvent = InternalApi["/api/audit"]["get"]["events"][number];
@@ -67,14 +71,7 @@ const columns: DataTableColumns<AuditEvent> = [
         {
           size: "small",
           bordered: false,
-          type:
-            event.outcome === "succeeded"
-              ? "success"
-              : event.outcome === "failed"
-                ? "error"
-                : event.outcome === "unknown"
-                  ? "warning"
-                  : "default",
+          type: auditOutcomeTypes[event.outcome],
         },
         () => auditOutcomeLabels[event.outcome],
       ),

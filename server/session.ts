@@ -58,5 +58,6 @@ export async function requireSession(event: H3Event) {
 
 export async function deletePortalSession(event: H3Event) {
   await sessions.deleteSession(getCookie(event, cookieName)!);
+
   deleteCookie(event, cookieName, cookieOptions);
 }

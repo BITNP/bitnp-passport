@@ -5,6 +5,13 @@ import type { flattenGroups } from "~/utils/groupDirectory";
 
 type Group = ReturnType<typeof flattenGroups>[number];
 
+interface GroupForm {
+  name: string;
+  label: string;
+  note: string;
+  allowInvites: boolean;
+}
+
 const emit = defineEmits<{
   createChild: [parentId: string];
 }>();
@@ -19,7 +26,7 @@ const { selection, mutation, refresh } = defineProps<{
 }>();
 const { submit, pending } = mutation;
 const message = useMessage();
-const initialForm = computed(() => {
+const initialForm = computed<GroupForm>(() => {
   const { group, settings } = selection;
   const name = group ? group.name : "";
 
@@ -35,14 +42,15 @@ const initialForm = computed(() => {
   };
 });
 const form = ref({ ...initialForm.value });
-const enrolled = computed(() =>
-  selection.settings ? selection.settings.enrolled : false,
-);
+const enrolled = computed(() => selection.settings?.enrolled === true);
 const formChanged = computed(() => {
-  const current: Record<string, unknown> = form.value;
+  const initial = initialForm.value;
 
-  return Object.entries(initialForm.value).some(
-    ([field, value]) => current[field] !== value,
+  return (
+    form.value.name !== initial.name ||
+    form.value.label !== initial.label ||
+    form.value.note !== initial.note ||
+    form.value.allowInvites !== initial.allowInvites
   );
 });
 

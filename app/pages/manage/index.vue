@@ -1,9 +1,14 @@
 <script setup lang="ts">
-definePageMeta({ middleware: ["auth", "admin"] });
+definePageMeta({ middleware: ["auth", "management"] });
+useHead({ title: "成员目录" });
 
 const route = useRoute();
 const page = computed({
-  get: () => Number(route.query.page ?? 1),
+  get: () => {
+    const value = Number(route.query.page ?? 1);
+
+    return Number.isInteger(value) && value > 0 ? value : 1;
+  },
   set: (value) => {
     void navigateTo({
       query: { ...route.query, page: value === 1 ? undefined : value },
@@ -16,7 +21,7 @@ const {
   error,
   refresh,
   status: loadStatus,
-} = await useFetch("/api/admin/users", {
+} = await useFetch("/api/manage/users", {
   query: computed(() => ({
     search: route.query.search,
     first: (page.value - 1) * 50,
@@ -27,7 +32,10 @@ useFetchError(error, refresh);
 </script>
 
 <template>
-  <NuxtLayout name="admin" title="用户目录">
+  <NuxtLayout name="manage">
+    <NPageHeader>
+      <template #title><h1>成员目录</h1></template>
+    </NPageHeader>
     <NCard>
       <NFlex :size="20" vertical>
         <UserSearch />
@@ -38,14 +46,15 @@ useFetchError(error, refresh);
           :users="data.users"
         >
           <template #actions="{ user }">
-            <NButton
-              :href="`/admin/keycloak?user=${encodeURIComponent(user.id)}`"
+            <LinkButton
               size="small"
-              tag="a"
-              target="_blank"
+              :to="{
+                path: `/manage/users/${encodeURIComponent(user.id)}`,
+                query: route.query,
+              }"
             >
-              Keycloak
-            </NButton>
+              成员资料
+            </LinkButton>
           </template>
         </UserTable>
         <ListPagination

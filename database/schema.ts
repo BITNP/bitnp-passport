@@ -1,4 +1,4 @@
-import { eq, gt, or } from "drizzle-orm";
+import { eq, gt, sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
@@ -13,23 +13,26 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import type { AuditDetail, AuditEvent } from "#shared/events";
+import type {
+  AuditEvent,
+  AuditOperation,
+  AuditTarget,
+  StoredAuditDetail,
+} from "#shared/events";
 import type { JobData, JobResult } from "#shared/jobs";
+import { jobItemStatuses } from "#shared/jobs";
 import type { SiteService } from "#shared/types";
 
-export const jobStatus = pgEnum("job_status", [
+const jobStatus = pgEnum("job_status", [
   "queued",
   "running",
   "succeeded",
   "failed",
   "cancelled",
 ]);
-export const jobOperation = pgEnum("job_operation", ["add", "remove"]);
-export const itemStatus = pgEnum("item_status", [
-  "pending",
-  "succeeded",
-  "failed",
-]);
+const jobOperation = pgEnum("job_operation", ["add", "remove"]);
+const itemStatus = pgEnum("item_status", jobItemStatuses);
+
 export const auditOutcome = pgEnum("audit_outcome", [
   "pending",
   "succeeded",
@@ -104,10 +107,7 @@ export const managedGroups = pgTable(
   (table) => [
     check(
       "managed_group_invites_require_enrollment",
-      or(
-        eq(table.enrolled, true),
-        eq(table.allowInvites, false),
-      )!.inlineParams(),
+      sql`(${table.enrolled} = true or ${table.allowInvites} = false)`,
     ),
   ],
 );
@@ -182,12 +182,12 @@ export const auditEvents = pgTable(
       .primaryKey()
       .generatedAlwaysAsIdentity(),
     actorSubject: text("actor_subject").notNull(),
-    operation: text("operation").notNull(),
+    operation: text("operation").$type<AuditOperation>().notNull(),
     groupId: text("group_id"),
-    target: jsonb("target").$type<{ type: string; id: string }>(),
+    target: jsonb("target").$type<AuditTarget>(),
     jobId: uuid("job_id").references(() => jobs.id),
     outcome: auditOutcome("outcome").notNull(),
-    detail: jsonb("detail").$type<AuditDetail>().notNull().default({}),
+    detail: jsonb("detail").$type<StoredAuditDetail>().notNull().default({}),
     error: text("error"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

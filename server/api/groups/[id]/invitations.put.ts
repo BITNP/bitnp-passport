@@ -5,5 +5,5 @@ export default defineEventHandler(async (event) => {
   const actor = await requireSession(event);
   const input = await readValidatedBody(event, updateInvitationInput.parse);
 
-  return updateInvitation(actor, getRouterParam(event, "id")!, input);
+  return updateInvitation(actor, routeParam(event, "id"), input);
 });

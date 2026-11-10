@@ -23,15 +23,15 @@ watch(
 
 const save = () =>
   submit(async () => {
-    const profile = await $fetch("/api/account/profile", {
+    const savedProfile = await $fetch("/api/account/profile", {
       method: "PUT",
       body: {
         name: form.name,
         email: form.email,
-        ...(session.value?.administrator && { qqNumber: form.qqNumber }),
+        ...(session.value?.management && { qqNumber: form.qqNumber }),
       },
     });
-    emit("saved", profile);
+    emit("saved", savedProfile);
     message.success("个人资料已保存");
   });
 </script>
@@ -83,7 +83,7 @@ const save = () =>
       <NFormItem label="QQ 号" :label-props="{ for: 'qqNumber' }">
         <NInput
           v-model:value="form.qqNumber"
-          :disabled="!session?.administrator || pending"
+          :disabled="!session?.management || pending"
           :input-props="{ id: 'qqNumber', autocomplete: 'off' }"
         />
       </NFormItem>

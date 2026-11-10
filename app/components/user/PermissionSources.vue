@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import type { InternalApi } from "nitropack/types";
 
-import { systemAdministratorRole } from "#shared/identity";
-
 type Source =
   InternalApi["/api/account"]["get"]["permissions"]["positions"][number]["sources"][number];
 
@@ -28,12 +26,7 @@ defineProps<{
       >
         {{ source.group.label }}
       </NuxtLink>
-      <NText v-else depth="3">
-        {{
-          source.group?.label ??
-          (source.role === systemAdministratorRole ? "个人特批" : "个人角色")
-        }}
-      </NText>
+      <NText v-else depth="3">{{ source.group?.label ?? "直接授予" }}</NText>
     </NFlex>
     <NCollapse arrow-placement="right">
       <NCollapseItem name="identifiers" title="查看角色与群组标识">

@@ -7,7 +7,9 @@ import {
   authorizeInvitation,
   joinInvitation,
 } from "#backend/invitations/access";
+import { logger } from "#backend/logger";
 import { identityClient } from "#backend/oidc";
+import { idTokenClaims } from "#backend/sessions";
 
 type AuthenticationRequest =
   | { type: "login" | "register"; returnTo: unknown }
@@ -37,6 +39,20 @@ const loginConfig = {
   sessionHeader: false,
   cookie: { secure: config.secureCookies, sameSite: "lax" },
 } satisfies SessionConfig;
+
+const invalidLoginCodes = new Set([
+  "OAUTH_INVALID_RESPONSE",
+  "OAUTH_JWT_CLAIM_COMPARISON_FAILED",
+  "OAUTH_JWT_TIMESTAMP_CHECK_FAILED",
+]);
+
+const invalidLogin = (error: unknown) =>
+  error instanceof oidc.AuthorizationResponseError ||
+  (error instanceof oidc.ResponseBodyError &&
+    error.error === "invalid_grant") ||
+  (error instanceof oidc.ClientError &&
+    error.code !== undefined &&
+    invalidLoginCodes.has(error.code));
 
 export function returnUrl(input: unknown) {
   const url = URL.parse(
@@ -131,14 +147,25 @@ export async function completeAuthentication(event: H3Event) {
   const callback = new URL(`${config.appUrl}/auth/callback`);
   callback.search = getRequestURL(event).search;
   const client = await identityClient();
-  const tokens = await oidc.authorizationCodeGrant(client, callback, {
-    pkceCodeVerifier: attempt.verifier,
-    expectedState: attempt.state,
-    expectedNonce: attempt.nonce,
-  });
+  let tokens: oidc.TokenEndpointResponse & oidc.TokenEndpointResponseHelpers;
+  try {
+    tokens = await oidc.authorizationCodeGrant(client, callback, {
+      pkceCodeVerifier: attempt.verifier,
+      expectedState: attempt.state,
+      expectedNonce: attempt.nonce,
+    });
+  } catch (error) {
+    if (invalidLogin(error)) {
+      throw new ApplicationError(400, "登录校验失败，请重新登录", {
+        cause: error,
+      });
+    }
+
+    throw error;
+  }
 
   // expectedNonce makes openid-client require and validate an ID token.
-  const claims = tokens.claims()!;
+  const claims = idTokenClaims(tokens);
   if (attempt.subject && claims.sub !== attempt.subject) {
     throw new ApplicationError(
       403,
@@ -156,8 +183,13 @@ export async function completeAuthentication(event: H3Event) {
   if (attempt.invitationToken) {
     try {
       await joinInvitation({ subject: claims.sub }, attempt.invitationToken);
-    } catch {
+    } catch (error) {
       // A failed join must not undo a successful login; the invitation page offers a retry.
+      (event.context.log ?? logger).warn(
+        { err: error },
+        "登录后自动加入邀请失败",
+      );
+
       return `${attempt.returnTo}?join=failed`;
     }
   }

@@ -44,11 +44,11 @@ const createInvitation = () =>
     await refresh();
   });
 
-const updateInvitation = () =>
+const updateInvitation = (current: UpdateInvitationInput) =>
   submit(async () => {
     await $fetch(endpoint.value, {
       method: "PUT",
-      body: editor.value!,
+      body: current,
     });
     editor.value = undefined;
     message.success("邀请设置已保存");
@@ -77,6 +77,12 @@ const copyInvitation = (url: string) =>
     await navigator.clipboard.writeText(url);
     message.success("链接已复制");
   });
+
+function selectInput(event: FocusEvent) {
+  if (event.target instanceof HTMLInputElement) {
+    event.target.select();
+  }
+}
 
 useFetchError(error, refresh);
 </script>
@@ -126,6 +132,7 @@ useFetchError(error, refresh);
                 </NText>
                 <NText v-else depth="3">未填写备注</NText>
                 <NButton
+                  v-if="invitation.status !== 'revoked'"
                   :disabled="pending"
                   size="small"
                   text
@@ -154,11 +161,7 @@ useFetchError(error, refresh);
                 </NTag>
               </NFlex>
               <NInputGroup>
-                <NInput
-                  readonly
-                  :value="invitation.url"
-                  @focus="($event.target as HTMLInputElement).select()"
-                />
+                <NInput readonly :value="invitation.url" @focus="selectInput" />
                 <NButton
                   :disabled="pending"
                   @click="copyInvitation(invitation.url)"
@@ -183,13 +186,16 @@ useFetchError(error, refresh);
                     使用记录
                   </NButton>
                   <NTag
-                    v-if="invitation.revokedAt"
+                    v-if="invitation.status !== 'active'"
                     :bordered="false"
                     size="small"
+                    :type="
+                      invitation.status === 'expired' ? 'warning' : 'default'
+                    "
                   >
-                    已撤销
+                    {{ invitation.status === "expired" ? "已到期" : "已撤销" }}
                   </NTag>
-                  <template v-else>
+                  <template v-if="invitation.status !== 'revoked'">
                     <NPopconfirm
                       v-if="allowInvites"
                       :disabled="pending"
@@ -254,7 +260,12 @@ useFetchError(error, refresh);
       </NFlex>
       <template #action>
         <NButton @click="editor = undefined">取消</NButton>
-        <NButton :loading="pending" type="primary" @click="updateInvitation">
+        <NButton
+          v-if="editor"
+          :loading="pending"
+          type="primary"
+          @click="updateInvitation(editor)"
+        >
           保存
         </NButton>
       </template>

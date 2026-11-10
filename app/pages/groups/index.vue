@@ -7,7 +7,7 @@ import { NuxtLink } from "#components";
 
 type Group = InternalApi["/api/groups"]["get"][number];
 
-definePageMeta({ middleware: "auth" });
+definePageMeta({ middleware: ["auth", "management"] });
 useHead({ title: "群组" });
 
 const [{ data: groups, error, refresh, status }, { data: session }] =
@@ -63,7 +63,7 @@ useFetchError(error, refresh);
 </script>
 
 <template>
-  <NuxtLayout name="page">
+  <NuxtLayout name="manage">
     <NPageHeader>
       <template #title><h1>我管理的群组</h1></template>
       <template #extra>
@@ -75,10 +75,10 @@ useFetchError(error, refresh);
     <NCard v-if="groups" :content-style="{ padding: 0 }">
       <div class="group-toolbar">
         <NText depth="3">{{ groups.length }} 个群组</NText>
-        <GroupAutocomplete
+        <NInput
           v-model:value="search"
           class="group-search"
-          :groups
+          clearable
           placeholder="搜索群组名称或备注"
         />
       </div>

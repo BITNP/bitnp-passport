@@ -6,7 +6,7 @@ on:
     paths:
       - keycloak/**
       - .github/workflows/keycloak-provider.yml
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 permissions:
   contents: write

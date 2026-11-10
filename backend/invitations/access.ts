@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { invitations, managedGroups } from "#database/schema";
+import { invitationStatus } from "#shared/invitations";
 import type { Actor } from "#shared/types";
 
 import { audited } from "../audit.ts";
@@ -35,8 +36,7 @@ function requireActiveInvitation(
   invitation: Awaited<ReturnType<typeof readInvitation>>,
 ) {
   if (
-    invitation.revokedAt !== null ||
-    invitation.expiresAt.getTime() <= Date.now() ||
+    invitationStatus(invitation) !== "active" ||
     !invitation.allowInvites ||
     !invitation.enrolled
   ) {
@@ -85,6 +85,12 @@ export const joinInvitation = async (actor: Actor, token: string) =>
     }
 
     const invitation = await readInvitation(token);
+    requireActiveInvitation(invitation);
+
+    const groups = await keycloak.groupsForUser(actor.subject);
+    if (groups.some((group) => group.id === invitation.groupId)) {
+      return;
+    }
 
     return audited(
       actor,
@@ -93,15 +99,6 @@ export const joinInvitation = async (actor: Actor, token: string) =>
         groupId: invitation.groupId,
         target: { type: "invitation", id: invitation.id },
       },
-      async () => {
-        requireActiveInvitation(invitation);
-
-        const groups = await keycloak.groupsForUser(actor.subject);
-        if (groups.some((group) => group.id === invitation.groupId)) {
-          return;
-        }
-
-        await keycloak.addMember(actor.subject, invitation.groupId);
-      },
+      () => keycloak.addMember(actor.subject, invitation.groupId),
     );
   });

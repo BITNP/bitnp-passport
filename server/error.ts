@@ -1,13 +1,8 @@
-import { FetchError } from "ofetch";
-
 import { errorMessage } from "#backend/errors";
 import { logger } from "#backend/logger";
 
 export default defineNitroErrorHandler((error, event) => {
-  // H3 already copies the HTTP status and data but marks FetchError as unhandled
-  if (error.cause instanceof FetchError && error.cause.response) {
-    error.unhandled = false;
-  } else if (error.unhandled) {
+  if (error.unhandled) {
     error.statusCode = 500;
   }
 

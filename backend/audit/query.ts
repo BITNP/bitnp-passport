@@ -56,11 +56,7 @@ async function actorCondition(identifier: string) {
   return user ? eq(auditEvents.actorSubject, user.id) : sql`false`;
 }
 
-async function userReference(
-  id: string,
-  viewer: Actor,
-  administrator: boolean,
-): Promise<Reference> {
+async function userReference(id: string, viewer: Actor): Promise<Reference> {
   const user = await keycloak.user(id).catch(notFoundAsNull);
   if (!user) {
     return { id, label: null, to: null };
@@ -72,15 +68,13 @@ async function userReference(
     to:
       id === viewer.subject
         ? "/account"
-        : administrator
-          ? `/admin/users/${encodeURIComponent(id)}`
-          : null,
+        : `/manage/users/${encodeURIComponent(id)}`,
   };
 }
 
 export async function listAudit(actor: Actor, query: AuditFilter) {
   const { administrator, groupIds } = await groupAccess(actor);
-  // 普通用户只能查看自己发起或管理范围内的记录
+  // 部门管理层只能查看自己发起或管理范围内的记录
   const visible = administrator
     ? undefined
     : or(
@@ -116,6 +110,7 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
         target: auditEvents.target,
         jobId: auditEvents.jobId,
         jobOwner: jobs.actorSubject,
+        jobResults: jobs.results,
         groupLabel: managedGroups.label,
         targetGroupLabel: targetGroups.label,
         invitationNote: invitations.note,
@@ -128,7 +123,7 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
       .leftJoin(targetGroups, eq(targetGroups.groupId, targetId("group")))
       .leftJoin(
         invitations,
-        eq(invitations.id, sql`${targetId("invitation")}::uuid`),
+        eq(sql`${invitations.id}::text`, targetId("invitation")),
       )
       .where(filter)
       .orderBy(desc(auditEvents.id))
@@ -152,9 +147,7 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
     }
   }
   const [resolvedUsers, resolvedGroups] = await Promise.all([
-    Promise.all(
-      [...userIds].map((id) => userReference(id, actor, administrator)),
-    ),
+    Promise.all([...userIds].map((id) => userReference(id, actor))),
     Promise.all(
       [...missingGroupIds].map(async (id) => {
         const group = await keycloak.group(id).catch(notFoundAsNull);
@@ -167,8 +160,8 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
   const users = new Map(resolvedUsers.map((user) => [user.id, user]));
   const groups = new Map(resolvedGroups.map((group) => [group.id, group]));
 
-  function groupReference(id: string, label: string | null): Reference {
-    const name = label ?? groups.get(id)!.name;
+  function resolveGroupReference(id: string, label: string | null): Reference {
+    const name = label ?? groups.get(id)?.name ?? null;
 
     return {
       id,
@@ -192,14 +185,15 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
             break;
           }
           case "group": {
-            target = groupReference(id, row.targetGroupLabel);
+            target = resolveGroupReference(id, row.targetGroupLabel);
 
             break;
           }
           case "invitation": {
+            const invitationGroupId = row.invitationGroupId;
             const canManage =
-              row.invitationGroupId !== null &&
-              (administrator || groupIds.includes(row.invitationGroupId));
+              invitationGroupId !== null &&
+              (administrator || groupIds.includes(invitationGroupId));
             target = {
               id,
               label:
@@ -208,24 +202,33 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
                   : row.invitationCreatedAt
                     ? `邀请（${formatDateTime(row.invitationCreatedAt)}）`
                     : null,
-              to: canManage
-                ? `/groups/${encodeURIComponent(row.invitationGroupId!)}`
-                : null,
+              to:
+                canManage && invitationGroupId !== null
+                  ? `/groups/${encodeURIComponent(invitationGroupId)}`
+                  : null,
             };
 
             break;
           }
           default: {
-            target = { id, label: id, to: null };
+            row.target satisfies never;
           }
         }
       }
 
       return {
         ...row.event,
+        detail: {
+          ...row.event.detail,
+          ...(row.event.operation === "handover.execute"
+            ? { results: row.jobResults }
+            : {}),
+        },
         actor: users.get(row.actorSubject)!,
         target,
-        group: row.groupId ? groupReference(row.groupId, row.groupLabel) : null,
+        group: row.groupId
+          ? resolveGroupReference(row.groupId, row.groupLabel)
+          : null,
         jobUrl:
           row.jobId && (administrator || row.jobOwner === actor.subject)
             ? `/jobs/${row.jobId}`

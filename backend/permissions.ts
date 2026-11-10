@@ -1,7 +1,10 @@
 import { eq } from "drizzle-orm";
 
 import { managedGroups as groupConfigurations } from "#database/schema";
-import { departmentCodes, systemAdministratorRole } from "#shared/identity";
+import {
+  managedDepartmentCodes,
+  systemAdministratorRole,
+} from "#shared/identity";
 import type { Actor } from "#shared/types";
 
 import { db } from "./database.ts";
@@ -9,40 +12,53 @@ import { ApplicationError } from "./errors.ts";
 import { effectiveUserRoles } from "./keycloak/roles.ts";
 import * as keycloak from "./keycloak.ts";
 import type { OrganizationGroup } from "./organization.ts";
-import { organizationGroups, organizationState } from "./organization.ts";
+import { mapOrganizationGroups, organizationState } from "./organization.ts";
 
-async function accessRoles(subject: string) {
+interface GroupAccess {
+  administrator: boolean;
+  groupIds: string[];
+}
+
+const missingActiveRootMessage =
+  "未识别到当前届组织；请联系系统管理员确认届别根组配置了当前组织标记";
+
+export async function userAccess(subject: string) {
   const [user, roles] = await Promise.all([
     keycloak.user(subject),
     effectiveUserRoles(subject),
   ]);
-
-  return user.enabled
-    ? new Set(roles.map((role) => role.name!))
+  const effective = user.enabled
+    ? new Set(roles.map((role) => role.name))
     : new Set<string>();
+
+  return {
+    user,
+    roles: effective,
+    management: managedDepartmentCodes(effective).length > 0,
+  };
 }
 
-export const isAdministrator = async (actor: Actor) =>
-  (await accessRoles(actor.subject)).has(systemAdministratorRole);
-
 export async function requireAdministrator(actor: Actor) {
-  if (!(await isAdministrator(actor))) {
+  const { roles } = await userAccess(actor.subject);
+
+  if (!roles.has(systemAdministratorRole)) {
     throw new ApplicationError(403, "此操作需要系统管理员权限");
   }
 }
 
-const managedDepartments = (roles: Set<string>) =>
-  departmentCodes.filter((department) =>
-    roles.has(`permission-${department}-admin`),
-  );
+export async function requireManagement(actor: Actor) {
+  const access = await userAccess(actor.subject);
 
-async function groupsForRoles(roles: Set<string>) {
-  const administrator = roles.has(systemAdministratorRole);
-  const managed = managedDepartments(roles);
-  if (!administrator && managed.length === 0) {
-    return [];
+  if (!access.management) {
+    throw new ApplicationError(403, "此操作需要管理层权限");
   }
 
+  return access;
+}
+
+async function groupsManagedByRoles(roles: Set<string>) {
+  const administrator = roles.has(systemAdministratorRole);
+  const managed = managedDepartmentCodes(roles);
   const [tree, configurations] = await Promise.all([
     keycloak.groupTree(),
     db
@@ -50,16 +66,13 @@ async function groupsForRoles(roles: Set<string>) {
       .from(groupConfigurations)
       .where(eq(groupConfigurations.enrolled, true)),
   ]);
-  const organization = organizationGroups(tree);
+  const organization = mapOrganizationGroups(tree);
   const activeRoot = administrator
     ? null
     : (await organizationState(organization)).activeRoot;
 
   if (!administrator && activeRoot === null) {
-    throw new ApplicationError(
-      409,
-      "未识别到当前届组织；请联系系统管理员确认四个部门组都已配置成员角色映射",
-    );
+    throw new ApplicationError(409, missingActiveRootMessage);
   }
 
   const rootId = activeRoot?.id;
@@ -69,8 +82,8 @@ async function groupsForRoles(roles: Set<string>) {
   }[] = [];
 
   for (const configuration of configurations) {
-    const group = organization.get(configuration.groupId)!;
-    if (group.isRoot) {
+    const group = organization.get(configuration.groupId);
+    if (!group || group.isRoot) {
       continue;
     }
 
@@ -89,14 +102,14 @@ async function groupsForRoles(roles: Set<string>) {
   return groups;
 }
 
-export async function groupAccess(actor: Actor) {
-  const roles = await accessRoles(actor.subject);
+export async function groupAccess(actor: Actor): Promise<GroupAccess> {
+  const { roles } = await requireManagement(actor);
 
   if (roles.has(systemAdministratorRole)) {
-    return { administrator: true, groupIds: [] as string[] };
+    return { administrator: true, groupIds: [] };
   }
 
-  const groups = await groupsForRoles(roles);
+  const groups = await groupsManagedByRoles(roles);
 
   return {
     administrator: false,
@@ -113,7 +126,8 @@ export async function requireGroupManager(actor: Actor, groupId: string) {
 }
 
 export async function managedGroups(actor: Actor) {
-  const groups = await groupsForRoles(await accessRoles(actor.subject));
+  const { roles } = await requireManagement(actor);
+  const groups = await groupsManagedByRoles(roles);
 
   return groups
     .sort(

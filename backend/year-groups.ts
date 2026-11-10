@@ -1,9 +1,10 @@
 import { managedGroups } from "#database/schema";
-import { departmentCodes } from "#shared/identity";
+import { departmentCodes, supportGroupNames } from "#shared/identity";
 import type { Actor } from "#shared/types";
 
 import { audited } from "./audit.ts";
 import { db, withIdentityLock } from "./database.ts";
+import { ApplicationError } from "./errors.ts";
 import * as keycloak from "./keycloak.ts";
 import { requireAdministrator } from "./permissions.ts";
 
@@ -17,7 +18,10 @@ export const prepareYearGroups = async (actor: Actor, year: number) =>
       async () => {
         const parent = (await keycloak.groupTree()).find(
           (group) => group.path === "/bitnp",
-        )!;
+        );
+        if (!parent) {
+          throw new ApplicationError(409, "Keycloak 缺少 /bitnp 根组");
+        }
 
         const name = `active-${year}`;
         const existing = parent.children.find((group) => group.name === name);
@@ -26,13 +30,15 @@ export const prepareYearGroups = async (actor: Actor, year: number) =>
 
         const groups = [{ id, name }];
 
-        for (const department of [...departmentCodes, "master", "management"]) {
-          const name = `${year}-${department}`;
-          const group = existing?.children.find((group) => group.name === name);
+        for (const suffix of [...departmentCodes, ...supportGroupNames]) {
+          const childName = `${year}-${suffix}`;
+          const group = existing?.children.find(
+            (candidate) => candidate.name === childName,
+          );
 
           groups.push({
-            id: group?.id ?? (await keycloak.createGroup(name, id)),
-            name,
+            id: group?.id ?? (await keycloak.createGroup(childName, id)),
+            name: childName,
           });
         }
 

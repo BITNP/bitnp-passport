@@ -12,5 +12,5 @@ export default defineEventHandler(async (event) => {
 
   const { id, days } = await readValidatedBody(event, input.parse);
 
-  return renewInvitation(actor, getRouterParam(event, "id")!, id, days);
+  return renewInvitation(actor, routeParam(event, "id"), id, days);
 });

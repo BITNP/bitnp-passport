@@ -89,7 +89,7 @@ openssl rand -base64 32
 - 开启 Backchannel logout session required，并保证 Keycloak 可以访问该 URL
 - 在 Realm settings → User profile 中，取消 `lastName` 的 Required；通行证用一个“真实姓名”字段保存姓名，可将 `firstName` 的 Display name 设为“真实姓名”，保留用户编辑权限
 - 使用头像功能时，在 User profile 中添加单值属性 `picture`，允许用户和管理员查看、用户编辑，长度上限设为 2048
-- 使用 QQ 号功能时，在 User profile 中添加单值属性 `qq_number`，Display name 设为“QQ”，允许用户和管理员查看、仅管理员编辑。通行证个人资料始终显示 QQ 输入框，普通用户禁用，系统管理员可编辑自己的 QQ；管理员也可在用户详情中修改其他用户的 QQ
+- 使用 QQ 号功能时，在 User profile 中添加单值属性 `qq_number`，Display name 设为“QQ”，允许用户和管理员查看、仅管理员编辑。通行证由管理层通过服务账户维护成员资料；普通用户只能查看自己的 QQ
 
 修改密码、删除认证器等操作会跳转到 Keycloak 完成，然后返回通行证。
 
@@ -119,8 +119,8 @@ mvn -f keycloak/pom.xml package
 - 允许自行注册时，在 realm 中开启 User registration
 - 关闭 Duplicate emails
 - 启用 Forgot password 并配置 SMTP，供用户通过邮件重置密码；按需配置 Verify email、密码策略和多因素认证
-- “网协现任”由 `position-*` 角色决定：普通成员通过部门组的 `position-<department>-member` 获得，职务通过个人 `position-*` 授予；`position-association-vice-chair` 仅作为复合角色父级，不单独计入
-- 当前届组织取 `/bitnp/active-YYYY` 下四个部门组都配置了 `position-<department>-member` 的最新一届；增删 `shared/identity.ts` 中的 `departments` 时需同步调整并迁移已有届的映射
+- “网协现任”由 `/bitnp/active-YYYY` 根组直接配置的 `bitnp-active` 表示；普通成员身份与个人职务仍由 `position-*` 角色表达
+- 当前届组织由唯一的 `bitnp-active` 根组确定。换届会同时切换该标记、四个部门组的 `position-<department>-member` 映射和个人任职；增删 `shared/identity.ts` 中的 `departments` 时需同步调整并迁移已有届的映射
 - 通行证本地会话保留两周，登录或令牌续期后延长；令牌是否有效仍由 Keycloak 的 SSO Session、Client Session 等设置控制
 
 帮助页的“重置密码”和账户安全页的“忘记密码？”均通过 `/auth/reset-password` 进入 Keycloak 的 `protocol/openid-connect/forgot-credentials` 重置流程，复用通行证的 OIDC 回调，完成后返回账户安全页。
@@ -145,7 +145,17 @@ docker compose run --rm web node scripts/migrate.ts
 
 ### 3. 管理权限
 
-通行证从 Keycloak 读取有效角色。系统管理使用 `permission-system-admin`，部门管理使用 `permission-<department>-admin`。具体请见内部 Keycloak 权限文档。
+通行证从 Keycloak 读取有效角色：
+
+- 持有任一部门 `permission-<department>-admin` 或 `permission-system-admin` 的用户均可进入管理工作台，查找用户并维护所有人的成员业务资料（目前为 QQ）。
+- `permission-<department>-admin` 授予本届对应部门的成员、邀请和批量任务管理权限。
+- `permission-system-admin` 还可进入系统设置，管理账户控制、任职授权、组织配置、换届和站点设置。
+
+工作台访问直接依据现有有效管理权限判断，无需新增角色或修改 Keycloak 组合关系。
+
+管理层从“管理工作台”进入成员目录、我管理的群组、任务与记录；系统管理员同时拥有“系统设置”入口，在成员详情中可以进入“账户与授权”。成员资料与账户信息使用独立的保存接口。
+
+管理工作台与系统设置使用独立按钮。普通用户不显示管理入口，也不能访问群组管理、任务和记录页面及其接口。
 
 ### 4. 启动服务与配置代理
 
@@ -172,9 +182,9 @@ scripts/publish-release.sh
 
 ## 组织与换届
 
-群组在 Keycloak 中存在后，可在后台“群组配置”中明确纳入或取消纳入。
+群组在 Keycloak 中存在后，可在系统设置的“群组配置”中明确纳入或取消纳入。
 
-后台“任职管理”维护个人职务，“系统管理权限”展示有效系统权限及来源。换届页面从 Keycloak 读取当前组织，确认四个部门的成员身份映射、个人任职和旧届邀请变化。历史组织关系及个人特殊授权保持独立。
+系统设置的“任职管理”维护个人职务，“系统管理权限”展示有效系统权限及来源。换届页面从 Keycloak 读取当前组织，确认四个部门的成员身份映射、个人任职和旧届邀请变化。历史组织关系及个人特殊授权保持独立。
 
 ## 本地开发
 

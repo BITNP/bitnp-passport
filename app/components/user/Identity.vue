@@ -20,11 +20,9 @@ const { size = 24 } = defineProps<{
   >
     <UserAvatar aria-hidden="true" class="identity-avatar" :size :user />
     <span class="identity-text">
-      <NEllipsis class="identity-name">
-        {{ user.name || user.username }}
-      </NEllipsis>
+      <NEllipsis class="identity-name">{{ user.name }}</NEllipsis>
       <NText
-        v-if="showUsername && user.name && user.name !== user.username"
+        v-if="showUsername && user.name !== user.username"
         class="identity-username"
         depth="3"
       >

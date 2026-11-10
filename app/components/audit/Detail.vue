@@ -21,6 +21,32 @@ const references = computed(() =>
     群组: event.group,
   }).flatMap(([title, reference]) => (reference ? [{ title, reference }] : [])),
 );
+
+const assignmentChanges = computed(() => {
+  if (
+    (event.operation !== "role.grant" && event.operation !== "role.revoke") ||
+    !("permissionsAfter" in event.detail)
+  ) {
+    return null;
+  }
+
+  return {
+    after: event.detail.permissionsAfter,
+    before: event.detail.permissionsBefore,
+    label: event.detail.label,
+  };
+});
+
+const configurationChanges = computed(() => {
+  if (!("after" in event.detail)) {
+    return null;
+  }
+
+  return {
+    before: event.detail.before,
+    after: event.detail.after,
+  };
+});
 </script>
 
 <template>
@@ -49,27 +75,19 @@ const references = computed(() =>
           {{ event.error }}
         </NAlert>
         <AuditAssignmentChanges
-          v-if="
-            event.operation === 'role.grant' ||
-            event.operation === 'role.revoke'
-          "
-          :after="event.detail.permissionsAfter"
-          :before="event.detail.permissionsBefore"
-          :label="event.detail.label"
+          v-if="assignmentChanges"
+          :after="assignmentChanges.after"
+          :before="assignmentChanges.before"
+          :label="assignmentChanges.label"
         />
         <AuditHandoverResults
           v-if="event.operation === 'handover.execute'"
           :results="event.detail.results"
         />
         <AuditConfigurationChanges
-          v-if="
-            (event.operation === 'site.update' ||
-              event.operation === 'group.configure' ||
-              event.operation === 'invitation.update') &&
-            event.detail.after
-          "
-          :after="event.detail.after"
-          :before="event.detail.before"
+          v-if="configurationChanges"
+          :after="configurationChanges.after"
+          :before="configurationChanges.before"
           :outcome="event.outcome"
         />
         <NCollapse>

@@ -6,7 +6,7 @@ type UserOption = (typeof options.value)[number];
 const value = defineModel<string | null>("value", { required: true });
 
 const search = computed(() => value.value?.trim() ?? "");
-const { data, error, refresh, status } = await useFetch("/api/admin/users", {
+const { data, error, refresh, status } = await useFetch("/api/manage/users", {
   query: { search },
   enabled: () => search.value.length > 0,
 });

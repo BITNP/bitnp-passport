@@ -8,7 +8,7 @@ import type {
 } from "#shared/groups";
 import type { Actor } from "#shared/types";
 
-import { audited } from "./audit.ts";
+import { audited, auditedConfigurationChange } from "./audit.ts";
 import { db, withIdentityLock } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
 import { revokeGroupInvitations } from "./invitations/revocation.ts";
@@ -54,7 +54,7 @@ export const configureGroup = async (
 
     const { groupId, name, settings } = input;
 
-    return audited(
+    return auditedConfigurationChange(
       actor,
       {
         operation: "group.configure",

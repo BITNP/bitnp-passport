@@ -12,7 +12,7 @@ watch(
 
 const searchUsers = () =>
   navigateTo({
-    path: "/admin/users",
+    path: "/manage",
     query: { search: search.value ?? undefined },
   });
 </script>

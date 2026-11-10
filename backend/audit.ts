@@ -1,22 +1,25 @@
 import { eq } from "drizzle-orm";
 
 import { auditEvents } from "#database/schema";
-import type { AuditEvent } from "#shared/events";
+import type {
+  AuditDetail,
+  AuditEvent,
+  ConfigurationAuditEvent,
+  PlainAuditEvent,
+} from "#shared/events";
 import type { Actor } from "#shared/types";
 
 import { db } from "./database.ts";
 import { ApplicationError, errorMessage } from "./errors.ts";
 import { pick } from "./utils.ts";
 
-export async function audited<T>(
+async function recordAudit<T>(
   actor: Actor,
   event: AuditEvent,
-  run: (
-    recordBefore: (before: Record<string, unknown> | null) => void,
-  ) => Promise<T>,
+  run: (updateDetail: (detail: AuditDetail) => void) => Promise<T>,
 ) {
   let detail = event.detail ?? {};
-  const [inserted] = await db
+  const inserted = await db
     .insert(auditEvents)
     .values({
       ...event,
@@ -25,18 +28,13 @@ export async function audited<T>(
       outcome: "pending",
     })
     .returning({ id: auditEvents.id });
-  const id = inserted!.id;
+  const { id } = inserted[0]!;
 
   let result: T;
 
   try {
-    // 配置保存会在事务内记录旧值，要等事务提交后结束
-    result = await run((before) => {
-      detail = {
-        ...detail,
-        before:
-          before === null ? null : pick(before, Object.keys(detail.after!)),
-      };
+    result = await run((updated) => {
+      detail = updated;
     });
   } catch (error) {
     const outcome =
@@ -63,4 +61,29 @@ export async function audited<T>(
     .where(eq(auditEvents.id, id));
 
   return result;
+}
+
+export const audited = <T>(
+  actor: Actor,
+  event: PlainAuditEvent,
+  run: () => Promise<T>,
+) => recordAudit(actor, event, () => run());
+
+export function auditedConfigurationChange<T>(
+  actor: Actor,
+  event: ConfigurationAuditEvent,
+  run: (
+    recordBefore: (before: Record<string, unknown> | null) => void,
+  ) => Promise<T>,
+) {
+  const beforeKeys = Object.keys(event.detail.after);
+
+  return recordAudit(actor, event, (updateDetail) =>
+    run((before) =>
+      updateDetail({
+        ...event.detail,
+        before: before === null ? null : pick(before, beforeKeys),
+      }),
+    ),
+  );
 }

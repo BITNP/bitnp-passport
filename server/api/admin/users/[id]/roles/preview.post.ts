@@ -7,5 +7,5 @@ export default defineEventHandler(async (event) => {
 
   const input = await readValidatedBody(event, assignmentInput.parse);
 
-  return previewAssignment(getRouterParam(event, "id")!, input);
+  return previewAssignment(routeParam(event, "id"), input);
 });

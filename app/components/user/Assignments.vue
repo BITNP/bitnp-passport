@@ -9,6 +9,9 @@ import {
 import type { DirectoryUser } from "#shared/user";
 import { userLabel } from "#shared/user";
 
+type AssignmentPreview =
+  InternalApi["/api/admin/users/:id/roles/preview"]["post"];
+
 const { user, directRoles, refresh } = defineProps<{
   user: DirectoryUser;
   directRoles: string[];
@@ -27,9 +30,7 @@ const availableOptions = computed(() =>
 );
 
 const selected = ref<string | null>(null);
-const preview = ref<
-  InternalApi["/api/admin/users/:id/roles/preview"]["post"] | null
->(null);
+const preview = ref<AssignmentPreview | null>(null);
 
 const { submit, pending } = useMutation();
 const message = useMessage();
@@ -40,17 +41,16 @@ const api = computed(
 
 const prepare = (role: string, assigned: boolean) =>
   submit(async () => {
-    preview.value = await $fetch<
-      InternalApi["/api/admin/users/:id/roles/preview"]["post"]
-    >(`${api.value}/preview`, {
+    preview.value = await $fetch<AssignmentPreview>(`${api.value}/preview`, {
       method: "POST",
       body: { role, assigned, previouslyAssigned: directRoles.includes(role) },
     });
   });
 
-const confirm = () =>
+const confirm = (current: AssignmentPreview) =>
   submit(async () => {
-    const { role, assigned, previouslyAssigned } = preview.value!;
+    const editingCurrentUser = session.value?.user.id === user.id;
+    const { role, assigned, previouslyAssigned } = current;
     await $fetch(api.value, {
       method: "POST",
       body: { role, assigned, previouslyAssigned },
@@ -60,13 +60,16 @@ const confirm = () =>
     selected.value = null;
     message.success("授权已更新");
 
-    await refreshNuxtData("portal-session");
+    if (editingCurrentUser) {
+      await refreshNuxtData("portal-session");
+      if (!session.value?.administrator) {
+        await navigateTo("/account");
 
-    if (session.value?.user.id === user.id && !session.value.administrator) {
-      await navigateTo("/account");
-    } else {
-      await refresh();
+        return;
+      }
     }
+
+    await refresh();
   });
 </script>
 
@@ -76,15 +79,17 @@ const confirm = () =>
       <NInputGroup>
         <NSelect
           v-model:value="selected"
-          :disabled="pending || !user.enabled"
+          :disabled="pending || !user.enabled || user.serviceAccount"
           :options="availableOptions"
           placeholder="选择职务或个人系统授权"
         />
         <NButton
-          :disabled="!selected || pending || !user.enabled"
+          :disabled="
+            !selected || pending || !user.enabled || user.serviceAccount
+          "
           :loading="pending"
           type="primary"
-          @click="prepare(selected!, true)"
+          @click="selected && prepare(selected, true)"
         >
           授予
         </NButton>
@@ -137,7 +142,7 @@ const confirm = () =>
             </NFlex>
           </NDescriptionsItem>
         </NDescriptions>
-        <NButton :loading="pending" type="primary" @click="confirm">
+        <NButton :loading="pending" type="primary" @click="confirm(preview)">
           确认{{ preview.assigned ? "授予" : "撤销" }}
         </NButton>
       </NFlex>

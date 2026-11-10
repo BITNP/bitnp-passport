@@ -16,8 +16,12 @@ const message = useMessage();
 
 watch(text, () => emit("preview", undefined));
 
-const importMembers = (sourceGroupId: string) =>
-  submit(async () => {
+function importMembers(sourceGroupId: string | null) {
+  if (!sourceGroupId) {
+    return;
+  }
+
+  return submit(async () => {
     emit("preview", undefined);
     const members = await $fetch(
       `/api/groups/${encodeURIComponent(sourceGroupId)}/members`,
@@ -44,6 +48,7 @@ const importMembers = (sourceGroupId: string) =>
     text.value = [...identifiers].join("\n");
     message.success("名单已导入");
   });
+}
 
 const compare = () =>
   submit(async () => {

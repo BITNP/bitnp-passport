@@ -95,7 +95,6 @@ export async function createMembershipJob(
   operation: "add" | "remove",
 ) {
   await requireGroupManager(actor, groupId);
-  await keycloak.group(groupId);
 
   const members = [...new Set(subjects)];
 

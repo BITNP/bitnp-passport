@@ -9,5 +9,5 @@ export default defineEventHandler(async (event) => {
 
   const { identifier } = await readValidatedBody(event, input.parse);
 
-  return addMember(actor, getRouterParam(event, "id")!, identifier);
+  return addMember(actor, routeParam(event, "id"), identifier);
 });

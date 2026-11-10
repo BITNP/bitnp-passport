@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { jobStatusLabels } from "#shared/labels";
+import { jobStatusLabels, jobStatusTypes } from "#shared/labels";
 
-definePageMeta({ middleware: "auth" });
+definePageMeta({ middleware: ["auth", "management"] });
 useHead({ title: "任务详情" });
 
 const route = useRoute();
@@ -19,14 +19,6 @@ const active = computed(
   () =>
     data.value?.job.status === "queued" || data.value?.job.status === "running",
 );
-const progressStatus = {
-  queued: "default",
-  running: "default",
-  succeeded: "success",
-  failed: "error",
-  cancelled: "default",
-} as const;
-
 const poll = setInterval(() => {
   if (active.value && status.value !== "pending") {
     void refresh();
@@ -44,7 +36,7 @@ useFetchError(loadError, refresh);
 </script>
 
 <template>
-  <NuxtLayout name="page">
+  <NuxtLayout name="manage">
     <NPageHeader
       @back="
         navigateTo(
@@ -84,11 +76,9 @@ useFetchError(loadError, refresh);
         <NFlex :size="20" vertical>
           <NText>已完成 {{ data.completed }} / {{ data.total }} 项</NText>
           <NProgress
-            :percentage="
-              Math.round((data.completed / Math.max(data.total, 1)) * 100)
-            "
+            :percentage="Math.round((data.completed / data.total) * 100)"
             :processing="active"
-            :status="progressStatus[data.job.status]"
+            :status="jobStatusTypes[data.job.status]"
             type="line"
           />
           <NAlert v-if="data.job.error" type="error">

@@ -9,9 +9,14 @@ const {
   refresh,
 } = await useFetch("/api/account/security");
 const { submit, pending } = useMutation();
-const password = computed(() =>
-  security.value?.credentials.find((type) => type.type === "password"),
-);
+const password = computed(() => {
+  const type = security.value?.credentials.find(
+    (credential) => credential.type === "password",
+  );
+  const action = type?.updateAction ?? type?.createAction;
+
+  return type && action ? { ...type, action } : null;
+});
 const authenticators = computed(
   () =>
     security.value?.credentials.filter(
@@ -58,19 +63,14 @@ useFetchError(loadError, refresh);
 <template>
   <NuxtLayout name="account" title="账户安全">
     <template v-if="security">
-      <NCard
-        v-if="password && (password.updateAction || password.createAction)"
-        title="密码"
-      >
+      <NCard v-if="password" title="密码">
         <template #header-extra>
           <NButton href="/auth/reset-password" tag="a" text>忘记密码？</NButton>
         </template>
         <NButton
           :loading="pending"
           type="primary"
-          @click="
-            startAction((password.updateAction || password.createAction)!)
-          "
+          @click="startAction(password.action)"
         >
           {{ password.credentials.length > 0 ? "修改密码" : "设置密码" }}
         </NButton>

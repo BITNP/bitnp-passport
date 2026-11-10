@@ -18,7 +18,7 @@ export function useFetchError(
       const toast = message.error(
         () =>
           h(NFlex, { align: "center", size: 12 }, () => [
-            h("span", (cause.data as any)?.message ?? cause.message),
+            h("span", requestErrorMessage(cause)),
             h(NButton, { text: true, onClick: retry }, () => "重试"),
           ]),
         { duration: 0 },

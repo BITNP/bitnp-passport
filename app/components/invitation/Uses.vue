@@ -37,7 +37,8 @@ const columns: DataTableColumns<Usage> = [
     title: "加入时间",
     key: "completedAt",
     width: 185,
-    render: (usage) => formatDateTime(usage.completedAt!),
+    render: (usage) =>
+      usage.completedAt ? formatDateTime(usage.completedAt) : "-",
   },
 ];
 

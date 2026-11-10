@@ -1,12 +1,13 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { jobItems, jobs, managedGroups } from "#database/schema";
-import type { JobData, JobResult } from "#shared/jobs";
+import type { JobData, JobItemStatus } from "#shared/jobs";
 import { jobOperationLabels } from "#shared/labels";
 import type { Actor } from "#shared/types";
 
 import { db } from "../database.ts";
 import { ApplicationError } from "../errors.ts";
+import { jobAccess } from "../jobs.ts";
 import * as keycloak from "../keycloak.ts";
 import { groupAccess } from "../permissions.ts";
 import { pick } from "../utils.ts";
@@ -28,7 +29,7 @@ interface JobItem {
   key: string;
   label: string;
   target: { label: string; to: string | null } | null;
-  status: typeof jobItems.$inferSelect.status | JobResult["outcome"];
+  status: JobItemStatus;
   error: string | null;
 }
 
@@ -116,18 +117,8 @@ export async function listJobs(actor: Actor, first: number, groupId?: string) {
 }
 
 export async function jobDetail(actor: Actor, id: string) {
-  const access = await groupAccess(actor);
+  const { job, access, canManage } = await jobAccess(actor, id);
   const { administrator } = access;
-  const job = await db.query.jobs.findFirst({
-    where: and(
-      eq(jobs.id, id),
-      administrator ? undefined : eq(jobs.actorSubject, actor.subject),
-    ),
-  });
-
-  if (!job) {
-    throw new ApplicationError(404, "任务不存在或你没有查看权限");
-  }
 
   const groups = await jobGroups([job.groupId], access);
   const definition = jobPolicies[job.data.type];
@@ -151,9 +142,7 @@ export async function jobDetail(actor: Actor, id: string) {
           to:
             item.itemKey === actor.subject
               ? "/account"
-              : administrator
-                ? `/admin/users/${encodeURIComponent(item.itemKey)}`
-                : null,
+              : `/manage/users/${encodeURIComponent(item.itemKey)}`,
         },
         status: item.status,
         error: item.error,
@@ -194,12 +183,12 @@ export async function jobDetail(actor: Actor, id: string) {
     total,
     completed: items.filter((item) => item.status === "succeeded").length,
     actions: [
-      ...(job.status === "failed" &&
-      definition.retryable &&
-      (administrator || access.groupIds.includes(job.groupId))
+      ...(job.status === "failed" && definition.retryable && canManage
         ? [retryAction]
         : []),
-      ...(definition.cancelStatuses.has(job.status) ? [cancelAction] : []),
+      ...(canManage && definition.cancelStatuses.has(job.status)
+        ? [cancelAction]
+        : []),
     ],
     notice: job.status === "failed" ? definition.failureNotice : null,
     followup: !active && administrator ? definition.followup : null,

@@ -1,4 +1,9 @@
+import type { H3Event } from "h3";
+import { getRouterParam } from "h3";
 import { z } from "zod";
+
+export const routeParam = (event: H3Event, name: string) =>
+  getRouterParam(event, name)!;
 
 export const uuidRouteParams = z.object({
   id: z.uuid(),

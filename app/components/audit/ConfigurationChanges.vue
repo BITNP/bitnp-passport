@@ -4,54 +4,66 @@ import type { InternalApi } from "nitropack/types";
 
 import type {
   AuditConfiguration,
-  AuditConfigurationEntry,
+  AuditConfigurationFields,
+  AuditConfigurationKey,
 } from "#shared/events";
+import { auditConfigurationKeys } from "#shared/events";
 import { auditFieldLabels } from "#shared/labels";
+
+type AuditEvent = InternalApi["/api/audit"]["get"]["events"][number];
 
 const { before, after, outcome } = defineProps<{
   before?: Partial<AuditConfiguration> | null;
   after: AuditConfiguration;
-  outcome: InternalApi["/api/audit"]["get"]["events"][number]["outcome"];
+  outcome: AuditEvent["outcome"];
 }>();
 
-function formatValue([key, value]: AuditConfigurationEntry): string {
-  switch (key) {
-    case "services": {
-      return (
-        value
-          .map(
-            ({ name, url, description }) =>
-              `名称：${name}，地址：${url}${
-                description === undefined
-                  ? ""
-                  : `，说明：${description || "无"}`
-              }`,
-          )
-          .join("；") || "无"
-      );
-    }
-    case "allowInvites":
-    case "allowRegistration": {
-      return value ? "是" : "否";
-    }
-    default: {
-      return String(value) || "未填写";
-    }
-  }
+interface ConfigurationEntry {
+  key: AuditConfigurationKey;
+  value: AuditConfigurationFields[AuditConfigurationKey];
 }
+
+function formatValue({ key, value }: ConfigurationEntry): string {
+  if (key === "services" && Array.isArray(value)) {
+    return (
+      value
+        .map(
+          ({ name, url, description }) =>
+            `名称：${name}，地址：${url}${
+              description === undefined ? "" : `，说明：${description || "无"}`
+            }`,
+        )
+        .join("；") || "无"
+    );
+  }
+  if (key === "allowInvites" || key === "allowRegistration") {
+    return value ? "是" : "否";
+  }
+
+  return String(value) || "未填写";
+}
+
+const configurationEntries = (
+  config: Partial<AuditConfigurationFields>,
+): ConfigurationEntry[] =>
+  auditConfigurationKeys.flatMap((key) => {
+    const value = config[key];
+
+    return value === undefined ? [] : [{ key, value }];
+  });
 
 const changes = computed(() => {
   const previous = new Map(
-    (Object.entries(before ?? {}) as AuditConfigurationEntry[]).map((entry) => [
-      entry[0],
+    configurationEntries(before ?? {}).map((entry) => [
+      entry.key,
       formatValue(entry),
     ]),
   );
 
-  return (Object.entries(after) as AuditConfigurationEntry[]).map((entry) => ({
-    key: entry[0],
-    label: auditFieldLabels[entry[0]],
-    before: before === null ? "未配置" : (previous.get(entry[0]) ?? "未记录"),
+  return configurationEntries(after).map((entry) => ({
+    key: entry.key,
+    label: auditFieldLabels[entry.key],
+    before: before === null ? "未配置" : (previous.get(entry.key) ?? "未记录"),
     after: formatValue(entry),
   }));
 });

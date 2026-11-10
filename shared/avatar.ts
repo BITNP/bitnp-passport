@@ -2,7 +2,7 @@ export const maxAvatarBytes = 2 * 1024 * 1024;
 
 const maxAvatarUrlLength = 2048;
 
-export function normalizeAvatarUrl(value: unknown): string | null {
+function normalizeAvatarUrl(value: unknown): string | null {
   const candidate = Array.isArray(value) ? value[0] : value;
   if (typeof candidate !== "string") {
     return null;

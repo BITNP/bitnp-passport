@@ -30,7 +30,7 @@ function releaseImage() {
 onBeforeUnmount(releaseImage);
 
 function selectImage(event: Event) {
-  const input = event.target as HTMLInputElement;
+  const input = event.currentTarget as HTMLInputElement;
   const file = input.files?.[0];
   input.value = "";
 
@@ -58,18 +58,16 @@ function selectImage(event: Event) {
 
 const save = () =>
   submit(async () => {
-    const canvas = cropper.value!.getResult().canvas;
-
-    if (!canvas) {
-      throw new Error("图片尚未准备好");
-    }
+    const canvas = cropper.value!.getResult().canvas!;
 
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, "image/jpeg", 0.9),
     );
 
     if (!blob) {
-      throw new Error("裁剪失败，请重试");
+      message.error("裁剪失败，请重试");
+
+      return;
     }
 
     const updated = await $fetch("/api/account/avatar", {

@@ -11,7 +11,10 @@ const input = paginationQuery
     invitationId: z.uuid().optional(),
     actor: z.string().trim().min(1).optional(),
     operation: z
-      .enum(Object.keys(auditOperations) as AuditOperation[])
+      .custom<AuditOperation>(
+        (value) =>
+          typeof value === "string" && Object.hasOwn(auditOperations, value),
+      )
       .optional(),
     outcome: z.enum(auditOutcome.enumValues).optional(),
     from: z.iso

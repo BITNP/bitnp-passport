@@ -6,23 +6,11 @@ const props = defineProps<{ title: string; back?: RouteLocationRaw }>();
 const route = useRoute();
 const links = [
   ["/admin", "群组配置"],
-  ["/admin/users", "用户目录"],
   ["/admin/appointments", "任职管理"],
   ["/admin/administrators", "系统管理权限"],
   ["/admin/handover", "换届"],
   ["/admin/settings", "站点设置"],
 ] as const;
-const active = computed(() =>
-  route.path.startsWith("/admin/users") ? "/admin/users" : route.path,
-);
-
-function navigate(to: string) {
-  if (to === "/admin/users" && active.value === to) {
-    return navigateTo({ path: to, query: route.query });
-  }
-
-  return navigateTo(to);
-}
 
 useHead({ title: () => props.title });
 </script>
@@ -42,12 +30,12 @@ useHead({ title: () => props.title });
         </NButton>
       </template>
     </NPageHeader>
-    <NTabs type="line" :value="active">
+    <NTabs type="line" :value="route.path">
       <NTab
         v-for="[to, label] in links"
         :key="to"
         :name="to"
-        @click="navigate(to)"
+        @click="navigateTo(to)"
       >
         {{ label }}
       </NTab>

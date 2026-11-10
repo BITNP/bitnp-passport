@@ -10,7 +10,6 @@ const { user, refresh } = defineProps<{
 const form = reactive<AdminProfileInput>({
   name: user.name,
   email: user.email,
-  qqNumber: user.qqNumber,
   enabled: user.enabled,
   emailVerified: user.emailVerified,
 });
@@ -20,7 +19,6 @@ watch(
     Object.assign(form, {
       name: value.name,
       email: value.email,
-      qqNumber: value.qqNumber,
       enabled: value.enabled,
       emailVerified: value.emailVerified,
     });
@@ -29,9 +27,7 @@ watch(
 watch(
   () => form.email,
   (value) => {
-    if (value !== user.email) {
-      form.emailVerified = false;
-    }
+    form.emailVerified = value === user.email ? user.emailVerified : false;
   },
 );
 
@@ -40,16 +36,22 @@ const { data: session } = await usePortalSession();
 const message = useMessage();
 const save = () =>
   submit(async () => {
+    const editingCurrentUser = session.value?.user.id === user.id;
+
     await $fetch(`/api/admin/users/${encodeURIComponent(user.id)}/profile`, {
       method: "PUT",
       body: form,
     });
-    await refreshNuxtData("portal-session");
-    if (!session.value) {
-      await navigateTo("/account");
 
-      return;
+    if (editingCurrentUser) {
+      await refreshNuxtData("portal-session");
+      if (!session.value) {
+        await navigateTo("/account");
+
+        return;
+      }
     }
+
     await refresh();
     message.success("用户资料已保存");
   });
@@ -94,21 +96,11 @@ const keycloakPages = {
           已验证
         </NCheckbox>
       </NFormItem>
-      <NFormItem label="QQ 号" :label-props="{ for: 'admin-qq' }">
-        <NInput
-          v-model:value="form.qqNumber"
-          :input-props="{
-            id: 'admin-qq',
-            autocomplete: 'off',
-            inputmode: 'numeric',
-          }"
-        />
-      </NFormItem>
       <NFormItem label="账户状态">
         <NCheckbox v-model:checked="form.enabled">允许登录</NCheckbox>
       </NFormItem>
       <NButton attr-type="submit" :loading="pending" type="primary">
-        保存资料
+        保存账户信息
       </NButton>
     </NForm>
     <NDivider />

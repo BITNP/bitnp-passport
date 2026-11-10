@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
 
   return createMembershipJob(
     actor,
-    getRouterParam(event, "id")!,
+    routeParam(event, "id"),
     subjects,
     operation,
   );

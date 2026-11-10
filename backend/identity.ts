@@ -1,21 +1,21 @@
 import {
-  departmentCodes,
+  activeOrganizationRole,
   departments,
+  isCurrentPositionRole,
+  managedDepartmentCodes,
   roleLabel,
+  roleSourceLabel,
   systemAdministratorRole,
 } from "#shared/identity";
 
 import { groupLabels } from "./groups/labels.ts";
+import type { RoleSource } from "./keycloak/roles.ts";
 import { userRoleAssignments } from "./keycloak/roles.ts";
 import * as keycloak from "./keycloak.ts";
 import { pick } from "./utils.ts";
 
-type RoleSource = Awaited<
-  ReturnType<typeof userRoleAssignments>
->["sources"][number];
-
 export const describeRoleSources = (
-  sources: RoleSource[],
+  sources: readonly RoleSource[],
   labels: ReadonlyMap<string, string>,
 ) =>
   sources.map((source) => ({
@@ -27,7 +27,7 @@ export const describeRoleSources = (
         }
       : null,
     role: source.role,
-    label: roleLabel(source.role),
+    label: roleSourceLabel(source.role, source.group?.id ?? null),
   }));
 
 export async function userIdentity(subject: string) {
@@ -49,7 +49,9 @@ export async function userIdentity(subject: string) {
       labels,
     );
 
-  const effective = assignments.effectiveRoles.map((role) => role.name!);
+  const effective = new Set(
+    assignments.effectiveRoles.map((role) => role.name),
+  );
   const describe = (name: string) => ({
     name,
     label: roleLabel(name),
@@ -60,28 +62,26 @@ export async function userIdentity(subject: string) {
     user,
     attributes,
     roles: assignments.effectiveRoles.map((role) => pick(role, ["id", "name"])),
-    directRoles: assignments.directRoles.map((role) => role.name!),
+    directRoles: assignments.directRoles.map((role) => role.name),
     permissions: {
       enabled: user.enabled,
-      administrator:
-        user.enabled && effective.includes(systemAdministratorRole),
+      active: user.enabled && effective.has(activeOrganizationRole),
+      activeSources: origins(activeOrganizationRole),
+      administrator: user.enabled && effective.has(systemAdministratorRole),
       memberships: assignments.memberships.map(groupInfo),
-      positions: effective
-        .filter((name) => name.startsWith("position-"))
+      positions: [...effective]
+        .filter(isCurrentPositionRole)
         .sort()
         .map(describe),
-      permissions: effective
+      permissions: [...effective]
         .filter((name) => name.startsWith("permission-"))
         .sort()
         .map(describe),
       managedDepartments: user.enabled
-        ? departmentCodes
-            .filter(
-              (code) =>
-                effective.includes(systemAdministratorRole) ||
-                effective.includes(`permission-${code}-admin`),
-            )
-            .map((code) => ({ code, label: departments[code] }))
+        ? managedDepartmentCodes(effective).map((code) => ({
+            code,
+            label: departments[code],
+          }))
         : [],
     },
   };
