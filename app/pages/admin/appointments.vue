@@ -53,7 +53,7 @@ useFetchError(error, refresh);
                     v-for="user in position.users"
                     :key="user.id"
                     show-username
-                    :to="`/admin/users/${encodeURIComponent(user.id)}`"
+                    :to="`/manage/users/${encodeURIComponent(user.id)}`"
                     :user
                   />
                 </NFlex>

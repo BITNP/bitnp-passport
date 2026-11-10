@@ -10,6 +10,7 @@ const { user, refresh } = defineProps<{
 const form = reactive<AdminProfileInput>({
   name: user.name,
   email: user.email,
+  qqNumber: user.qqNumber,
   enabled: user.enabled,
   emailVerified: user.emailVerified,
 });
@@ -19,6 +20,7 @@ watch(
     Object.assign(form, {
       name: value.name,
       email: value.email,
+      qqNumber: value.qqNumber,
       enabled: value.enabled,
       emailVerified: value.emailVerified,
     });
@@ -60,7 +62,7 @@ const keycloakPages = {
 </script>
 
 <template>
-  <NCard title="账户信息">
+  <NCard title="成员资料">
     <template #header-extra>
       <NuxtLink :to="{ path: '/audit', query: { actor: user.username } }">
         操作记录
@@ -87,6 +89,16 @@ const keycloakPages = {
           }"
         />
       </NFormItem>
+      <NFormItem label="QQ 号" :label-props="{ for: 'admin-qq' }">
+        <NInput
+          v-model:value="form.qqNumber"
+          :input-props="{
+            id: 'admin-qq',
+            autocomplete: 'off',
+            inputmode: 'numeric',
+          }"
+        />
+      </NFormItem>
       <NFormItem label="邮箱验证">
         <NCheckbox v-model:checked="form.emailVerified" :disabled="!form.email">
           已验证
@@ -96,7 +108,7 @@ const keycloakPages = {
         <NCheckbox v-model:checked="form.enabled">允许登录</NCheckbox>
       </NFormItem>
       <NButton attr-type="submit" :loading="pending" type="primary">
-        保存账户信息
+        保存资料
       </NButton>
     </NForm>
     <NDivider />

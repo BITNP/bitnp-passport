@@ -16,7 +16,7 @@ useFetchError(error, refresh);
               <UserIdentity
                 class="administrator-name"
                 show-username
-                :to="`/admin/users/${encodeURIComponent(user.id)}`"
+                :to="`/manage/users/${encodeURIComponent(user.id)}`"
                 :user
               />
               <NTag v-if="!user.enabled" :bordered="false" size="small">

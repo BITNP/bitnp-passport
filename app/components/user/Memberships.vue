@@ -4,9 +4,13 @@ import type { InternalApi } from "nitropack/types";
 import type { DirectoryUser } from "#shared/user";
 import { userLabel } from "#shared/user";
 
+type UserAdministration = NonNullable<
+  InternalApi["/api/manage/users/:id"]["get"]["administration"]
+>;
+
 const { user, memberships, refresh } = defineProps<{
   user: DirectoryUser;
-  memberships: InternalApi["/api/admin/users/:id"]["get"]["permissions"]["memberships"];
+  memberships: UserAdministration["permissions"]["memberships"];
   refresh: () => Promise<void>;
 }>();
 const {

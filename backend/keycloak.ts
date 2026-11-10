@@ -89,7 +89,10 @@ export async function updateUserProfile(id: string, input: AdminProfileInput) {
         email: input.email ?? "",
         emailVerified: input.emailVerified,
         enabled: input.enabled,
-        attributes: user!.attributes ?? {},
+        attributes: {
+          ...user!.attributes,
+          qq_number: input.qqNumber === null ? [] : [input.qqNumber],
+        },
       },
     ),
   );

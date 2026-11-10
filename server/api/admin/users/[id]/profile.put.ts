@@ -9,6 +9,11 @@ const input = z
       .union([z.email(), z.literal("")])
       .nullable()
       .transform((value) => (value === "" ? null : value)),
+    qqNumber: z
+      .string()
+      .trim()
+      .transform((value) => value || null)
+      .nullable(),
     enabled: z.boolean(),
     emailVerified: z.boolean(),
   })

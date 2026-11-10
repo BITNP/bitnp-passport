@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import type { InternalApi } from "nitropack/types";
 
-type UserDetail = InternalApi["/api/admin/users/:id"]["get"];
+type UserAdministration = NonNullable<
+  InternalApi["/api/manage/users/:id"]["get"]["administration"]
+>;
 
 const { roles, attributes } = defineProps<{
-  roles: UserDetail["roles"];
-  attributes: UserDetail["attributes"];
+  roles: UserAdministration["roles"];
+  attributes: UserAdministration["attributes"];
 }>();
 </script>
 

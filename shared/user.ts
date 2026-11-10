@@ -38,7 +38,8 @@ export interface MemberProfileInput {
   qqNumber: string | null;
 }
 
-export interface AdminProfileInput extends Omit<ProfileInput, "qqNumber"> {
+export interface AdminProfileInput extends ProfileInput {
+  qqNumber: string | null;
   enabled: boolean;
   emailVerified: boolean;
 }
