@@ -34,13 +34,7 @@ useHead({ title: "首页" });
         </NFlex>
       </div>
     </NCard>
-    <NGrid
-      v-if="!session"
-      cols="1 m:2"
-      responsive="screen"
-      :x-gap="16"
-      :y-gap="16"
-    >
+    <NGrid cols="1 m:2" responsive="screen" :x-gap="16" :y-gap="16">
       <NGi>
         <NCard class="notice-card" size="small" title="北理工公众用户">
           <p>
