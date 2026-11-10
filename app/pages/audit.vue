@@ -1,6 +1,5 @@
 <script setup lang="ts">
 definePageMeta({ middleware: ["auth", "management"] });
-useHead({ title: "操作记录" });
 
 const route = useRoute();
 const page = ref(1);
@@ -65,10 +64,7 @@ useFetchError(groupsError, refreshGroups);
 </script>
 
 <template>
-  <NuxtLayout name="manage">
-    <NPageHeader>
-      <template #title><h1>操作记录</h1></template>
-    </NPageHeader>
+  <NuxtLayout name="manage" title="操作记录">
     <NCard>
       <NFlex :size="20" vertical>
         <AuditFilters

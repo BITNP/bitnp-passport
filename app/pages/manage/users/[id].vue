@@ -7,18 +7,14 @@ const route = useRoute();
 const { data, error, refresh } = await useFetch(
   () => `/api/manage/users/${encodeURIComponent(String(route.params.id))}`,
 );
-useHead({
-  title: () => (data.value ? userLabel(data.value.user) : "成员资料"),
-});
 </script>
 
 <template>
-  <NuxtLayout name="manage">
-    <NPageHeader @back="navigateBack({ path: '/manage', query: route.query })">
-      <template #title>
-        <h1>{{ data ? userLabel(data.user) : "成员资料" }}</h1>
-      </template>
-    </NPageHeader>
+  <NuxtLayout
+    :back="{ path: '/manage', query: route.query }"
+    name="manage"
+    :title="data ? userLabel(data.user) : '成员资料'"
+  >
     <NCard><UserSearch /></NCard>
     <LoadError v-if="error" :error :retry="refresh" />
     <template v-if="data">

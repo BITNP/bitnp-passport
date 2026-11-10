@@ -2,7 +2,6 @@
 import type { MembershipPreview } from "#shared/types";
 
 definePageMeta({ middleware: ["auth", "management"] });
-useHead({ title: "批量成员操作" });
 
 const route = useRoute();
 const groupId = computed(() => String(route.params.id));
@@ -19,20 +18,21 @@ useFetchError(groupsError, refreshGroups);
 </script>
 
 <template>
-  <NuxtLayout name="manage">
-    <NPageHeader @back="navigateBack(`/groups/${encodeURIComponent(groupId)}`)">
-      <template #title><h1>批量成员操作</h1></template>
-      <template v-if="group" #footer>
-        <NuxtLink :to="`/groups/${encodeURIComponent(groupId)}`">
-          {{ group.settings ? group.settings.label : group.directory.name }}
-        </NuxtLink>
-      </template>
-      <template #extra>
-        <LinkButton :to="`/jobs?groupId=${encodeURIComponent(groupId)}`">
-          群组任务
-        </LinkButton>
-      </template>
-    </NPageHeader>
+  <NuxtLayout
+    :back="`/groups/${encodeURIComponent(groupId)}`"
+    name="manage"
+    title="批量成员操作"
+  >
+    <template #extra>
+      <LinkButton :to="`/jobs?groupId=${encodeURIComponent(groupId)}`">
+        群组任务
+      </LinkButton>
+    </template>
+    <template v-if="group" #footer>
+      <NuxtLink :to="`/groups/${encodeURIComponent(groupId)}`">
+        {{ group.settings ? group.settings.label : group.directory.name }}
+      </NuxtLink>
+    </template>
     <LoadError v-if="loadError" :error="loadError" :retry="refresh" />
     <GroupBatchInput
       v-if="group"

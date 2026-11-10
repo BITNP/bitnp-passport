@@ -8,7 +8,6 @@ import { NuxtLink } from "#components";
 type Group = InternalApi["/api/groups"]["get"][number];
 
 definePageMeta({ middleware: ["auth", "management"] });
-useHead({ title: "群组" });
 
 const [{ data: groups, error, refresh, status }, { data: session }] =
   await Promise.all([useFetch("/api/groups"), usePortalSession()]);
@@ -61,15 +60,10 @@ const columns: DataTableColumns<Group> = [
 </script>
 
 <template>
-  <NuxtLayout name="manage">
-    <NPageHeader>
-      <template #title><h1>我管理的群组</h1></template>
-      <template #extra>
-        <LinkButton v-if="session?.administrator" to="/admin">
-          全部群组与配置
-        </LinkButton>
-      </template>
-    </NPageHeader>
+  <NuxtLayout name="manage" title="我管理的群组">
+    <template v-if="session?.administrator" #extra>
+      <LinkButton to="/admin">全部群组与配置</LinkButton>
+    </template>
     <NCard v-if="groups" :content-style="{ padding: 0 }">
       <div class="group-toolbar">
         <NText depth="3">{{ groups.length }} 个群组</NText>

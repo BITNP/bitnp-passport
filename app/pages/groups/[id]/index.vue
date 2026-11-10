@@ -18,42 +18,35 @@ const groupLabel = computed(() => {
 
   return current.settings ? current.settings.label : current.directory.name;
 });
-
-useHead({ title: groupLabel });
 </script>
 
 <template>
-  <NuxtLayout name="manage">
-    <NPageHeader @back="navigateBack('/groups')">
-      <template #title>
-        <h1>{{ groupLabel }}</h1>
-      </template>
-      <template v-if="group" #extra>
-        <NFlex :size="12">
-          <LinkButton :to="`/jobs?groupId=${encodeURIComponent(groupId)}`">
-            群组任务
-          </LinkButton>
-          <LinkButton :to="`/audit?groupId=${encodeURIComponent(groupId)}`">
-            操作记录
-          </LinkButton>
-          <LinkButton
-            v-if="session?.administrator"
-            :to="`/admin?groupId=${encodeURIComponent(groupId)}`"
-          >
-            配置群组
-          </LinkButton>
+  <NuxtLayout back="/groups" name="manage" :title="groupLabel">
+    <template v-if="group" #extra>
+      <NFlex :size="12">
+        <LinkButton :to="`/jobs?groupId=${encodeURIComponent(groupId)}`">
+          群组任务
+        </LinkButton>
+        <LinkButton :to="`/audit?groupId=${encodeURIComponent(groupId)}`">
+          操作记录
+        </LinkButton>
+        <LinkButton
+          v-if="session?.administrator"
+          :to="`/admin?groupId=${encodeURIComponent(groupId)}`"
+        >
+          配置群组
+        </LinkButton>
+      </NFlex>
+    </template>
+    <template v-if="group" #footer>
+      <NFlex align="center" justify="space-between" :size="16">
+        <NText depth="3">{{ group.directory.path }}</NText>
+        <NFlex :size="20">
+          <NuxtLink to="#members">成员</NuxtLink>
+          <NuxtLink to="#invitations">邀请链接</NuxtLink>
         </NFlex>
-      </template>
-      <template v-if="group" #footer>
-        <NFlex align="center" justify="space-between" :size="16">
-          <NText depth="3">{{ group.directory.path }}</NText>
-          <NFlex :size="20">
-            <NuxtLink to="#members">成员</NuxtLink>
-            <NuxtLink to="#invitations">邀请链接</NuxtLink>
-          </NFlex>
-        </NFlex>
-      </template>
-    </NPageHeader>
+      </NFlex>
+    </template>
     <LoadError v-if="error" :error :retry="refresh" />
     <template v-if="group">
       <GroupMembers

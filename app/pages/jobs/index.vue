@@ -1,6 +1,5 @@
 <script setup lang="ts">
 definePageMeta({ middleware: ["auth", "management"] });
-useHead({ title: "后台任务" });
 
 const route = useRoute();
 const page = ref(1);
@@ -50,17 +49,14 @@ useFetchError(groupsError, refreshGroups);
 </script>
 
 <template>
-  <NuxtLayout name="manage">
-    <NPageHeader>
-      <template #title><h1>后台任务</h1></template>
-      <template v-if="selectedGroup" #extra>
-        <LinkButton
-          :to="`/groups/${encodeURIComponent(selectedGroup.groupId)}/batch`"
-        >
-          批量成员操作
-        </LinkButton>
-      </template>
-    </NPageHeader>
+  <NuxtLayout name="manage" title="后台任务">
+    <template v-if="selectedGroup" #extra>
+      <LinkButton
+        :to="`/groups/${encodeURIComponent(selectedGroup.groupId)}/batch`"
+      >
+        批量成员操作
+      </LinkButton>
+    </template>
     <NCard>
       <NFlex :size="20" vertical>
         <NFlex align="center" justify="space-between">

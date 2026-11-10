@@ -1,6 +1,5 @@
 <script setup lang="ts">
 definePageMeta({ middleware: ["auth", "management"] });
-useHead({ title: "成员目录" });
 
 const route = useRoute();
 const page = computed({
@@ -26,10 +25,7 @@ const {
 </script>
 
 <template>
-  <NuxtLayout name="manage">
-    <NPageHeader>
-      <template #title><h1>成员目录</h1></template>
-    </NPageHeader>
+  <NuxtLayout name="manage" title="成员目录">
     <NCard>
       <NFlex :size="20" vertical>
         <UserSearch />

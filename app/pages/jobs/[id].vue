@@ -2,7 +2,6 @@
 import { jobStatusLabels } from "#shared/labels";
 
 definePageMeta({ middleware: ["auth", "management"] });
-useHead({ title: "任务详情" });
 
 const route = useRoute();
 const id = computed(() => encodeURIComponent(String(route.params.id)));
@@ -42,32 +41,25 @@ const action = (name: "retry" | "cancel") =>
 </script>
 
 <template>
-  <NuxtLayout name="manage">
-    <NPageHeader
-      @back="
-        navigateBack(
-          data
-            ? `/jobs?groupId=${encodeURIComponent(data.job.groupId)}`
-            : '/jobs',
-        )
-      "
-    >
-      <template #title>
-        <h1>{{ data?.job.title ?? "任务详情" }}</h1>
-      </template>
-      <template v-if="data" #extra>
-        <NFlex>
-          <LinkButton v-if="data.job.group.to" :to="data.job.group.to">
-            {{ data.job.group.label }}
-          </LinkButton>
-          <LinkButton
-            :to="`/audit?groupId=${encodeURIComponent(data.job.groupId)}`"
-          >
-            群组记录
-          </LinkButton>
-        </NFlex>
-      </template>
-    </NPageHeader>
+  <NuxtLayout
+    :back="
+      data ? `/jobs?groupId=${encodeURIComponent(data.job.groupId)}` : '/jobs'
+    "
+    name="manage"
+    :title="data?.job.title ?? '任务详情'"
+  >
+    <template v-if="data" #extra>
+      <NFlex>
+        <LinkButton v-if="data.job.group.to" :to="data.job.group.to">
+          {{ data.job.group.label }}
+        </LinkButton>
+        <LinkButton
+          :to="`/audit?groupId=${encodeURIComponent(data.job.groupId)}`"
+        >
+          群组记录
+        </LinkButton>
+      </NFlex>
+    </template>
     <LoadError v-if="loadError" :error="loadError" :retry="refresh" />
     <template v-if="data">
       <NCard :title="jobStatusLabels[data.job.status]">
