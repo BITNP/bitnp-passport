@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import type { RouteLocationRaw } from "vue-router";
+const props = defineProps<{ title: string }>();
 
-const props = defineProps<{ title: string; back?: RouteLocationRaw }>();
-
-const route = useRoute();
 const links = [
   ["/admin", "群组配置"],
   ["/admin/appointments", "任职管理"],
@@ -17,10 +14,7 @@ useHead({ title: () => props.title });
 
 <template>
   <NuxtLayout name="page">
-    <NPageHeader
-      class="admin-heading"
-      :on-back="props.back ? () => navigateTo(props.back) : undefined"
-    >
+    <NPageHeader class="admin-heading">
       <template #title>
         <h1>{{ props.title }}</h1>
       </template>
@@ -30,16 +24,7 @@ useHead({ title: () => props.title });
         </NButton>
       </template>
     </NPageHeader>
-    <NTabs type="line" :value="route.path">
-      <NTab
-        v-for="[to, label] in links"
-        :key="to"
-        :name="to"
-        @click="navigateTo(to)"
-      >
-        {{ label }}
-      </NTab>
-    </NTabs>
+    <NavTabs :links />
     <slot />
   </NuxtLayout>
 </template>

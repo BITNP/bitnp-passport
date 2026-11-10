@@ -23,8 +23,6 @@ const {
     first: (page.value - 1) * 50,
   })),
 });
-
-useFetchError(error, refresh);
 </script>
 
 <template>
@@ -35,6 +33,7 @@ useFetchError(error, refresh);
     <NCard>
       <NFlex :size="20" vertical>
         <UserSearch />
+        <LoadError v-if="error" :error :retry="refresh" />
         <UserTable
           v-if="data"
           :loading="loadStatus === 'pending'"

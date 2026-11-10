@@ -11,7 +11,7 @@ export default defineNuxtConfig({
   },
   modules: ["@nuxt/eslint", "@nuxtjs/color-mode"],
   imports: {
-    presets: [{ from: "naive-ui", imports: ["useMessage"] }],
+    presets: [{ from: "naive-ui", imports: ["useDialog", "useMessage"] }],
   },
   vite: {
     plugins: [

@@ -14,7 +14,7 @@ const endpoint = computed(
   () => `/api/groups/${encodeURIComponent(groupId)}/invitations` as const,
 );
 const { data: invitations, error, refresh, status } = await useFetch(endpoint);
-const { submit, pending } = useMutation();
+const { submit, pending, running } = useMutation();
 const message = useMessage();
 const form = ref<CreateInvitationInput>({
   days: 7,
@@ -33,6 +33,20 @@ const durations = [1, 7, 14, 30].map((value) => ({
   value,
 }));
 
+type Invitation = NonNullable<typeof invitations.value>[number];
+
+function invitationState(invitation: Invitation) {
+  if (invitation.revokedAt) {
+    return { label: "已撤销", type: "default", usable: false } as const;
+  }
+
+  if (new Date(invitation.expiresAt).getTime() <= Date.now()) {
+    return { label: "已过期", type: "warning", usable: false } as const;
+  }
+
+  return { label: "有效", type: "success", usable: true } as const;
+}
+
 const createInvitation = () =>
   submit(async () => {
     await $fetch(endpoint.value, {
@@ -42,7 +56,7 @@ const createInvitation = () =>
     form.value = { days: form.value.days, note: "", allowRegistration: false };
     message.success("邀请已创建");
     await refresh();
-  });
+  }, "create");
 
 const updateInvitation = () =>
   submit(async () => {
@@ -53,7 +67,7 @@ const updateInvitation = () =>
     editor.value = undefined;
     message.success("邀请设置已保存");
     await refresh();
-  });
+  }, "update");
 
 const renewInvitation = (id: string) =>
   submit(async () => {
@@ -63,22 +77,23 @@ const renewInvitation = (id: string) =>
     });
     message.success("邀请已续期");
     await refresh();
-  });
+  }, `renew:${id}`);
 
 const revokeInvitation = (id: string) =>
   submit(async () => {
     await $fetch(endpoint.value, { method: "DELETE", body: { id } });
     message.success("邀请已撤销");
     await refresh();
-  });
+  }, `revoke:${id}`);
 
-const copyInvitation = (url: string) =>
-  submit(async () => {
+async function copyInvitation(url: string) {
+  try {
     await navigator.clipboard.writeText(url);
     message.success("链接已复制");
-  });
-
-useFetchError(error, refresh);
+  } catch {
+    message.error("无法写入剪贴板，请手动选中链接复制");
+  }
+}
 </script>
 
 <template>
@@ -109,7 +124,12 @@ useFetchError(error, refresh);
             允许新用户注册
           </NCheckbox>
           <NFlex>
-            <NButton attr-type="submit" :loading="pending" type="primary">
+            <NButton
+              attr-type="submit"
+              :disabled="pending"
+              :loading="running === 'create'"
+              type="primary"
+            >
               创建邀请
             </NButton>
           </NFlex>
@@ -121,10 +141,26 @@ useFetchError(error, refresh);
           <NListItem v-for="invitation in invitations" :key="invitation.id">
             <NFlex :size="12" vertical>
               <NFlex align="center" justify="space-between" :size="12">
-                <NText v-if="invitation.note" strong>
-                  {{ invitation.note }}
-                </NText>
-                <NText v-else depth="3">未填写备注</NText>
+                <NFlex align="center" :size="8">
+                  <NText v-if="invitation.note" strong>
+                    {{ invitation.note }}
+                  </NText>
+                  <NText v-else depth="3">未填写备注</NText>
+                  <NTag
+                    :bordered="false"
+                    size="small"
+                    :type="invitationState(invitation).type"
+                  >
+                    {{ invitationState(invitation).label }}
+                  </NTag>
+                  <NTag :bordered="false" size="small">
+                    {{
+                      invitation.allowRegistration
+                        ? "可注册新账号"
+                        : "使用已有账号"
+                    }}
+                  </NTag>
+                </NFlex>
                 <NButton
                   :disabled="pending"
                   size="small"
@@ -140,31 +176,13 @@ useFetchError(error, refresh);
                   编辑设置
                 </NButton>
               </NFlex>
-              <NFlex>
-                <NTag
-                  :bordered="false"
-                  size="small"
-                  :type="invitation.allowRegistration ? 'info' : 'default'"
-                >
-                  {{
-                    invitation.allowRegistration
-                      ? "可注册新账号"
-                      : "使用已有账号"
-                  }}
-                </NTag>
-              </NFlex>
-              <NInputGroup>
+              <NInputGroup v-if="invitationState(invitation).usable">
                 <NInput
                   readonly
                   :value="invitation.url"
                   @focus="($event.target as HTMLInputElement).select()"
                 />
-                <NButton
-                  :disabled="pending"
-                  @click="copyInvitation(invitation.url)"
-                >
-                  复制
-                </NButton>
+                <NButton @click="copyInvitation(invitation.url)">复制</NButton>
               </NInputGroup>
               <NFlex align="center" justify="space-between" :size="12">
                 <NFlex :size="12">
@@ -182,14 +200,7 @@ useFetchError(error, refresh);
                   <NButton size="small" @click="usageId = invitation.id">
                     使用记录
                   </NButton>
-                  <NTag
-                    v-if="invitation.revokedAt"
-                    :bordered="false"
-                    size="small"
-                  >
-                    已撤销
-                  </NTag>
-                  <template v-else>
+                  <template v-if="!invitation.revokedAt">
                     <NPopconfirm
                       v-if="allowInvites"
                       :disabled="pending"
@@ -202,7 +213,13 @@ useFetchError(error, refresh);
                       @positive-click="renewInvitation(invitation.id)"
                     >
                       <template #trigger>
-                        <NButton :disabled="pending" size="small">续期</NButton>
+                        <NButton
+                          :disabled="pending"
+                          :loading="running === `renew:${invitation.id}`"
+                          size="small"
+                        >
+                          续期
+                        </NButton>
                       </template>
 
                       <NFormItem label="延长天数" :show-feedback="false">
@@ -228,6 +245,7 @@ useFetchError(error, refresh);
             </NFlex>
           </NListItem>
         </NList>
+        <LoadError v-else-if="error" :error :retry="refresh" />
         <NEmpty v-else-if="status === 'success'" description="暂无邀请链接" />
       </NSpin>
     </NFlex>
@@ -239,12 +257,18 @@ useFetchError(error, refresh);
       @update:show="editor = undefined"
     >
       <NFlex v-if="editor" :size="16" vertical>
-        <NInput
-          v-model:value="editor.note"
-          :autosize="{ minRows: 2, maxRows: 5 }"
-          placeholder="填写备注"
-          type="textarea"
-        />
+        <NFormItem
+          label="备注"
+          :label-props="{ for: 'invitation-note' }"
+          :show-feedback="false"
+        >
+          <NInput
+            v-model:value="editor.note"
+            :autosize="{ minRows: 2, maxRows: 5 }"
+            :input-props="{ id: 'invitation-note' }"
+            type="textarea"
+          />
+        </NFormItem>
         <NCheckbox
           v-model:checked="editor.allowRegistration"
           :disabled="pending"
@@ -253,8 +277,12 @@ useFetchError(error, refresh);
         </NCheckbox>
       </NFlex>
       <template #action>
-        <NButton @click="editor = undefined">取消</NButton>
-        <NButton :loading="pending" type="primary" @click="updateInvitation">
+        <NButton :disabled="pending" @click="editor = undefined">取消</NButton>
+        <NButton
+          :loading="running === 'update'"
+          type="primary"
+          @click="updateInvitation"
+        >
           保存
         </NButton>
       </template>

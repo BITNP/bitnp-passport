@@ -27,7 +27,7 @@ const availableGroups = computed(() =>
   ),
 );
 
-const { submit, pending } = useMutation(refresh);
+const { submit, pending, running } = useMutation(refresh);
 const message = useMessage();
 
 const addGroup = () =>
@@ -41,7 +41,7 @@ const addGroup = () =>
     );
     selectedGroupId.value = null;
     message.success("已加入群组");
-  });
+  }, "add");
 
 const removeGroup = (groupId: string) =>
   submit(async () => {
@@ -50,9 +50,7 @@ const removeGroup = (groupId: string) =>
       body: { subject: user.id },
     });
     message.success("已从群组移除");
-  });
-
-useFetchError(error, refreshGroups);
+  }, "remove");
 </script>
 
 <template>
@@ -71,7 +69,7 @@ useFetchError(error, refreshGroups);
             <NButton
               attr-type="submit"
               :disabled="pending || !selectedGroupId || !user.enabled"
-              :loading="pending"
+              :loading="running === 'add'"
               type="primary"
             >
               添加
@@ -79,6 +77,7 @@ useFetchError(error, refreshGroups);
           </NInputGroup>
         </NFormItem>
       </NForm>
+      <LoadError v-else-if="error" :error :retry="refreshGroups" />
       <NList v-if="memberships.length > 0">
         <NListItem v-for="group in memberships" :key="group.id">
           <NuxtLink :to="`/groups/${encodeURIComponent(group.id)}`">

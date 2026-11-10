@@ -28,13 +28,12 @@ const groups = computed(() => {
     };
   });
 });
-
-useFetchError(error, refresh);
 </script>
 
 <template>
   <NuxtLayout name="admin" title="任职管理">
     <NCard><UserSearch /></NCard>
+    <LoadError v-if="error" :error :retry="refresh" />
     <NCard v-for="group in groups" :key="group.key" size="small">
       <NCollapse
         arrow-placement="right"

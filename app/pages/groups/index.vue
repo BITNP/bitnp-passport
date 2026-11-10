@@ -58,8 +58,6 @@ const columns: DataTableColumns<Group> = [
       ),
   },
 ];
-
-useFetchError(error, refresh);
 </script>
 
 <template>
@@ -75,10 +73,11 @@ useFetchError(error, refresh);
     <NCard v-if="groups" :content-style="{ padding: 0 }">
       <div class="group-toolbar">
         <NText depth="3">{{ groups.length }} 个群组</NText>
-        <GroupAutocomplete
+        <NInput
           v-model:value="search"
           class="group-search"
-          :groups
+          clearable
+          :input-props="{ 'aria-label': '搜索群组' }"
           placeholder="搜索群组名称或备注"
         />
       </div>
@@ -104,6 +103,7 @@ useFetchError(error, refresh);
         </template>
       </NDataTable>
     </NCard>
+    <LoadError v-else-if="error" :error :retry="refresh" />
   </NuxtLayout>
 </template>
 

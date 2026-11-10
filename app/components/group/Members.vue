@@ -12,7 +12,7 @@ const { groupId, members, note, loading, refresh } = defineProps<{
   loading: boolean;
   refresh: () => Promise<void>;
 }>();
-const { submit, pending } = useMutation(refresh);
+const { submit, pending, running } = useMutation(refresh);
 const message = useMessage();
 const identifier = ref("");
 
@@ -24,7 +24,7 @@ const addMember = () =>
     });
     identifier.value = "";
     message.success("成员已添加");
-  });
+  }, "add");
 
 const removeMember = (subject: string) =>
   submit(async () => {
@@ -33,7 +33,7 @@ const removeMember = (subject: string) =>
       body: { subject },
     });
     message.success("成员已移除");
-  });
+  }, "remove");
 
 const columns: DataTableColumns<DirectoryUser> = [
   {
@@ -78,7 +78,7 @@ const columns: DataTableColumns<DirectoryUser> = [
         size="small"
         :to="`/groups/${encodeURIComponent(groupId)}/batch`"
       >
-        批量管理
+        批量成员操作
       </LinkButton>
     </template>
     <NFlex :size="20" vertical>
@@ -98,7 +98,12 @@ const columns: DataTableColumns<DirectoryUser> = [
                 required: true,
               }"
             />
-            <NButton attr-type="submit" :loading="pending" type="primary">
+            <NButton
+              attr-type="submit"
+              :disabled="pending"
+              :loading="running === 'add'"
+              type="primary"
+            >
               添加
             </NButton>
           </NInputGroup>

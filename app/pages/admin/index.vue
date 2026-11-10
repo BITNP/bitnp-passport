@@ -13,10 +13,22 @@ const {
 const mutation = useMutation();
 const { pending } = mutation;
 const search = ref("");
-const selection = ref<{ groupId?: string; parentId?: string }>();
 const groups = computed(() =>
   flattenGroups(directory.value?.groups ?? [], directory.value?.settings ?? []),
 );
+const selection = computed(() => {
+  const { groupId, create } = route.query;
+
+  if (typeof groupId === "string") {
+    return { groupId };
+  }
+
+  if (typeof create === "string") {
+    return { parentId: create || undefined };
+  }
+
+  return undefined;
+});
 const editor = computed(() => {
   const { groupId, parentId } = selection.value ?? {};
 
@@ -32,29 +44,17 @@ const editor = computed(() => {
 const select = (groupId: string) =>
   navigateTo({ path: "/admin", query: { groupId } }, { replace: true });
 
-function create(parentId?: string) {
-  selection.value = { parentId };
-
-  return navigateTo("/admin", { replace: true });
-}
+const create = (parentId?: string) =>
+  navigateTo(
+    { path: "/admin", query: { create: parentId ?? "" } },
+    { replace: true },
+  );
 
 async function refreshSelection(groupId: string) {
   await refresh();
   search.value = "";
   await select(groupId);
 }
-
-watch(
-  () => route.query.groupId,
-  (groupId) => {
-    if (typeof groupId === "string") {
-      selection.value = { groupId };
-    }
-  },
-  { immediate: true },
-);
-
-useFetchError(error, refresh);
 </script>
 
 <template>
@@ -92,6 +92,7 @@ useFetchError(error, refresh);
         </NCard>
       </NGi>
     </NGrid>
+    <LoadError v-else-if="error" :error :retry="refresh" />
   </NuxtLayout>
 </template>
 

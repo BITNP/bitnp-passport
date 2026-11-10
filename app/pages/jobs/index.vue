@@ -46,7 +46,6 @@ const selectedGroup = computed(() =>
   groups.value?.find((group) => group.groupId === groupId.value),
 );
 
-useFetchError(error, refresh);
 useFetchError(groupsError, refreshGroups);
 </script>
 
@@ -58,7 +57,7 @@ useFetchError(groupsError, refreshGroups);
         <LinkButton
           :to="`/groups/${encodeURIComponent(selectedGroup.groupId)}/batch`"
         >
-          批量管理
+          批量成员操作
         </LinkButton>
       </template>
     </NPageHeader>
@@ -72,6 +71,7 @@ useFetchError(groupsError, refreshGroups);
           />
           <NButton @click="refresh()">刷新</NButton>
         </NFlex>
+        <LoadError v-if="error" :error :retry="refresh" />
         <JobTable
           v-if="data"
           :jobs="data.jobs"

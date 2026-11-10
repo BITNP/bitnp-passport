@@ -17,15 +17,17 @@ const themeOverrides = computed(() =>
     :theme-overrides
   >
     <NGlobalStyle />
-    <NMessageProvider closable :duration="5000" keep-alive-on-hover>
-      <NEl class="site-shell">
-        <SiteHeader />
-        <main>
-          <slot />
-        </main>
-        <SiteFooter />
-      </NEl>
-    </NMessageProvider>
+    <NDialogProvider>
+      <NMessageProvider closable :duration="5000" keep-alive-on-hover>
+        <NEl class="site-shell">
+          <SiteHeader />
+          <main>
+            <slot />
+          </main>
+          <SiteFooter />
+        </NEl>
+      </NMessageProvider>
+    </NDialogProvider>
   </NConfigProvider>
 </template>
 

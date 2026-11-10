@@ -36,12 +36,11 @@ const save = () =>
     editor.value = structuredClone(saved);
     message.success("站点设置已保存");
   });
-
-useFetchError(error, refresh);
 </script>
 
 <template>
   <NuxtLayout name="admin" title="站点设置">
+    <LoadError v-if="error" :error :retry="refresh" />
     <NCard v-if="!editor && status === 'pending'">
       <NSkeleton :repeat="4" text />
     </NCard>

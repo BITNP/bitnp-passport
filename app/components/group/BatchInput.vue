@@ -11,7 +11,7 @@ const { groupId, groups } = defineProps<{
   groups: InternalApi["/api/groups"]["get"] | undefined;
 }>();
 const text = ref("");
-const { submit, pending } = useMutation();
+const { submit, pending, running } = useMutation();
 const message = useMessage();
 
 watch(text, () => emit("preview", undefined));
@@ -43,7 +43,7 @@ const importMembers = (sourceGroupId: string) =>
 
     text.value = [...identifiers].join("\n");
     message.success("名单已导入");
-  });
+  }, "import");
 
 const compare = () =>
   submit(async () => {
@@ -56,7 +56,7 @@ const compare = () =>
       },
     );
     emit("preview", result);
-  });
+  }, "compare");
 </script>
 
 <template>
@@ -66,6 +66,7 @@ const compare = () =>
         <GroupSelect
           :disabled="pending"
           :groups
+          :loading="running === 'import'"
           placeholder="选择来源群组"
           :value="null"
           @update:value="importMembers"
@@ -84,7 +85,12 @@ const compare = () =>
           type="textarea"
         />
       </NFormItem>
-      <NButton attr-type="submit" :loading="pending" type="primary">
+      <NButton
+        attr-type="submit"
+        :disabled="pending"
+        :loading="running === 'compare'"
+        type="primary"
+      >
         预览差异
       </NButton>
     </NForm>

@@ -10,7 +10,7 @@ const [{ data: invitation, error: loadError, refresh }, { data: session }] =
     usePortalSession(),
   ]);
 
-const { submit, pending } = useMutation();
+const { submit, pending, running } = useMutation();
 const authenticate = (mode: "login" | "register") =>
   submit(async () => {
     const result = await $fetch(
@@ -21,7 +21,7 @@ const authenticate = (mode: "login" | "register") =>
       },
     );
     await navigateTo(result.url, { external: true });
-  });
+  }, mode);
 
 useHead({
   title: "群组邀请",
@@ -37,7 +37,7 @@ const join = () =>
     } finally {
       await refresh();
     }
-  });
+  }, "join");
 
 const switchAccount = () =>
   submit(async () => {
@@ -46,7 +46,7 @@ const switchAccount = () =>
       query: { returnTo: `/i/${token}` },
     });
     await navigateTo(result.url, { external: true });
-  });
+  }, "switch");
 </script>
 
 <template>
@@ -71,7 +71,7 @@ const switchAccount = () =>
             :user="session.user"
           />
         </NDescriptionsItem>
-        <NDescriptionsItem label="有效期至">
+        <NDescriptionsItem v-if="!invitation.joined" label="有效期至">
           {{
             formatDateTime(invitation.expiresAt, {
               dateStyle: "medium",
@@ -100,14 +100,20 @@ const switchAccount = () =>
           <NButton
             v-else
             block
-            :loading="pending"
+            :disabled="pending"
+            :loading="running === 'join'"
             size="large"
             type="primary"
             @click="join"
           >
             加入群组
           </NButton>
-          <NButton :loading="pending" text @click="switchAccount">
+          <NButton
+            :disabled="pending"
+            :loading="running === 'switch'"
+            text
+            @click="switchAccount"
+          >
             切换账户
           </NButton>
         </template>
@@ -116,7 +122,7 @@ const switchAccount = () =>
             v-if="invitation.allowRegistration"
             block
             :disabled="pending"
-            :loading="pending"
+            :loading="running === 'register'"
             size="large"
             type="primary"
             @click="authenticate('register')"
@@ -126,7 +132,7 @@ const switchAccount = () =>
           <NButton
             block
             :disabled="pending"
-            :loading="pending"
+            :loading="running === 'login'"
             size="large"
             :type="invitation.allowRegistration ? 'default' : 'primary'"
             @click="authenticate('login')"

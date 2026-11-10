@@ -3,7 +3,6 @@ import { systemAdministratorRole } from "#shared/identity";
 
 definePageMeta({ middleware: ["auth", "admin"] });
 const { data, error, refresh } = await useFetch("/api/admin/administrators");
-useFetchError(error, refresh);
 </script>
 
 <template>
@@ -45,6 +44,7 @@ useFetchError(error, refresh);
           </div>
         </NListItem>
       </NList>
+      <LoadError v-else-if="error" :error :retry="refresh" />
     </NCard>
   </NuxtLayout>
 </template>

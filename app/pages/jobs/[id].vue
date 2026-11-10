@@ -39,15 +39,13 @@ const action = (name: "retry" | "cancel") =>
   submit(async () => {
     await $fetch(`/api/jobs/${id.value}/${name}`, { method: "POST" });
   });
-
-useFetchError(loadError, refresh);
 </script>
 
 <template>
   <NuxtLayout name="manage">
     <NPageHeader
       @back="
-        navigateTo(
+        navigateBack(
           data
             ? `/jobs?groupId=${encodeURIComponent(data.job.groupId)}`
             : '/jobs',
@@ -70,6 +68,7 @@ useFetchError(loadError, refresh);
         </NFlex>
       </template>
     </NPageHeader>
+    <LoadError v-if="loadError" :error="loadError" :retry="refresh" />
     <template v-if="data">
       <NCard :title="jobStatusLabels[data.job.status]">
         <template #header-extra>
@@ -100,6 +99,7 @@ useFetchError(loadError, refresh);
               v-for="item in data.actions"
               :key="item.name"
               :confirm-label="item.label"
+              :confirm-type="item.name === 'retry' ? 'primary' : 'error'"
               :disabled="pending"
               :message="item.confirmation"
               @confirm="action(item.name)"

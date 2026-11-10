@@ -1,7 +1,6 @@
 <script setup lang="ts">
 const props = defineProps<{ title: string }>();
 
-const route = useRoute();
 const links = [
   ["/account", "个人资料"],
   ["/account/security", "账户安全"],
@@ -18,9 +17,7 @@ useHead({ title: () => props.title });
         <h1>{{ props.title }}</h1>
       </template>
     </NPageHeader>
-    <NTabs type="line" :value="route.path" @update:value="navigateTo($event)">
-      <NTab v-for="[to, label] in links" :key="to" :name="to">{{ label }}</NTab>
-    </NTabs>
+    <NavTabs :links />
 
     <slot />
   </NuxtLayout>

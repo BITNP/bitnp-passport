@@ -61,7 +61,6 @@ const groupOptions = computed(() => {
   return Array.from(labels, ([groupId, label]) => ({ groupId, label }));
 });
 
-useFetchError(error, refresh);
 useFetchError(groupsError, refreshGroups);
 </script>
 
@@ -79,6 +78,7 @@ useFetchError(groupsError, refreshGroups);
           @refresh="refresh()"
           @search="search"
         />
+        <LoadError v-if="error" :error :retry="refresh" />
         <AuditTable
           :loading="loadStatus === 'pending'"
           :records="data?.events"

@@ -10,17 +10,17 @@ const { data, error, refresh } = await useFetch(
 useHead({
   title: () => (data.value ? userLabel(data.value.user) : "成员资料"),
 });
-useFetchError(error, refresh);
 </script>
 
 <template>
   <NuxtLayout name="manage">
-    <NPageHeader @back="navigateTo({ path: '/manage', query: route.query })">
+    <NPageHeader @back="navigateBack({ path: '/manage', query: route.query })">
       <template #title>
         <h1>{{ data ? userLabel(data.user) : "成员资料" }}</h1>
       </template>
     </NPageHeader>
     <NCard><UserSearch /></NCard>
+    <LoadError v-if="error" :error :retry="refresh" />
     <template v-if="data">
       <template v-if="data.administration">
         <NGrid

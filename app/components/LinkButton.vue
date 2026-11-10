@@ -7,8 +7,8 @@ defineProps<{ to: RouteLocationRaw }>();
 </script>
 
 <template>
-  <NuxtLink :to>
-    <NButton v-bind="$attrs" tag="span">
+  <NuxtLink v-slot="{ href, navigate }" custom :to>
+    <NButton v-bind="$attrs" :href tag="a" @click="navigate">
       <slot />
     </NButton>
   </NuxtLink>

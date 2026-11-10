@@ -1,13 +1,13 @@
 export function useMutation(refresh?: () => Promise<void>) {
   const message = useMessage();
-  const pending = ref(false);
+  const running = ref<string | null>(null);
 
-  async function submit(request: () => Promise<void>) {
-    if (pending.value) {
+  async function submit(request: () => Promise<void>, action = "submit") {
+    if (running.value) {
       return;
     }
 
-    pending.value = true;
+    running.value = action;
 
     try {
       await request();
@@ -19,9 +19,13 @@ export function useMutation(refresh?: () => Promise<void>) {
         await refreshNuxtData("portal-session");
       }
     } finally {
-      pending.value = false;
+      running.value = null;
     }
   }
 
-  return { submit, pending };
+  return {
+    submit,
+    pending: computed(() => running.value !== null),
+    running: readonly(running),
+  };
 }

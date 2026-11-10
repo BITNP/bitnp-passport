@@ -11,19 +11,41 @@ const {
 const { submit, pending } = useMutation();
 const menuOpen = ref(false);
 const route = useRoute();
-const active = computed(() => `/${route.path.split("/")[1]}`);
 
-const links = computed(() => {
-  const items = [];
+const links = computed(() => [
+  ...(session.value
+    ? [{ to: "/account", label: "我的账户", sections: ["/account"] }]
+    : []),
+  ...(session.value?.management
+    ? [
+        {
+          to: "/manage",
+          label: "管理工作台",
+          sections: ["/manage", "/groups", "/jobs", "/audit"],
+        },
+      ]
+    : []),
+  ...(session.value?.administrator
+    ? [{ to: "/admin", label: "系统设置", sections: ["/admin"] }]
+    : []),
+  { to: "/help", label: "帮助", sections: ["/help"] },
+]);
+const active = computed(
+  () =>
+    links.value.find((link) =>
+      link.sections.some(
+        (section) =>
+          route.path === section || route.path.startsWith(`${section}/`),
+      ),
+    )?.to,
+);
 
-  if (session.value) {
-    items.push({ to: "/account", label: "我的账户" });
-  }
-
-  items.push({ to: "/help", label: "帮助" });
-
-  return items;
-});
+watch(
+  () => route.fullPath,
+  () => {
+    menuOpen.value = false;
+  },
+);
 
 const renderLink = (option: MenuOption) =>
   h(NuxtLink, { to: option.to as string }, () => option.label as string);
@@ -52,27 +74,15 @@ useFetchError(sessionError, refreshSession);
         :value="active"
       />
       <div class="account-actions">
-        <LinkButton
-          v-if="session?.management"
-          size="small"
-          to="/manage"
-          type="primary"
-          @click="menuOpen = false"
-        >
-          管理工作台
-        </LinkButton>
-        <LinkButton
-          v-if="session?.administrator"
-          size="small"
-          to="/admin"
-          @click="menuOpen = false"
-        >
-          系统设置
-        </LinkButton>
         <SiteColorModeSwitch />
         <template v-if="session">
           <UserIdentity class="username" to="/account" :user="session.user" />
-          <NButton :loading="pending" size="small" @click="signOut">
+          <NButton
+            class="desktop-only"
+            :loading="pending"
+            size="small"
+            @click="signOut"
+          >
             退出
           </NButton>
         </template>
@@ -80,23 +90,46 @@ useFetchError(sessionError, refreshSession);
           <NButton href="/auth/login" size="small" tag="a" type="primary">
             登录
           </NButton>
-          <NButton href="/auth/register" size="small" tag="a">注册</NButton>
+          <NButton
+            class="desktop-only"
+            href="/auth/register"
+            size="small"
+            tag="a"
+          >
+            注册
+          </NButton>
         </template>
-        <NButton class="mobile-menu" size="small" @click="menuOpen = !menuOpen">
+        <NButton
+          aria-controls="mobile-nav"
+          :aria-expanded="menuOpen"
+          class="mobile-menu"
+          size="small"
+          @click="menuOpen = !menuOpen"
+        >
           {{ menuOpen ? "收起" : "菜单" }}
         </NButton>
       </div>
     </div>
-    <NMenu
-      v-if="menuOpen"
-      class="mobile-nav"
-      key-field="to"
-      mode="horizontal"
-      :options="links"
-      :render-label="renderLink"
-      :value="active"
-      @update:value="menuOpen = false"
-    />
+    <nav v-if="menuOpen" id="mobile-nav" class="mobile-nav">
+      <NMenu
+        key-field="to"
+        :options="links"
+        :render-label="renderLink"
+        :value="active"
+        @update:value="menuOpen = false"
+      />
+      <div class="mobile-account">
+        <template v-if="session">
+          <UserIdentity show-username :user="session.user" />
+          <NButton :loading="pending" size="small" @click="signOut">
+            退出
+          </NButton>
+        </template>
+        <NButton v-else href="/auth/register" size="small" tag="a">
+          注册
+        </NButton>
+      </div>
+    </nav>
   </NLayoutHeader>
 </template>
 
@@ -140,25 +173,35 @@ useFetchError(sessionError, refreshSession);
 }
 
 .mobile-nav {
-  flex-wrap: wrap;
-  padding: 0 12px 12px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 4px 12px;
+}
+
+.mobile-account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 16px 0;
+  border-top: 1px solid var(--divider-color);
 }
 
 @media (max-width: 960px) {
   .header-content {
     padding: 8px 12px;
-    flex-wrap: wrap;
     gap: 8px;
     min-height: 48px;
   }
 
   .account-actions {
     gap: 8px;
-    max-width: 100%;
   }
 
   .desktop-nav,
-  .username {
+  .username,
+  .desktop-only {
     display: none;
   }
 

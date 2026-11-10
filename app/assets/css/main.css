@@ -23,7 +23,7 @@ a:hover {
   text-decoration: underline;
 }
 
-a:has(.n-button):hover {
+a.n-button:hover {
   text-decoration: none;
 }
 

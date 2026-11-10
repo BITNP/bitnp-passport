@@ -40,8 +40,6 @@ const columns: DataTableColumns<Usage> = [
     render: (usage) => formatDateTime(usage.completedAt!),
   },
 ];
-
-useFetchError(error, refresh);
 </script>
 
 <template>
@@ -61,6 +59,7 @@ useFetchError(error, refresh);
     <NEl>
       <NFlex :size="16" vertical>
         <NText v-if="invitation.note" strong>{{ invitation.note }}</NText>
+        <LoadError v-if="error" :error :retry="refresh" />
         <NDataTable
           :bordered="false"
           :columns

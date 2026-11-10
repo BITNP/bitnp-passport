@@ -19,6 +19,8 @@ const options = [...appointmentRoles, systemAdministratorRole].map((role) => ({
   value: role,
   label: role === systemAdministratorRole ? "个人系统授权" : roleLabel(role),
 }));
+const optionLabel = (role: string) =>
+  options.find((option) => option.value === role)?.label ?? roleLabel(role);
 const assignedOptions = computed(() =>
   options.filter((option) => directRoles.includes(option.value)),
 );
@@ -31,7 +33,7 @@ const preview = ref<
   InternalApi["/api/admin/users/:id/roles/preview"]["post"] | null
 >(null);
 
-const { submit, pending } = useMutation();
+const { submit, pending, running } = useMutation();
 const message = useMessage();
 const { data: session } = await usePortalSession();
 const api = computed(
@@ -39,14 +41,21 @@ const api = computed(
 );
 
 const prepare = (role: string, assigned: boolean) =>
-  submit(async () => {
-    preview.value = await $fetch<
-      InternalApi["/api/admin/users/:id/roles/preview"]["post"]
-    >(`${api.value}/preview`, {
-      method: "POST",
-      body: { role, assigned, previouslyAssigned: directRoles.includes(role) },
-    });
-  });
+  submit(
+    async () => {
+      preview.value = await $fetch<
+        InternalApi["/api/admin/users/:id/roles/preview"]["post"]
+      >(`${api.value}/preview`, {
+        method: "POST",
+        body: {
+          role,
+          assigned,
+          previouslyAssigned: directRoles.includes(role),
+        },
+      });
+    },
+    assigned ? "grant" : `revoke:${role}`,
+  );
 
 const confirm = () =>
   submit(async () => {
@@ -67,7 +76,7 @@ const confirm = () =>
     } else {
       await refresh();
     }
-  });
+  }, "confirm");
 </script>
 
 <template>
@@ -82,7 +91,7 @@ const confirm = () =>
         />
         <NButton
           :disabled="!selected || pending || !user.enabled"
-          :loading="pending"
+          :loading="running === 'grant'"
           type="primary"
           @click="prepare(selected!, true)"
         >
@@ -95,6 +104,7 @@ const confirm = () =>
           <template #suffix>
             <NButton
               :disabled="pending"
+              :loading="running === `revoke:${option.value}`"
               size="small"
               @click="prepare(option.value, false)"
             >
@@ -117,7 +127,7 @@ const confirm = () =>
           {{ userLabel(preview.user) }}：{{
             preview.assigned ? "授予" : "撤销"
           }}
-          {{ roleLabel(preview.role) }}
+          {{ optionLabel(preview.role) }}
         </NText>
         <NAlert v-if="preview.role === systemAdministratorRole" type="warning">
           此授权不随换届变更。
@@ -137,9 +147,16 @@ const confirm = () =>
             </NFlex>
           </NDescriptionsItem>
         </NDescriptions>
-        <NButton :loading="pending" type="primary" @click="confirm">
-          确认{{ preview.assigned ? "授予" : "撤销" }}
-        </NButton>
+        <NFlex justify="end" :size="8">
+          <NButton :disabled="pending" @click="preview = null">取消</NButton>
+          <NButton
+            :loading="running === 'confirm'"
+            :type="preview.assigned ? 'primary' : 'error'"
+            @click="confirm"
+          >
+            确认{{ preview.assigned ? "授予" : "撤销" }}
+          </NButton>
+        </NFlex>
       </NFlex>
     </NModal>
   </NCard>

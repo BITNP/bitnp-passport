@@ -17,8 +17,9 @@ const { selection, mutation, refresh } = defineProps<{
   mutation: ReturnType<typeof useMutation>;
   refresh: (groupId: string) => Promise<void>;
 }>();
-const { submit, pending } = mutation;
+const { submit, pending, running } = mutation;
 const message = useMessage();
+const dialog = useDialog();
 const initialForm = computed(() => {
   const { group, settings } = selection;
   const name = group ? group.name : "";
@@ -48,6 +49,34 @@ const formChanged = computed(() => {
 
 watch(initialForm, (value) => (form.value = { ...value }));
 
+const confirmDiscard = () =>
+  pending.value ||
+  !formChanged.value ||
+  new Promise<boolean>((resolve) => {
+    dialog.warning({
+      title: "放弃未保存的修改？",
+      content: "离开后，对当前群组的修改不会保存。",
+      positiveText: "放弃修改",
+      negativeText: "继续编辑",
+      onPositiveClick: () => resolve(true),
+      onAfterLeave: () => resolve(false),
+    });
+  });
+
+onBeforeRouteUpdate(confirmDiscard);
+onBeforeRouteLeave(confirmDiscard);
+
+function preventUnload(event: BeforeUnloadEvent) {
+  if (formChanged.value) {
+    event.preventDefault();
+  }
+}
+
+onMounted(() => window.addEventListener("beforeunload", preventUnload));
+onBeforeUnmount(() =>
+  window.removeEventListener("beforeunload", preventUnload),
+);
+
 const save = () =>
   submit(async () => {
     const { group, parent } = selection;
@@ -69,7 +98,7 @@ const save = () =>
         });
     await refresh(result.groupId);
     message.success(group ? "群组已保存" : "群组已创建");
-  });
+  }, "save");
 
 const setEnrollment = (groupId: string, enrolled: boolean) =>
   submit(async () => {
@@ -79,7 +108,7 @@ const setEnrollment = (groupId: string, enrolled: boolean) =>
     });
     await refresh(result.groupId);
     message.success(enrolled ? "群组已纳入通行证" : "群组已取消纳入通行证");
-  });
+  }, "enrollment");
 </script>
 
 <template>
@@ -121,7 +150,11 @@ const setEnrollment = (groupId: string, enrolled: boolean) =>
           @positive-click="setEnrollment(selection.group.groupId, !enrolled)"
         >
           <template #trigger>
-            <NButton :disabled="pending || formChanged" size="small">
+            <NButton
+              :disabled="pending || formChanged"
+              :loading="running === 'enrollment'"
+              size="small"
+            >
               {{ enrolled ? "取消纳入" : "纳入通行证" }}
             </NButton>
           </template>
@@ -161,7 +194,11 @@ const setEnrollment = (groupId: string, enrolled: boolean) =>
             允许创建邀请链接
           </NCheckbox>
           <NFlex align="center">
-            <NButton attr-type="submit" :loading="pending" type="primary">
+            <NButton
+              attr-type="submit"
+              :loading="running === 'save'"
+              type="primary"
+            >
               {{ selection.group ? "保存" : "创建群组" }}
             </NButton>
             <LinkButton

@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import type { DirectoryUser } from "#shared/user";
 import { userLabel } from "#shared/user";
 
 type UserOption = (typeof options.value)[number];
 
+const emit = defineEmits<{ select: [user: DirectoryUser] }>();
 const value = defineModel<string | null>("value", { required: true });
 
 const search = computed(() => value.value?.trim() ?? "");
@@ -33,6 +35,12 @@ useFetchError(error, refresh);
     placeholder="搜索姓名、用户名或邮箱"
     :render-label="(option: UserOption) => option.description"
     :value="value ?? ''"
+    @select="
+      emit(
+        'select',
+        data!.users.find((user) => user.username === $event)!,
+      )
+    "
     @update:value="value = $event"
   />
 </template>

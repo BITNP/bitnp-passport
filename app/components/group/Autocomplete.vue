@@ -4,7 +4,7 @@ type GroupOption = (typeof options.value)[number];
 const emit = defineEmits<{ select: [groupId: string] }>();
 
 const { groups } = defineProps<{
-  groups: { groupId: string; label: string; path: string; note?: string }[];
+  groups: { groupId: string; label: string; path: string }[];
 }>();
 
 const value = defineModel<string>("value", { required: true });
@@ -14,8 +14,8 @@ const options = computed(() => {
 
   return groups
     .filter((group) =>
-      [group.label, group.path, group.note].some((text) =>
-        text?.toLocaleLowerCase().includes(query),
+      [group.label, group.path].some((text) =>
+        text.toLocaleLowerCase().includes(query),
       ),
     )
     .map((group) => ({

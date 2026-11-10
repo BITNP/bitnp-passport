@@ -45,12 +45,12 @@ const save = () =>
       <NFormItem label="真实姓名" :label-props="{ for: 'name' }" required>
         <NInput
           v-model:value="form.name"
+          :disabled="profile.readOnly.name"
           :input-props="{
             id: 'name',
             autocomplete: 'name',
             required: true,
           }"
-          :readonly="profile.readOnly.name"
         />
       </NFormItem>
       <NFormItem
@@ -71,21 +71,31 @@ const save = () =>
         </template>
         <NInput
           v-model:value="form.email"
+          :disabled="profile.readOnly.email"
           :input-props="{
             id: 'email',
             autocomplete: 'email',
             required: profile.emailRequired,
             type: 'email',
           }"
-          :readonly="profile.readOnly.email"
         />
       </NFormItem>
-      <NFormItem label="QQ 号" :label-props="{ for: 'qqNumber' }">
+      <NFormItem
+        v-if="session?.management"
+        label="QQ 号"
+        :label-props="{ for: 'qqNumber' }"
+      >
         <NInput
           v-model:value="form.qqNumber"
-          :disabled="!session?.management || pending"
+          :disabled="pending"
           :input-props="{ id: 'qqNumber', autocomplete: 'off' }"
         />
+      </NFormItem>
+      <NFormItem v-else label="QQ 号">
+        <NFlex align="baseline" :size="12" wrap>
+          <NText>{{ profile.qqNumber || "未填写" }}</NText>
+          <NText depth="3">由管理层维护</NText>
+        </NFlex>
       </NFormItem>
       <NButton attr-type="submit" :loading="pending" type="primary">
         保存资料

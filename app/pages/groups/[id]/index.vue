@@ -20,20 +20,18 @@ const groupLabel = computed(() => {
 });
 
 useHead({ title: groupLabel });
-
-useFetchError(error, refresh);
 </script>
 
 <template>
   <NuxtLayout name="manage">
-    <NPageHeader @back="navigateTo('/groups')">
+    <NPageHeader @back="navigateBack('/groups')">
       <template #title>
         <h1>{{ groupLabel }}</h1>
       </template>
       <template v-if="group" #extra>
         <NFlex :size="12">
           <LinkButton :to="`/jobs?groupId=${encodeURIComponent(groupId)}`">
-            批量任务
+            群组任务
           </LinkButton>
           <LinkButton :to="`/audit?groupId=${encodeURIComponent(groupId)}`">
             操作记录
@@ -56,6 +54,7 @@ useFetchError(error, refresh);
         </NFlex>
       </template>
     </NPageHeader>
+    <LoadError v-if="error" :error :retry="refresh" />
     <template v-if="group">
       <GroupMembers
         id="members"

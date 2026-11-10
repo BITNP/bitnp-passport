@@ -8,7 +8,7 @@ import { userLabel } from "#shared/user";
 definePageMeta({ middleware: ["auth", "admin"] });
 
 const { data, error, refresh } = await useFetch("/api/admin/handover");
-const { submit, pending } = useMutation();
+const { submit, pending, running } = useMutation();
 const message = useMessage();
 
 const year = ref(new Date().getFullYear() + 1);
@@ -31,7 +31,7 @@ const addCandidate = (role: string) =>
     position.next = [...new Set([...position.next, user.id])];
     users.set(user.id, user);
     candidate[role] = null;
-  });
+  }, `candidate:${role}`);
 
 const options = computed(
   () =>
@@ -81,7 +81,7 @@ const prepare = () =>
       method: "POST",
       body: payload(),
     });
-  });
+  }, "preview");
 
 const execute = () =>
   submit(async () => {
@@ -92,7 +92,7 @@ const execute = () =>
 
     message.success("换届任务已提交");
     await navigateTo(`/jobs/${job.id}`);
-  });
+  }, "execute");
 
 const create = () =>
   submit(async () => {
@@ -104,30 +104,44 @@ const create = () =>
     await refresh();
     nextRootId.value = created.id;
     message.success("新届群组已就绪");
-  });
-
-useFetchError(error, refresh);
+  }, "create");
 </script>
 
 <template>
   <NuxtLayout name="admin" title="组织与任职换届">
-    <NCard title="当前组织">
+    <LoadError v-if="error" :error :retry="refresh" />
+    <NCard v-if="data" title="当前组织">
       <NFlex :size="16" vertical>
-        <NText v-if="data?.activeRoot">
-          当前届：{{ data?.activeRoot?.path }}
-        </NText>
-        <NAlert v-if="data && !data.activeRoot" type="warning">
+        <NText v-if="data.activeRoot">当前届：{{ data.activeRoot.path }}</NText>
+        <NAlert v-else type="warning">
           未识别到当前届组织。请确认当前届四个部门组都已配置成员角色映射；
           在补齐前，非管理员部门管理者将无法管理群组。也可在下方选择前届和新届，
           通过换届建立当前届。
         </NAlert>
-        <NInputGroup>
-          <NInputNumber v-model:value="year" :max="9999" :min="1000" />
-          <NButton :loading="pending" @click="create">准备该届组织</NButton>
-        </NInputGroup>
+        <NFormItem
+          label="新届年份"
+          :label-props="{ for: 'handover-year' }"
+          :show-feedback="false"
+        >
+          <NInputGroup>
+            <NInputNumber
+              v-model:value="year"
+              :input-props="{ id: 'handover-year' }"
+              :max="9999"
+              :min="1000"
+            />
+            <NButton
+              :disabled="pending"
+              :loading="running === 'create'"
+              @click="create"
+            >
+              准备该届组织
+            </NButton>
+          </NInputGroup>
+        </NFormItem>
       </NFlex>
     </NCard>
-    <NCard title="换届安排">
+    <NCard v-if="data" title="换届安排">
       <NFlex :size="20" vertical>
         <NFormItem label="前届组织">
           <NSelect
@@ -150,7 +164,7 @@ useFetchError(error, refresh);
             <NText depth="3">点击留任：</NText>
             <NFlex :size="8" wrap>
               <NButton
-                v-for="user in data?.appointments.find(
+                v-for="user in data.appointments.find(
                   (item) => item.role === position.role,
                 )?.users ?? []"
                 :key="user.id"
@@ -186,6 +200,7 @@ useFetchError(error, refresh);
               />
               <NButton
                 :disabled="!candidate[position.role] || pending"
+                :loading="running === `candidate:${position.role}`"
                 @click="addCandidate(position.role)"
               >
                 加入名单
@@ -194,8 +209,8 @@ useFetchError(error, refresh);
           </NFlex>
         </NCard>
         <NButton
-          :disabled="!previousRootId || !nextRootId"
-          :loading="pending"
+          :disabled="!previousRootId || !nextRootId || pending"
+          :loading="running === 'preview'"
           type="primary"
           @click="prepare"
         >
@@ -223,7 +238,12 @@ useFetchError(error, refresh);
           </NListItem>
         </NList>
         <NAlert type="warning">失败时会保留已完成的变更。</NAlert>
-        <NButton :loading="pending" type="primary" @click="execute">
+        <NButton
+          :disabled="pending"
+          :loading="running === 'execute'"
+          type="primary"
+          @click="execute"
+        >
           提交换届任务
         </NButton>
       </NFlex>

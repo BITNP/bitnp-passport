@@ -1,19 +1,31 @@
 <script setup lang="ts">
 const emit = defineEmits<{ confirm: [] }>();
 
-defineProps<{ message: string; disabled?: boolean; confirmLabel?: string }>();
+const { confirmType = "error" } = defineProps<{
+  message: string;
+  disabled?: boolean;
+  confirmLabel?: string;
+  confirmType?: "primary" | "error";
+  primary?: boolean;
+}>();
 </script>
 
 <template>
   <NPopconfirm
     :disabled
     negative-text="取消"
-    :positive-button-props="{ type: 'error' }"
+    :positive-button-props="{ type: confirmType }"
     :positive-text="confirmLabel || '确认'"
     @positive-click="emit('confirm')"
   >
     <template #trigger>
-      <NButton :disabled size="small"><slot /></NButton>
+      <NButton
+        :disabled
+        :size="primary ? 'medium' : 'small'"
+        :type="primary ? 'primary' : 'default'"
+      >
+        <slot />
+      </NButton>
     </template>
 
     <span class="confirmation">{{ message }}</span>

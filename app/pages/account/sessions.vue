@@ -25,12 +25,11 @@ const signOut = (id?: string) =>
       await refresh();
     }
   });
-
-useFetchError(loadError, refresh);
 </script>
 
 <template>
   <NuxtLayout name="account" title="登录设备">
+    <LoadError v-if="loadError" :error="loadError" :retry="refresh" />
     <template v-if="devices">
       <NFlex align="center" justify="space-between">
         <NText strong>活跃会话</NText>

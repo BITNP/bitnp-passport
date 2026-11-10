@@ -13,6 +13,9 @@ const job = reactive<{ subjects: string[]; operation: "add" | "remove" }>({
   operation: "add",
 });
 const { submit, pending } = useMutation();
+const operationLabel = computed(() =>
+  job.operation === "add" ? "添加" : "移除",
+);
 
 const candidates = computed(() => {
   if (!preview) {
@@ -72,16 +75,22 @@ const columns: DataTableColumns<(typeof candidates.value)[number]> = [
         :row-key="(user) => user.id"
         :scroll-x="520"
         @update:checked-row-keys="job.subjects = $event as string[]"
-      />
+      >
+        <template #empty>
+          <NEmpty :description="`名单中没有可${operationLabel}的成员`" />
+        </template>
+      </NDataTable>
       <NFlex align="center" justify="space-between">
         <NText depth="3">已选 {{ job.subjects.length }} 人</NText>
         <ConfirmAction
-          confirm-label="确认并创建任务"
+          :confirm-label="`确认${operationLabel}`"
+          :confirm-type="job.operation === 'add' ? 'primary' : 'error'"
           :disabled="pending || job.subjects.length === 0"
-          :message="`确认${job.operation === 'add' ? '添加' : '移除'}这 ${job.subjects.length} 位成员？`"
+          :message="`将创建任务，${operationLabel}这 ${job.subjects.length} 位成员。`"
+          primary
           @confirm="enqueue"
         >
-          创建任务
+          {{ operationLabel }} {{ job.subjects.length }} 位成员
         </ConfirmAction>
       </NFlex>
     </NFlex>

@@ -5,7 +5,6 @@ const [{ data: site, error, refresh, status }, { data: session }] =
     usePortalSession(),
   ]);
 
-useFetchError(error, refresh);
 useHead({ title: "首页" });
 </script>
 
@@ -35,7 +34,13 @@ useHead({ title: "首页" });
         </NFlex>
       </div>
     </NCard>
-    <NGrid cols="1 m:2" responsive="screen" :x-gap="16" :y-gap="16">
+    <NGrid
+      v-if="!session"
+      cols="1 m:2"
+      responsive="screen"
+      :x-gap="16"
+      :y-gap="16"
+    >
       <NGi>
         <NCard class="notice-card" size="small" title="北理工公众用户">
           <p>
@@ -56,7 +61,8 @@ useHead({ title: "首页" });
     </NGrid>
     <section>
       <h2>服务入口</h2>
-      <template v-if="site">
+      <LoadError v-if="error" :error :retry="refresh" />
+      <template v-else-if="site">
         <NGrid
           v-if="site.services.length > 0"
           cols="1 s:2 m:3"

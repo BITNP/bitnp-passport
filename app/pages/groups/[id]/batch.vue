@@ -15,13 +15,12 @@ const [
 ]);
 const preview = ref<MembershipPreview>();
 
-useFetchError(loadError, refresh);
 useFetchError(groupsError, refreshGroups);
 </script>
 
 <template>
   <NuxtLayout name="manage">
-    <NPageHeader @back="navigateTo(`/groups/${encodeURIComponent(groupId)}`)">
+    <NPageHeader @back="navigateBack(`/groups/${encodeURIComponent(groupId)}`)">
       <template #title><h1>批量成员操作</h1></template>
       <template v-if="group" #footer>
         <NuxtLink :to="`/groups/${encodeURIComponent(groupId)}`">
@@ -34,6 +33,7 @@ useFetchError(groupsError, refreshGroups);
         </LinkButton>
       </template>
     </NPageHeader>
+    <LoadError v-if="loadError" :error="loadError" :retry="refresh" />
     <GroupBatchInput
       v-if="group"
       :group-id

@@ -6,12 +6,11 @@ const [{ data: account, error, refresh }, { data: session }] =
     useFetch("/api/account", { deep: true }),
     usePortalSession(),
   ]);
-
-useFetchError(error, refresh);
 </script>
 
 <template>
   <NuxtLayout name="account" title="我的账户">
+    <LoadError v-if="error" :error :retry="refresh" />
     <NGrid
       v-if="account"
       cols="1 m:3"
