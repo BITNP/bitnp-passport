@@ -1,7 +1,11 @@
 import { eq } from "drizzle-orm";
 
 import { managedGroups as groupConfigurations } from "#database/schema";
-import { departmentCodes, systemAdministratorRole } from "#shared/identity";
+import {
+  departmentCodes,
+  hasManagementAccess,
+  systemAdministratorRole,
+} from "#shared/identity";
 import type { Actor } from "#shared/types";
 
 import { db } from "./database.ts";
@@ -29,6 +33,15 @@ export async function requireAdministrator(actor: Actor) {
   if (!(await isAdministrator(actor))) {
     throw new ApplicationError(403, "此操作需要系统管理员权限");
   }
+}
+
+export async function requireManagement(actor: Actor) {
+  const roles = await accessRoles(actor.subject);
+  if (!hasManagementAccess(roles)) {
+    throw new ApplicationError(403, "此操作需要管理层权限");
+  }
+
+  return roles;
 }
 
 const managedDepartments = (roles: Set<string>) =>
@@ -90,7 +103,7 @@ async function groupsForRoles(roles: Set<string>) {
 }
 
 export async function groupAccess(actor: Actor) {
-  const roles = await accessRoles(actor.subject);
+  const roles = await requireManagement(actor);
 
   if (roles.has(systemAdministratorRole)) {
     return { administrator: true, groupIds: [] as string[] };
@@ -113,7 +126,7 @@ export async function requireGroupManager(actor: Actor, groupId: string) {
 }
 
 export async function managedGroups(actor: Actor) {
-  const groups = await groupsForRoles(await accessRoles(actor.subject));
+  const groups = await groupsForRoles(await requireManagement(actor));
 
   return groups
     .sort(

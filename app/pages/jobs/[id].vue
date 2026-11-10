@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { jobStatusLabels } from "#shared/labels";
 
-definePageMeta({ middleware: "auth" });
+definePageMeta({ middleware: ["auth", "management"] });
 useHead({ title: "任务详情" });
 
 const route = useRoute();
@@ -44,7 +44,7 @@ useFetchError(loadError, refresh);
 </script>
 
 <template>
-  <NuxtLayout name="page">
+  <NuxtLayout name="manage">
     <NPageHeader
       @back="
         navigateTo(

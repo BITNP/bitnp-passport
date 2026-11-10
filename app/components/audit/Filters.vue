@@ -15,10 +15,9 @@ const emit = defineEmits<{
   refresh: [];
 }>();
 
-const { filters, groups, administrator, loading } = defineProps<{
+const { filters, groups, loading } = defineProps<{
   filters: Record<string, string>;
   groups: { groupId: string; label: string }[];
-  administrator?: boolean;
   loading?: boolean;
 }>();
 
@@ -98,17 +97,7 @@ const outcomeOptions = Object.entries(auditOutcomeLabels).map(
         />
       </NFormItemGi>
       <NFormItemGi label="操作者">
-        <UserAutocomplete
-          v-if="administrator"
-          v-model:value="form.actor"
-          clearable
-        />
-        <NInput
-          v-else
-          v-model:value="form.actor"
-          clearable
-          placeholder="完整用户名或邮箱"
-        />
+        <UserAutocomplete v-model:value="form.actor" clearable />
       </NFormItemGi>
       <NFormItemGi label="操作">
         <NSelect

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { MembershipPreview } from "#shared/types";
 
-definePageMeta({ middleware: "auth" });
+definePageMeta({ middleware: ["auth", "management"] });
 useHead({ title: "批量成员操作" });
 
 const route = useRoute();
@@ -20,7 +20,7 @@ useFetchError(groupsError, refreshGroups);
 </script>
 
 <template>
-  <NuxtLayout name="page">
+  <NuxtLayout name="manage">
     <NPageHeader @back="navigateTo(`/groups/${encodeURIComponent(groupId)}`)">
       <template #title><h1>批量成员操作</h1></template>
       <template v-if="group" #footer>

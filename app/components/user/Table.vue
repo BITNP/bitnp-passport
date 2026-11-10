@@ -31,7 +31,7 @@ const columns: DataTableColumns<DirectoryUser> = [
           user,
           showUsername: true,
           to: {
-            path: `/admin/users/${encodeURIComponent(user.id)}`,
+            path: `/manage/users/${encodeURIComponent(user.id)}`,
             query: userQuery,
           },
         }),

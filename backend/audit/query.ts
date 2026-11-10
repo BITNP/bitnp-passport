@@ -56,11 +56,7 @@ async function actorCondition(identifier: string) {
   return user ? eq(auditEvents.actorSubject, user.id) : sql`false`;
 }
 
-async function userReference(
-  id: string,
-  viewer: Actor,
-  administrator: boolean,
-): Promise<Reference> {
+async function userReference(id: string, viewer: Actor): Promise<Reference> {
   const user = await keycloak.user(id).catch(notFoundAsNull);
   if (!user) {
     return { id, label: null, to: null };
@@ -72,15 +68,13 @@ async function userReference(
     to:
       id === viewer.subject
         ? "/account"
-        : administrator
-          ? `/admin/users/${encodeURIComponent(id)}`
-          : null,
+        : `/manage/users/${encodeURIComponent(id)}`,
   };
 }
 
 export async function listAudit(actor: Actor, query: AuditFilter) {
   const { administrator, groupIds } = await groupAccess(actor);
-  // 普通用户只能查看自己发起或管理范围内的记录
+  // 部门管理层只能查看自己发起或管理范围内的记录
   const visible = administrator
     ? undefined
     : or(
@@ -152,9 +146,7 @@ export async function listAudit(actor: Actor, query: AuditFilter) {
     }
   }
   const [resolvedUsers, resolvedGroups] = await Promise.all([
-    Promise.all(
-      [...userIds].map((id) => userReference(id, actor, administrator)),
-    ),
+    Promise.all([...userIds].map((id) => userReference(id, actor))),
     Promise.all(
       [...missingGroupIds].map(async (id) => {
         const group = await keycloak.group(id).catch(notFoundAsNull);

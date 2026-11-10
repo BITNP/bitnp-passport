@@ -6,13 +6,14 @@ import { fromDrizzle } from "pg-boss";
 import type { AuditRecord } from "#database/schema";
 import { auditEvents, jobItems, jobs } from "#database/schema";
 import type { AuditDetail } from "#shared/events";
+import { systemAdministratorRole } from "#shared/identity";
 import type { JobData } from "#shared/jobs";
 import type { Actor } from "#shared/types";
 
 import { db } from "./database.ts";
 import { ApplicationError } from "./errors.ts";
 import { jobPolicies } from "./jobs/policy.ts";
-import { isAdministrator, requireGroupManager } from "./permissions.ts";
+import { requireGroupManager, requireManagement } from "./permissions.ts";
 import { operationQueue, queue } from "./queue.ts";
 
 interface NewJob {
@@ -70,7 +71,7 @@ export async function createJob(actor: Actor, input: NewJob) {
 }
 
 const readableBy = async (actor: Actor) =>
-  (await isAdministrator(actor))
+  (await requireManagement(actor)).has(systemAdministratorRole)
     ? undefined
     : eq(jobs.actorSubject, actor.subject);
 
@@ -142,6 +143,8 @@ export async function cancelJob(actor: Actor, id: string) {
     if (!job) {
       throw new ApplicationError(404, "任务不存在或你没有查看权限");
     }
+
+    await requireGroupManager(actor, job.groupId);
 
     if (!jobPolicies[job.data.type].cancelStatuses.has(job.status)) {
       throw new ApplicationError(409, "此任务当前无法取消");

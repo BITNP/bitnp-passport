@@ -151,9 +151,7 @@ export async function jobDetail(actor: Actor, id: string) {
           to:
             item.itemKey === actor.subject
               ? "/account"
-              : administrator
-                ? `/admin/users/${encodeURIComponent(item.itemKey)}`
-                : null,
+              : `/manage/users/${encodeURIComponent(item.itemKey)}`,
         },
         status: item.status,
         error: item.error,
@@ -199,7 +197,10 @@ export async function jobDetail(actor: Actor, id: string) {
       (administrator || access.groupIds.includes(job.groupId))
         ? [retryAction]
         : []),
-      ...(definition.cancelStatuses.has(job.status) ? [cancelAction] : []),
+      ...(definition.cancelStatuses.has(job.status) &&
+      (administrator || access.groupIds.includes(job.groupId))
+        ? [cancelAction]
+        : []),
     ],
     notice: job.status === "failed" ? definition.failureNotice : null,
     followup: !active && administrator ? definition.followup : null,

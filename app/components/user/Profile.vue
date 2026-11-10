@@ -10,7 +10,6 @@ const { user, refresh } = defineProps<{
 const form = reactive<AdminProfileInput>({
   name: user.name,
   email: user.email,
-  qqNumber: user.qqNumber,
   enabled: user.enabled,
   emailVerified: user.emailVerified,
 });
@@ -20,7 +19,6 @@ watch(
     Object.assign(form, {
       name: value.name,
       email: value.email,
-      qqNumber: value.qqNumber,
       enabled: value.enabled,
       emailVerified: value.emailVerified,
     });
@@ -94,21 +92,11 @@ const keycloakPages = {
           已验证
         </NCheckbox>
       </NFormItem>
-      <NFormItem label="QQ 号" :label-props="{ for: 'admin-qq' }">
-        <NInput
-          v-model:value="form.qqNumber"
-          :input-props="{
-            id: 'admin-qq',
-            autocomplete: 'off',
-            inputmode: 'numeric',
-          }"
-        />
-      </NFormItem>
       <NFormItem label="账户状态">
         <NCheckbox v-model:checked="form.enabled">允许登录</NCheckbox>
       </NFormItem>
       <NButton attr-type="submit" :loading="pending" type="primary">
-        保存资料
+        保存账户信息
       </NButton>
     </NForm>
     <NDivider />

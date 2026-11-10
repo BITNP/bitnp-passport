@@ -4,11 +4,12 @@ import { FetchError, ofetch } from "ofetch";
 
 import { sessions } from "#database/schema";
 import { avatarUrlFromAttributes } from "#shared/avatar";
-import { systemAdministratorRole } from "#shared/identity";
+import { hasManagementAccess, systemAdministratorRole } from "#shared/identity";
 import type { Actor } from "#shared/types";
 import type {
   AccountProfile,
   AdminProfileInput,
+  MemberProfileInput,
   ProfileInput,
 } from "#shared/user";
 
@@ -21,7 +22,7 @@ import { ApplicationError } from "./errors.ts";
 import { userIdentity } from "./identity.ts";
 import { effectiveUserRoles } from "./keycloak/roles.ts";
 import * as keycloak from "./keycloak.ts";
-import { requireAdministrator } from "./permissions.ts";
+import { requireAdministrator, requireManagement } from "./permissions.ts";
 import { revokeAccountSessions, updateSessionProfile } from "./sessions.ts";
 import { avatarStorage } from "./storage.ts";
 import { pick } from "./utils.ts";
@@ -167,6 +168,9 @@ export async function session(actor: Actor) {
     administrator:
       user.enabled &&
       roles.some((role) => role.name === systemAdministratorRole),
+    management:
+      user.enabled &&
+      hasManagementAccess(new Set(roles.map((role) => role.name!))),
   };
 }
 
@@ -200,7 +204,7 @@ export async function updateProfile(
 ) {
   const { qqNumber } = input;
   if (qqNumber !== undefined) {
-    await requireAdministrator(actor);
+    await requireManagement(actor);
   }
 
   const save = () =>
@@ -238,6 +242,23 @@ export async function updateProfile(
         },
         save,
       );
+}
+
+export async function updateMemberProfile(
+  actor: Actor,
+  subject: string,
+  input: MemberProfileInput,
+) {
+  await requireManagement(actor);
+
+  return audited(
+    actor,
+    { operation: "user.profile.update", target: { type: "user", id: subject } },
+    () =>
+      withProfileLock(subject, () =>
+        keycloak.updateUserQqNumber(subject, input.qqNumber),
+      ),
+  );
 }
 
 export async function updateUserProfile(

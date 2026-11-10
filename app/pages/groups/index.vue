@@ -7,7 +7,7 @@ import { NuxtLink } from "#components";
 
 type Group = InternalApi["/api/groups"]["get"][number];
 
-definePageMeta({ middleware: "auth" });
+definePageMeta({ middleware: ["auth", "management"] });
 useHead({ title: "群组" });
 
 const [{ data: groups, error, refresh, status }, { data: session }] =
@@ -63,7 +63,7 @@ useFetchError(error, refresh);
 </script>
 
 <template>
-  <NuxtLayout name="page">
+  <NuxtLayout name="manage">
     <NPageHeader>
       <template #title><h1>我管理的群组</h1></template>
       <template #extra>

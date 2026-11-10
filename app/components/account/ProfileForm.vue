@@ -28,7 +28,7 @@ const save = () =>
       body: {
         name: form.name,
         email: form.email,
-        ...(session.value?.administrator && { qqNumber: form.qqNumber }),
+        ...(session.value?.management && { qqNumber: form.qqNumber }),
       },
     });
     emit("saved", profile);
@@ -83,7 +83,7 @@ const save = () =>
       <NFormItem label="QQ 号" :label-props="{ for: 'qqNumber' }">
         <NInput
           v-model:value="form.qqNumber"
-          :disabled="!session?.administrator || pending"
+          :disabled="!session?.management || pending"
           :input-props="{ id: 'qqNumber', autocomplete: 'off' }"
         />
       </NFormItem>

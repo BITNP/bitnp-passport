@@ -11,6 +11,12 @@ export const departmentCodes = Object.keys(
 ) as readonly Department[];
 export const systemAdministratorRole = "permission-system-admin";
 
+export const hasManagementAccess = (roles: ReadonlySet<string>) =>
+  roles.has(systemAdministratorRole) ||
+  departmentCodes.some((department) =>
+    roles.has(`permission-${department}-admin`),
+  );
+
 export const memberRole = (department: Department) =>
   `position-${department}-member`;
 

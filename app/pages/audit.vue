@@ -1,6 +1,6 @@
 <script setup lang="ts">
-definePageMeta({ middleware: "auth" });
-useHead({ title: "审计记录" });
+definePageMeta({ middleware: ["auth", "management"] });
+useHead({ title: "操作记录" });
 
 const route = useRoute();
 const page = ref(1);
@@ -36,11 +36,9 @@ function search(query: Record<string, string>) {
 
 const [
   { data: groups, error: groupsError, refresh: refreshGroups },
-  { data: session },
   { data, error, refresh, status: loadStatus },
 ] = await Promise.all([
   useFetch("/api/groups"),
-  usePortalSession(),
   useFetch("/api/audit", {
     query: computed(() => ({
       first: (page.value - 1) * 50,
@@ -68,14 +66,13 @@ useFetchError(groupsError, refreshGroups);
 </script>
 
 <template>
-  <NuxtLayout name="page">
+  <NuxtLayout name="manage">
     <NPageHeader>
-      <template #title><h1>审计记录</h1></template>
+      <template #title><h1>操作记录</h1></template>
     </NPageHeader>
     <NCard>
       <NFlex :size="20" vertical>
         <AuditFilters
-          :administrator="session?.administrator"
           :filters
           :groups="groupOptions"
           :loading="loadStatus === 'pending'"

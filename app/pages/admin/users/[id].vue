@@ -13,9 +13,12 @@ useFetchError(error, refresh);
 
 <template>
   <NuxtLayout
-    :back="{ path: '/admin/users', query: route.query }"
+    :back="{
+      path: `/manage/users/${encodeURIComponent(String(route.params.id))}`,
+      query: route.query,
+    }"
     name="admin"
-    :title="data ? userLabel(data.user) : '用户详情'"
+    :title="data ? `${userLabel(data.user)} · 账户与授权` : '账户与授权'"
   >
     <NCard>
       <UserSearch />
