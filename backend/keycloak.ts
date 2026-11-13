@@ -4,6 +4,7 @@ import type {
   AdminProfileInput,
   AdminUserProfile,
   DirectoryUser,
+  MemberProfile,
 } from "#shared/user";
 
 import { config } from "./config.ts";
@@ -67,7 +68,7 @@ export async function userDetails(id: string) {
   const attributes: Record<string, string[]> = user!.attributes ?? {};
   const profile: AdminUserProfile = {
     ...fromKeycloak(user!),
-    qqNumber: attributes.qq_number?.[0] ?? null,
+    ...memberProfileFromAttributes(attributes),
   };
 
   return {
@@ -75,6 +76,27 @@ export async function userDetails(id: string) {
     attributes,
   };
 }
+
+export function memberProfileFromAttributes(
+  attributes: UserRepresentation["attributes"],
+): MemberProfile {
+  return {
+    qqNumber: attributes?.qq_number?.[0] ?? null,
+    githubUsername: attributes?.github_username?.[0] ?? null,
+  };
+}
+
+const memberProfileAttributes = ({
+  qqNumber,
+  githubUsername,
+}: Partial<MemberProfile>) => ({
+  ...(qqNumber !== undefined && {
+    qq_number: qqNumber === null ? [] : [qqNumber],
+  }),
+  ...(githubUsername !== undefined && {
+    github_username: githubUsername === null ? [] : [githubUsername],
+  }),
+});
 
 export async function updateUserProfile(id: string, input: AdminProfileInput) {
   const user = await request(() => client.users.findOne({ id }));
@@ -91,7 +113,7 @@ export async function updateUserProfile(id: string, input: AdminProfileInput) {
         enabled: input.enabled,
         attributes: {
           ...user!.attributes,
-          qq_number: input.qqNumber === null ? [] : [input.qqNumber],
+          ...memberProfileAttributes(input),
         },
       },
     ),
@@ -102,7 +124,10 @@ export async function updateUserProfile(id: string, input: AdminProfileInput) {
   }
 }
 
-export async function updateUserQqNumber(id: string, qqNumber: string | null) {
+export async function updateMemberProfile(
+  id: string,
+  input: Partial<MemberProfile>,
+) {
   const user = await request(() => client.users.findOne({ id }));
 
   await request(() =>
@@ -119,7 +144,7 @@ export async function updateUserQqNumber(id: string, qqNumber: string | null) {
         ]),
         attributes: {
           ...user!.attributes,
-          qq_number: qqNumber === null ? [] : [qqNumber],
+          ...memberProfileAttributes(input),
         },
       },
     ),
@@ -137,19 +162,31 @@ export async function allUsers(search?: string) {
 }
 
 export async function searchUsers(search: string, first: number) {
+  const githubUsername =
+    /^(?:@|https?:\/\/github\.com\/)([^/\s"\\]+)\/?$/i.exec(search)?.[1];
+  const query = githubUsername
+    ? { q: `github_username:${githubUsername}`, exact: true }
+    : { search };
   const [users, total] = await request(() =>
     Promise.all([
       client.users.find({
-        search,
+        ...query,
         first,
         max: 50,
         briefRepresentation: false,
       }),
-      client.users.count({ search }),
+      client.users.count(query),
     ]),
   );
 
-  return { users: users.map(fromKeycloak), total };
+  return {
+    users: users.map((user) => ({
+      ...fromKeycloak(user),
+      githubUsername: memberProfileFromAttributes(user.attributes)
+        .githubUsername,
+    })),
+    total,
+  };
 }
 
 export async function resolveUser(identifier: string) {

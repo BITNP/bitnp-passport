@@ -9,7 +9,12 @@ const { submit, pending } = useMutation(() =>
 );
 const message = useMessage();
 
-const form = reactive<ProfileInput>({ name: "", email: null, qqNumber: null });
+const form = reactive<ProfileInput>({
+  name: "",
+  email: null,
+  qqNumber: null,
+  githubUsername: null,
+});
 
 watch(
   () => profile,
@@ -17,21 +22,25 @@ watch(
     form.name = value.user.name;
     form.email = value.user.email;
     form.qqNumber = value.qqNumber;
+    form.githubUsername = value.githubUsername;
   },
   { immediate: true },
 );
 
 const save = () =>
   submit(async () => {
-    const profile = await $fetch("/api/account/profile", {
+    const saved = await $fetch("/api/account/profile", {
       method: "PUT",
       body: {
         name: form.name,
         email: form.email,
-        ...(session.value?.management && { qqNumber: form.qqNumber }),
+        ...(session.value?.management && {
+          qqNumber: form.qqNumber,
+          githubUsername: form.githubUsername,
+        }),
       },
     });
-    emit("saved", profile);
+    emit("saved", saved);
     message.success("个人资料已保存");
   });
 </script>
@@ -97,9 +106,41 @@ const save = () =>
           <NText depth="3">由管理层维护</NText>
         </NFlex>
       </NFormItem>
+      <NFormItem
+        v-if="session?.management"
+        label="GitHub 用户名"
+        :label-props="{ for: 'github-username' }"
+      >
+        <NInput
+          v-model:value="form.githubUsername"
+          :disabled="pending"
+          :input-props="{ id: 'github-username', autocomplete: 'off' }"
+        />
+      </NFormItem>
+      <NFormItem v-else label="GitHub 用户名">
+        <NFlex align="baseline" :size="12" wrap>
+          <a
+            v-if="profile.githubUsername"
+            class="profile-username"
+            :href="`https://github.com/${encodeURIComponent(profile.githubUsername)}`"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            {{ profile.githubUsername }}
+          </a>
+          <NText v-else>未填写</NText>
+          <NText depth="3">由管理层维护</NText>
+        </NFlex>
+      </NFormItem>
       <NButton attr-type="submit" :loading="pending" type="primary">
         保存资料
       </NButton>
     </NForm>
   </NCard>
 </template>
+
+<style scoped>
+.profile-username {
+  overflow-wrap: anywhere;
+}
+</style>

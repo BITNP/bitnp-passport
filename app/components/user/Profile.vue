@@ -11,6 +11,7 @@ const form = reactive<AdminProfileInput>({
   name: user.name,
   email: user.email,
   qqNumber: user.qqNumber,
+  githubUsername: user.githubUsername,
   enabled: user.enabled,
   emailVerified: user.emailVerified,
 });
@@ -21,6 +22,7 @@ watch(
       name: value.name,
       email: value.email,
       qqNumber: value.qqNumber,
+      githubUsername: value.githubUsername,
       enabled: value.enabled,
       emailVerified: value.emailVerified,
     });
@@ -97,6 +99,15 @@ const keycloakPages = {
             autocomplete: 'off',
             inputmode: 'numeric',
           }"
+        />
+      </NFormItem>
+      <NFormItem
+        label="GitHub 用户名"
+        :label-props="{ for: 'admin-github-username' }"
+      >
+        <NInput
+          v-model:value="form.githubUsername"
+          :input-props="{ id: 'admin-github-username', autocomplete: 'off' }"
         />
       </NFormItem>
       <NFormItem label="邮箱验证">

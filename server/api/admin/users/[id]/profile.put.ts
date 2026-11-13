@@ -14,6 +14,7 @@ const input = z
       .trim()
       .transform((value) => value || null)
       .nullable(),
+    githubUsername: githubUsernameInput,
     enabled: z.boolean(),
     emailVerified: z.boolean(),
   })

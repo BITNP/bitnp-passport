@@ -11,3 +11,10 @@ export const paginationQuery = z.object({
 export const searchQuery = paginationQuery.extend({
   search: z.string().trim().default(""),
 });
+
+export const githubUsernameInput = z
+  .string()
+  .trim()
+  .transform((value) => value || null)
+  .nullable()
+  .optional();

@@ -9,6 +9,7 @@ const input = z
       .trim()
       .transform((value) => value || null)
       .nullable(),
+    githubUsername: githubUsernameInput,
   })
   .strict();
 

@@ -12,13 +12,15 @@ export interface DirectoryUser extends User {
   createdTimestamp: number | null;
 }
 
-export interface AdminUserProfile extends DirectoryUser {
+export interface MemberProfile {
   qqNumber: string | null;
+  githubUsername: string | null;
 }
 
-export interface AccountProfile {
+export type AdminUserProfile = DirectoryUser & MemberProfile;
+
+export interface AccountProfile extends MemberProfile {
   user: User;
-  qqNumber: string | null;
   emailVerified: boolean;
   readOnly: {
     name: boolean;
@@ -28,13 +30,12 @@ export interface AccountProfile {
   emailRequired: boolean;
 }
 
-export interface ProfileInput {
+export interface ProfileInput extends Partial<MemberProfile> {
   name: string;
   email: string | null;
-  qqNumber?: string | null;
 }
 
-export interface MemberProfileInput {
+export interface MemberProfileInput extends Partial<MemberProfile> {
   qqNumber: string | null;
 }
 

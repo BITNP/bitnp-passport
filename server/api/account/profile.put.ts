@@ -12,6 +12,7 @@ const input = z
       .transform((value) => value || null)
       .nullable()
       .optional(),
+    githubUsername: githubUsernameInput,
   })
   .strict();
 

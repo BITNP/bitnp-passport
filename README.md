@@ -90,6 +90,7 @@ openssl rand -base64 32
 - 在 Realm settings → User profile 中，取消 `lastName` 的 Required；通行证用一个“真实姓名”字段保存姓名，可将 `firstName` 的 Display name 设为“真实姓名”，保留用户编辑权限
 - 使用头像功能时，在 User profile 中添加单值属性 `picture`，允许用户和管理员查看、用户编辑，长度上限设为 2048
 - 使用 QQ 号功能时，在 User profile 中添加单值属性 `qq_number`，Display name 设为“QQ”，允许用户和管理员查看、仅管理员编辑。通行证由管理层通过服务账户维护成员资料；普通用户只能查看自己的 QQ
+- GitHub 用户名使用单值属性 `github_username`，查看和编辑权限与 `qq_number` 相同。成员搜索支持 `@GitHub用户名` 或完整的 GitHub 个人主页链接
 
 修改密码、删除认证器等操作会跳转到 Keycloak 完成，然后返回通行证。
 
@@ -147,7 +148,7 @@ docker compose run --rm web node scripts/migrate.ts
 
 通行证从 Keycloak 读取有效角色：
 
-- 持有任一部门 `permission-<department>-admin` 或 `permission-system-admin` 的用户均可进入管理工作台，查找用户并维护所有人的成员业务资料（目前为 QQ）。
+- 持有任一部门 `permission-<department>-admin` 或 `permission-system-admin` 的用户均可进入管理工作台，查找用户并维护所有人的 QQ 和 GitHub 用户名。
 - `permission-<department>-admin` 授予本届对应部门的成员、邀请和批量任务管理权限。
 - `permission-system-admin` 还可进入系统设置，管理账户控制、任职授权、组织配置、换届和站点设置。
 

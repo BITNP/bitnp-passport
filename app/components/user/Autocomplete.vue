@@ -21,7 +21,13 @@ const options = computed(() => {
   return (data.value?.users ?? []).map((user) => ({
     value: user.username,
     label: user.username,
-    description: [userLabel(user), user.email].filter(Boolean).join("，"),
+    description: [
+      userLabel(user),
+      user.email,
+      user.githubUsername && `GitHub @${user.githubUsername}`,
+    ]
+      .filter(Boolean)
+      .join("，"),
   }));
 });
 
@@ -32,7 +38,7 @@ useFetchError(error, refresh);
   <NAutoComplete
     :loading="status === 'pending'"
     :options
-    placeholder="搜索姓名、用户名或邮箱"
+    placeholder="搜索姓名、用户名、邮箱或 @GitHub用户名"
     :render-label="(option: UserOption) => option.description"
     :value="value ?? ''"
     @select="

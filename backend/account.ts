@@ -58,7 +58,7 @@ function accountProfile(id: string, profile: KeycloakProfile): AccountProfile {
       email: profile.email ?? null,
       avatarUrl: avatarUrlFromAttributes(profile.attributes),
     },
-    qqNumber: profile.attributes?.qq_number?.[0] ?? null,
+    ...keycloak.memberProfileFromAttributes(profile.attributes),
     emailVerified: profile.emailVerified,
     readOnly: {
       name: fields.some(
@@ -202,8 +202,11 @@ export async function updateProfile(
   actor: AccountSession,
   input: ProfileInput,
 ) {
-  const { qqNumber } = input;
-  if (qqNumber !== undefined) {
+  const { name, email, ...memberProfile } = input;
+  const updatesMemberProfile =
+    memberProfile.qqNumber !== undefined ||
+    memberProfile.githubUsername !== undefined;
+  if (updatesMemberProfile) {
     await requireManagement(actor);
   }
 
@@ -213,13 +216,13 @@ export async function updateProfile(
 
       await writeProfile(actor.accessToken, {
         ...profile,
-        firstName: input.name,
+        firstName: name,
         lastName: null,
-        email: input.email,
+        email,
       });
 
-      if (qqNumber !== undefined) {
-        await keycloak.updateUserQqNumber(actor.subject, qqNumber);
+      if (updatesMemberProfile) {
+        await keycloak.updateMemberProfile(actor.subject, memberProfile);
       }
 
       const updated = accountProfile(
@@ -232,16 +235,16 @@ export async function updateProfile(
       return updated;
     });
 
-  return qqNumber === undefined
-    ? save()
-    : audited(
+  return updatesMemberProfile
+    ? audited(
         actor,
         {
           operation: "user.profile.update",
           target: { type: "user", id: actor.subject },
         },
         save,
-      );
+      )
+    : save();
 }
 
 export async function updateMemberProfile(
@@ -256,7 +259,7 @@ export async function updateMemberProfile(
     { operation: "user.profile.update", target: { type: "user", id: subject } },
     () =>
       withProfileLock(subject, () =>
-        keycloak.updateUserQqNumber(subject, input.qqNumber),
+        keycloak.updateMemberProfile(subject, input),
       ),
   );
 }

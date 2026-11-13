@@ -6,11 +6,15 @@ const { user, refresh } = defineProps<{
   refresh: () => Promise<void>;
 }>();
 
-const form = reactive<MemberProfileInput>({ qqNumber: user.qqNumber });
+const form = reactive<MemberProfileInput>({
+  qqNumber: user.qqNumber,
+  githubUsername: user.githubUsername,
+});
 watch(
   () => user,
   (value) => {
     form.qqNumber = value.qqNumber;
+    form.githubUsername = value.githubUsername;
   },
 );
 
@@ -48,6 +52,15 @@ const save = () =>
               autocomplete: 'off',
               inputmode: 'numeric',
             }"
+          />
+        </NFormItem>
+        <NFormItem
+          label="GitHub 用户名"
+          :label-props="{ for: 'member-github-username' }"
+        >
+          <NInput
+            v-model:value="form.githubUsername"
+            :input-props="{ id: 'member-github-username', autocomplete: 'off' }"
           />
         </NFormItem>
         <NButton attr-type="submit" :loading="pending" type="primary">

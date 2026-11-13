@@ -35,6 +35,19 @@
       "multivalued": false
     },
     {
+      "name": "github_username",
+      "displayName": "GitHub 用户名",
+      "validations": {
+        "length": { "max": 39 },
+        "pattern": { "pattern": "[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*" }
+      },
+      "permissions": {
+        "view": ["admin", "user"],
+        "edit": ["admin"]
+      },
+      "multivalued": false
+    },
+    {
       "name": "email",
       "displayName": "${email}",
       "required": { "roles": ["user"] },
